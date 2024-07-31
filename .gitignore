@@ -1,2 +1,3 @@
-*nii.gz
+;q*nii.gz
 venv/
+*.egg-info
