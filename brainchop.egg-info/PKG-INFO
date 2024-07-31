@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: brainchop
+Version: 0.1
+Requires-Dist: numpy
+Requires-Dist: tinygrad
+Requires-Dist: nibabel

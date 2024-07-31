@@ -1,0 +1,11 @@
+setup.py
+brainchop/__init__.py
+brainchop/convert.py
+brainchop/main.py
+brainchop/model.py
+brainchop.egg-info/PKG-INFO
+brainchop.egg-info/SOURCES.txt
+brainchop.egg-info/dependency_links.txt
+brainchop.egg-info/entry_points.txt
+brainchop.egg-info/requires.txt
+brainchop.egg-info/top_level.txt

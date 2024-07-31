@@ -1,0 +1,2 @@
+[console_scripts]
+brainchop = brainchop.main:main
