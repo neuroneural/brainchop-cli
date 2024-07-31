@@ -1,6 +1,6 @@
 # BrainChop
 
-BrainChop is a Python tool for brain segmentation using tinygrad.
+BrainChop is a lightweight tool for brain segmentation using tinygrad that runs on pretty much everything.
 
 ---
 
