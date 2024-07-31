@@ -1,3 +1,4 @@
-;q*nii.gz
+*nii.gz
 venv/
 *.egg-info
+__pycache__/
