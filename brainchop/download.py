@@ -2,10 +2,10 @@ import requests
 from pathlib import Path
 
 AVAILABLE_MODELS = {
-  "model18cls": "model18cls",
-  "model20chan3cls": "model20chan3cls",
-  "model30chan18cls": "model30chan18cls",
-  "model30chan50cls": "model30chan50cls",
+  "small": "model18cls",
+  "medium": "model20chan3cls",
+  "large": "model30chan18cls",
+  "astronomical": "model30chan50cls",
   # Add more models here as they become available
 }
 

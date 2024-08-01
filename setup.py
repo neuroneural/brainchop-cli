@@ -17,6 +17,7 @@ setup(
         "numpy",
         "tinygrad",
         "nibabel",
+        "requests",
     ],
     entry_points={
         "console_scripts": [
