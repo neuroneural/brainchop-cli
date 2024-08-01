@@ -1,6 +1,6 @@
 # BrainChop
 
-BrainChop is a lightweight tool for brain segmentation using tinygrad that runs on pretty much everything.
+BrainChop is a lightweight tool for brain segmentation that runs on pretty much everything.
 
 ---
 
