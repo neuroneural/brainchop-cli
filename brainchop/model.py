@@ -1,7 +1,6 @@
 import json
 import numpy as np
 from tinygrad import Tensor 
-from nibabel import save, load, Nifti1Image
 
 def normalize(img):
   img = (img - img.min()) / (img.max() - img.min())
@@ -42,7 +41,6 @@ def tinygrad_model(json_path, bin_path, x):
 
   model_spec, weights_data = load_tfjs_model(json_path, bin_path)
   x = normalize(x)
-  layers = []
   weight_index = 0
   in_channels = 1  # Start with 1 input channel
   spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]
