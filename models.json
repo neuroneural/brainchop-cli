@@ -19,7 +19,7 @@
   },
   "halfDKatlas": {
     "folder": "model30chan50cls",
-    "description": "🔪 segments the brain into the Desikan Killianu atlas with 50 labels because the contralateral homologues are merged into a single class",
+    "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 50 labels because the contralateral homologues are merged into a single class",
     "considerations": "quantile normalization",
     "parameter_name": "halfDKatlas"
   }
