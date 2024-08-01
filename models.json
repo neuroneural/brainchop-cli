@@ -1,0 +1,18 @@
+{
+  "subcortical": {
+    "folder": "model18cls",
+    "description": "Subcortical segmentation model"
+  },
+  "tissue": {
+    "folder": "model20chan3cls",
+    "description": "Tissue segmentation model"
+  },
+  "robust_subcortical": {
+    "folder": "model30chan18cls",
+    "description": "Robust subcortical segmentation model"
+  },
+  "halfDKatlas": {
+    "folder": "model30chan50cls",
+    "description": "Half Desikan-Killiany atlas segmentation model"
+  }
+}
