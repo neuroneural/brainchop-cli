@@ -27,9 +27,10 @@ Where:
 ## Requirements
 
 - Python 3.6+
-- numpy
-- tinygrad
-- nibabel
+- tinygrad : our tiny ML inference engine
+- numpy : basic tensor operations
+- nibabel : to read nifti files
+- requests : to download models
 
 ## License
 
