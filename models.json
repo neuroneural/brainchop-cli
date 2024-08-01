@@ -1,18 +1,26 @@
 {
+  "tissue_fast": {
+    "folder": "model5_gw_ae",
+    "description": "⚡ our fastest tissue segmentation model that produces gray and white matter labels",
+    "considerations": "min/max normalization",
+    "parameter_name": "tissue_fast"
+  },
   "subcortical": {
-    "folder": "model18cls",
-    "description": "Subcortical segmentation model"
-  },
-  "tissue": {
-    "folder": "model20chan3cls",
-    "description": "Tissue segmentation model"
-  },
-  "robust_subcortical": {
     "folder": "model30chan18cls",
-    "description": "Robust subcortical segmentation model"
+    "description": "🪓 a robust model that can handle clinical scans and other difficult input volumes producing cortical tissue segmentation accompanied by 15 subcortical regions",
+    "considerations": "min/max normalization",
+    "parameter_name": "subcortical"
+  },
+  "DKatlas": {
+    "folder": "model21_104class",
+    "description": "🔪 segments the brain into the Desikan Killianu atlas with 104 labels",
+    "considerations": "min/max normalization",
+    "parameter_name": "DKatlas"
   },
   "halfDKatlas": {
     "folder": "model30chan50cls",
-    "description": "Half Desikan-Killiany atlas segmentation model"
+    "description": "🔪 segments the brain into the Desikan Killianu atlas with 50 labels because the contralateral homologues are merged into a single class",
+    "considerations": "quantile normalization",
+    "parameter_name": "halfDKatlas"
   }
 }
