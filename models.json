@@ -13,7 +13,7 @@
   },
   "DKatlas": {
     "folder": "model21_104class",
-    "description": "🔪 segments the brain into the Desikan Killianu atlas with 104 labels",
+    "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
     "considerations": "min/max normalization",
     "parameter_name": "DKatlas"
   },
