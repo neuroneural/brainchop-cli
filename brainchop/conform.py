@@ -699,8 +699,6 @@ def conform(
 
     mdc_affine = mdc_affine / np.linalg.norm(mdc_affine, axis=1)
     h1["Mdc"] = np.linalg.inv(mdc_affine)
-
-    print(h1.get_zooms())
     h1["fov"] = max(i * v for i, v in zip(h1.get_data_shape(), h1.get_zooms()))
     center = np.asarray(img.shape[:3], dtype=float) / 2.0
     h1["Pxyz_c"] = img.affine.dot(np.hstack((center, [1.0])))[:3]
@@ -1096,6 +1094,7 @@ def _conform(img: Union[nib.Nifti1Image, nib.Nifti2Image],
                       conform_to_1mm_threshold=conform_to_1mm_threshold,
                       criteria=criteria):
         
+        print("Image not conformed, conforming to (256x256x256) with voxel size 1mm")
         # Check affine consistency for nifti images
         if not check_affine_in_nifti(img):
             raise ValueError("Inconsistency in nifti-header.")
