@@ -11,8 +11,8 @@ def quantile_normalization(img, qmin, qmax):
   return Tensor(img)
 
 def normalize(img, spec):
+  return min_max_normalize(img)
   normalization = spec.get("_normalization")
-  print(normalization)
   if normalization is None:
     return min_max_normalize(img)
   
