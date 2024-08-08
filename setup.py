@@ -20,6 +20,7 @@ except ImportError:
     numpy_include = []
 
 # Define the extension module
+# btw maybe run python setup.py build_ext --inplace
 nd_image_module = Extension('brainchop.utils._nd_image',
                             sources=['brainchop/utils/nd_image/nd_image.c',
                                      'brainchop/utils/nd_image/ni_filters.c',
