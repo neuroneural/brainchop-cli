@@ -1,7 +1,7 @@
 import warnings
 import numpy as np
 
-from brainchop.utils import nd_image as _nd_image
+from brainchop.utils import _nd_image
 
 import _ni_support
 
@@ -165,7 +165,7 @@ def geometric_transform(input, mapping, output_shape=None,
     Parameters
     ----------
     %(input)s
-    mapping : {callable, scipy.LowLevelCallable}
+    mapping : {callable, smcipy.LowLevelCallable}
         A callable object that accepts a tuple of length equal to the output
         array rank, and returns the corresponding input coordinates as a tuple
         of length equal to the input array rank.
@@ -212,7 +212,7 @@ def geometric_transform(input, mapping, output_shape=None,
     be interpolated in ``input_coordinates``. The rank of the input and
     output arrays are given by ``input_rank`` and ``output_rank``
     respectively. ``user_data`` is the data pointer provided
-    to `scipy.LowLevelCallable` as-is.
+    to `smcipy.LowLevelCallable` as-is.
 
     The callback function must return an integer error status that is zero
     if something went wrong and one otherwise. If an error occurs, you should
@@ -233,7 +233,7 @@ def geometric_transform(input, mapping, output_shape=None,
     Examples
     --------
     >>> import numpy as np
-    >>> from scipy.ndimage import geometric_transform
+    >>> from smcipy.ndimage import geometric_transform
     >>> a = np.arange(12.).reshape((4, 3))
     >>> def shift_func(output_coords):
     ...     return (output_coords[0] - 0.5, output_coords[1] - 0.5)
@@ -439,7 +439,7 @@ def affine_transform(input, matrix, offset=0.0, output_shape=None,
         warnings.warn(
             "The behavior of affine_transform with a 1-D "
             "array supplied for the matrix parameter has changed in "
-            "SciPy 0.18.0.",
+            "smcipy 0.18.0.",
             stacklevel=2
         )
         _nd_image.zoom_shift(filtered, matrix, offset/matrix, output, order,
