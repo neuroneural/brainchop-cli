@@ -7,3 +7,4 @@ dist/
 nifti/
 .DS_Store
 *.sh
+*.so
