@@ -1,17 +1,17 @@
 # :: from scipy.ndimage._ni_docstrings.py
 """Docstring components common to several ndimage functions."""
-from scipy._lib import doccer
 import itertools
 import warnings
 
 import numpy as np
 
 from scipy.ndimage import _nd_image
+from scipy._lib import doccer
+
 import _ni_support
 
 __all__ = ['docfiller', 'spline_filter1d', 'spline_filter', 'geometric_transform',
            'map_coordinates', 'affine_transform', 'shift', 'zoom', 'rotate']
-
 
 
 _input_doc = (
