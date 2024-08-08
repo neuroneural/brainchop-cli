@@ -2,8 +2,7 @@ import warnings
 import numpy as np
 
 from brainchop.utils import _nd_image
-
-import _ni_support
+from brainchop.utils import _ni_support
 
 __all__ = ['spline_filter1d',
            'spline_filter',

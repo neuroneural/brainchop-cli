@@ -22,7 +22,7 @@ from typing import Literal, Optional, Type, Tuple, Union, Iterable, cast
 import numpy as np
 import numpy.typing as npt
 import nibabel as nib
-from _interpolation import affine_transform
+from brainchop.utils._interpolation import affine_transform
 
 
 VoxSizeOption = Union[float, Literal["min"]]
@@ -1061,6 +1061,71 @@ def check_affine_in_nifti(
 
     return check
 
+def _conform(img: Union[nib.Nifti1Image, nib.Nifti2Image], 
+             order: int = 1, 
+             conform_vox_size: Union[float, str] = 1.0,
+             dtype: Optional[str] = None,
+             conform_to_1mm_threshold: Optional[float] = None) -> Union[nib.Nifti1Image, nib.Nifti2Image]:
+    """
+    Check if a nifti image needs to be conformed, and if so, conform it.
+
+    Parameters:
+    -----------
+    img : Union[nib.Nifti1Image, nib.Nifti2Image]
+        Input nifti image
+    order : int, optional
+        Interpolation order (default is 1)
+    conform_vox_size : Union[float, str], optional
+        Target voxel size or 'min' for minimum voxel size (default is 1.0)
+    dtype : Optional[str], optional
+        Target data type (default is None, which will use uint8)
+    conform_to_1mm_threshold : Optional[float], optional
+        Threshold for conforming to 1mm voxel size (default is None)
+
+    Returns:
+    --------
+    Union[nib.Nifti1Image, nib.Nifti2Image]
+        Conformed image if conforming was necessary, otherwise the original image
+    """
+    # Set default criteria
+    criteria = {Criteria.FORCE_LIA, Criteria.FORCE_LIA_STRICT, Criteria.FORCE_ISO_VOX, Criteria.FORCE_IMG_SIZE}
+    
+    # Check if the image needs to be conformed
+    if not is_conform(img, conform_vox_size=conform_vox_size, check_dtype=True, 
+                      dtype=dtype, verbose=False, 
+                      conform_to_1mm_threshold=conform_to_1mm_threshold,
+                      criteria=criteria):
+        
+        # Check affine consistency for nifti images
+        if not check_affine_in_nifti(img):
+            raise ValueError("Inconsistency in nifti-header.")
+        
+        # Conform the image
+        conformed_img = conform(img, order=order, conform_vox_size=conform_vox_size,
+                                dtype=dtype, 
+                                conform_to_1mm_threshold=conform_to_1mm_threshold,
+                                criteria=criteria)
+        
+        return conformed_img
+    else:
+        # Image is already conformed, return the original
+        return img
+
+# Helper function to check affine in nifti (simplified version)
+def check_affine_in_nifti(img: Union[nib.Nifti1Image, nib.Nifti2Image]) -> bool:
+    header = img.header
+    if (header['qform_code'] != 0 and 
+        not np.allclose(img.get_sform(), img.get_qform(), atol=0.001)):
+        img.set_sform(img.get_qform())
+        img.update_header()
+    
+    vox_size_header = header.get_zooms()
+    vox_size_affine = np.sqrt((img.affine[:3, :3] * img.affine[:3, :3]).sum(0))
+    
+    return np.allclose(vox_size_affine, vox_size_header, atol=1e-3)
+
+# Note: This function assumes that the `is_conform`, `conform`, and `Criteria` 
+# are defined elsewhere in your code, as they were in the original script.
 
 if __name__ == "__main__":
     # Command Line options are error checking done here
