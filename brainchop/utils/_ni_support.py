@@ -1,3 +1,4 @@
+# :: from smcipy.ndimage._ni_support
 # Copyright (C) 2003-2005 Peter J. Verveer
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,7 +33,6 @@ from collections.abc import Iterable
 import operator
 import warnings
 import numpy as np
-
 
 def _extend_mode_to_code(mode):
     """Convert an extension mode to the corresponding integer code.
@@ -117,3 +117,5 @@ def _check_axes(axes, ndim):
     if len(tuple(set(axes))) != len(axes):
         raise ValueError("axes must be unique")
     return axes
+
+

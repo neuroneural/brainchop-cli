@@ -1,3 +1,223 @@
+# :: from scipy.ndimage._ni_docstrings.py
+"""Docstring components common to several ndimage functions."""
+from scipy._lib import doccer
+import itertools
+import warnings
+
+import numpy as np
+
+from scipy import special
+from scipy.ndimage import _nd_image
+from scipy._lib._util import normalize_axis_index
+import _ni_support
+
+__all__ = ['docfiller']
+
+
+_input_doc = (
+"""input : array_like
+    The input array.""")
+_axis_doc = (
+"""axis : int, optional
+    The axis of `input` along which to calculate. Default is -1.""")
+_output_doc = (
+"""output : array or dtype, optional
+    The array in which to place the output, or the dtype of the
+    returned array. By default an array of the same dtype as input
+    will be created.""")
+_size_foot_doc = (
+"""size : scalar or tuple, optional
+    See footprint, below. Ignored if footprint is given.
+footprint : array, optional
+    Either `size` or `footprint` must be defined. `size` gives
+    the shape that is taken from the input array, at every element
+    position, to define the input to the filter function.
+    `footprint` is a boolean array that specifies (implicitly) a
+    shape, but also which of the elements within this shape will get
+    passed to the filter function. Thus ``size=(n,m)`` is equivalent
+    to ``footprint=np.ones((n,m))``.  We adjust `size` to the number
+    of dimensions of the input array, so that, if the input array is
+    shape (10,10,10), and `size` is 2, then the actual size used is
+    (2,2,2). When `footprint` is given, `size` is ignored.""")
+_mode_reflect_doc = (
+"""mode : {'reflect', 'constant', 'nearest', 'mirror', 'wrap'}, optional
+    The `mode` parameter determines how the input array is extended
+    beyond its boundaries. Default is 'reflect'. Behavior for each valid
+    value is as follows:
+
+    'reflect' (`d c b a | a b c d | d c b a`)
+        The input is extended by reflecting about the edge of the last
+        pixel. This mode is also sometimes referred to as half-sample
+        symmetric.
+
+    'constant' (`k k k k | a b c d | k k k k`)
+        The input is extended by filling all values beyond the edge with
+        the same constant value, defined by the `cval` parameter.
+
+    'nearest' (`a a a a | a b c d | d d d d`)
+        The input is extended by replicating the last pixel.
+
+    'mirror' (`d c b | a b c d | c b a`)
+        The input is extended by reflecting about the center of the last
+        pixel. This mode is also sometimes referred to as whole-sample
+        symmetric.
+
+    'wrap' (`a b c d | a b c d | a b c d`)
+        The input is extended by wrapping around to the opposite edge.
+
+    For consistency with the interpolation functions, the following mode
+    names can also be used:
+
+    'grid-mirror'
+        This is a synonym for 'reflect'.
+
+    'grid-constant'
+        This is a synonym for 'constant'.
+
+    'grid-wrap'
+        This is a synonym for 'wrap'.""")
+
+_mode_interp_constant_doc = (
+"""mode : {'reflect', 'grid-mirror', 'constant', 'grid-constant', 'nearest', \
+'mirror', 'grid-wrap', 'wrap'}, optional
+    The `mode` parameter determines how the input array is extended
+    beyond its boundaries. Default is 'constant'. Behavior for each valid
+    value is as follows (see additional plots and details on
+    :ref:`boundary modes <ndimage-interpolation-modes>`):
+
+    'reflect' (`d c b a | a b c d | d c b a`)
+        The input is extended by reflecting about the edge of the last
+        pixel. This mode is also sometimes referred to as half-sample
+        symmetric.
+
+    'grid-mirror'
+        This is a synonym for 'reflect'.
+
+    'constant' (`k k k k | a b c d | k k k k`)
+        The input is extended by filling all values beyond the edge with
+        the same constant value, defined by the `cval` parameter. No
+        interpolation is performed beyond the edges of the input.
+
+    'grid-constant' (`k k k k | a b c d | k k k k`)
+        The input is extended by filling all values beyond the edge with
+        the same constant value, defined by the `cval` parameter. Interpolation
+        occurs for samples outside the input's extent  as well.
+
+    'nearest' (`a a a a | a b c d | d d d d`)
+        The input is extended by replicating the last pixel.
+
+    'mirror' (`d c b | a b c d | c b a`)
+        The input is extended by reflecting about the center of the last
+        pixel. This mode is also sometimes referred to as whole-sample
+        symmetric.
+
+    'grid-wrap' (`a b c d | a b c d | a b c d`)
+        The input is extended by wrapping around to the opposite edge.
+
+    'wrap' (`d b c d | a b c d | b c a b`)
+        The input is extended by wrapping around to the opposite edge, but in a
+        way such that the last point and initial point exactly overlap. In this
+        case it is not well defined which sample will be chosen at the point of
+        overlap.""")
+_mode_interp_mirror_doc = (
+    _mode_interp_constant_doc.replace("Default is 'constant'",
+                                      "Default is 'mirror'")
+)
+assert _mode_interp_mirror_doc != _mode_interp_constant_doc, \
+    'Default not replaced'
+
+_mode_multiple_doc = (
+"""mode : str or sequence, optional
+    The `mode` parameter determines how the input array is extended
+    when the filter overlaps a border. By passing a sequence of modes
+    with length equal to the number of dimensions of the input array,
+    different modes can be specified along each axis. Default value is
+    'reflect'. The valid values and their behavior is as follows:
+
+    'reflect' (`d c b a | a b c d | d c b a`)
+        The input is extended by reflecting about the edge of the last
+        pixel. This mode is also sometimes referred to as half-sample
+        symmetric.
+
+    'constant' (`k k k k | a b c d | k k k k`)
+        The input is extended by filling all values beyond the edge with
+        the same constant value, defined by the `cval` parameter.
+
+    'nearest' (`a a a a | a b c d | d d d d`)
+        The input is extended by replicating the last pixel.
+
+    'mirror' (`d c b | a b c d | c b a`)
+        The input is extended by reflecting about the center of the last
+        pixel. This mode is also sometimes referred to as whole-sample
+        symmetric.
+
+    'wrap' (`a b c d | a b c d | a b c d`)
+        The input is extended by wrapping around to the opposite edge.
+
+    For consistency with the interpolation functions, the following mode
+    names can also be used:
+
+    'grid-constant'
+        This is a synonym for 'constant'.
+
+    'grid-mirror'
+        This is a synonym for 'reflect'.
+
+    'grid-wrap'
+        This is a synonym for 'wrap'.""")
+_cval_doc = (
+"""cval : scalar, optional
+    Value to fill past edges of input if `mode` is 'constant'. Default
+    is 0.0.""")
+_origin_doc = (
+"""origin : int, optional
+    Controls the placement of the filter on the input array's pixels.
+    A value of 0 (the default) centers the filter over the pixel, with
+    positive values shifting the filter to the left, and negative ones
+    to the right.""")
+_origin_multiple_doc = (
+"""origin : int or sequence, optional
+    Controls the placement of the filter on the input array's pixels.
+    A value of 0 (the default) centers the filter over the pixel, with
+    positive values shifting the filter to the left, and negative ones
+    to the right. By passing a sequence of origins with length equal to
+    the number of dimensions of the input array, different shifts can
+    be specified along each axis.""")
+_extra_arguments_doc = (
+"""extra_arguments : sequence, optional
+    Sequence of extra positional arguments to pass to passed function.""")
+_extra_keywords_doc = (
+"""extra_keywords : dict, optional
+    dict of extra keyword arguments to pass to passed function.""")
+_prefilter_doc = (
+"""prefilter : bool, optional
+    Determines if the input array is prefiltered with `spline_filter`
+    before interpolation. The default is True, which will create a
+    temporary `float64` array of filtered values if ``order > 1``. If
+    setting this to False, the output will be slightly blurred if
+    ``order > 1``, unless the input is prefiltered, i.e. it is the result
+    of calling `spline_filter` on the original input.""")
+
+docdict = {
+    'input': _input_doc,
+    'axis': _axis_doc,
+    'output': _output_doc,
+    'size_foot': _size_foot_doc,
+    'mode_interp_constant': _mode_interp_constant_doc,
+    'mode_interp_mirror': _mode_interp_mirror_doc,
+    'mode_reflect': _mode_reflect_doc,
+    'mode_multiple': _mode_multiple_doc,
+    'cval': _cval_doc,
+    'origin': _origin_doc,
+    'origin_multiple': _origin_multiple_doc,
+    'extra_arguments': _extra_arguments_doc,
+    'extra_keywords': _extra_keywords_doc,
+    'prefilter': _prefilter_doc
+    }
+
+docfiller = doccer.filldoc(docdict)
+
+# :: from scipy.ndimage._interpolation
 # Copyright (C) 2003-2005 Peter J. Verveer
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,17 +247,6 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-import itertools
-import warnings
-
-import numpy as np
-from scipy._lib._util import normalize_axis_index
-
-from scipy import special
-from . import _ni_support
-from . import _nd_image
-from ._ni_docstrings import docfiller
 
 
 __all__ = ['spline_filter1d', 'spline_filter', 'geometric_transform',
@@ -228,7 +437,7 @@ def _prepad_for_spline_filter(input, mode, cval):
 def geometric_transform(input, mapping, output_shape=None,
                         output=None, order=3,
                         mode='constant', cval=0.0, prefilter=True,
-                        extra_arguments=(), extra_keywords={}):
+                        extra_arguments=(), extra_keywords=None):
     """
     Apply an arbitrary geometric transform.
 
@@ -333,6 +542,8 @@ def geometric_transform(input, mapping, output_shape=None,
     array([2, 3, 4, 1, 2])
 
     """
+    if extra_keywords is None:
+        extra_keywords = {}
     if order < 0 or order > 5:
         raise RuntimeError('spline order not supported')
     input = np.asarray(input)
@@ -859,4 +1070,143 @@ def zoom(input, zoom, output=None, order=3, mode='constant', cval=0.0,
     zoom = np.ascontiguousarray(zoom)
     _nd_image.zoom_shift(filtered, zoom, None, output, order, mode, cval, npad,
                          grid_mode)
+    return output
+
+
+@docfiller
+def rotate(input, angle, axes=(1, 0), reshape=True, output=None, order=3,
+           mode='constant', cval=0.0, prefilter=True):
+    """
+    Rotate an array.
+
+    The array is rotated in the plane defined by the two axes given by the
+    `axes` parameter using spline interpolation of the requested order.
+
+    Parameters
+    ----------
+    %(input)s
+    angle : float
+        The rotation angle in degrees.
+    axes : tuple of 2 ints, optional
+        The two axes that define the plane of rotation. Default is the first
+        two axes.
+    reshape : bool, optional
+        If `reshape` is true, the output shape is adapted so that the input
+        array is contained completely in the output. Default is True.
+    %(output)s
+    order : int, optional
+        The order of the spline interpolation, default is 3.
+        The order has to be in the range 0-5.
+    %(mode_interp_constant)s
+    %(cval)s
+    %(prefilter)s
+
+    Returns
+    -------
+    rotate : ndarray
+        The rotated input.
+
+    Notes
+    -----
+    For complex-valued `input`, this function rotates the real and imaginary
+    components independently.
+
+    .. versionadded:: 1.6.0
+        Complex-valued support added.
+
+    Examples
+    --------
+    >>> from scipy import ndimage, datasets
+    >>> import matplotlib.pyplot as plt
+    >>> fig = plt.figure(figsize=(10, 3))
+    >>> ax1, ax2, ax3 = fig.subplots(1, 3)
+    >>> img = datasets.ascent()
+    >>> img_45 = ndimage.rotate(img, 45, reshape=False)
+    >>> full_img_45 = ndimage.rotate(img, 45, reshape=True)
+    >>> ax1.imshow(img, cmap='gray')
+    >>> ax1.set_axis_off()
+    >>> ax2.imshow(img_45, cmap='gray')
+    >>> ax2.set_axis_off()
+    >>> ax3.imshow(full_img_45, cmap='gray')
+    >>> ax3.set_axis_off()
+    >>> fig.set_layout_engine('tight')
+    >>> plt.show()
+    >>> print(img.shape)
+    (512, 512)
+    >>> print(img_45.shape)
+    (512, 512)
+    >>> print(full_img_45.shape)
+    (724, 724)
+
+    """
+    input_arr = np.asarray(input)
+    ndim = input_arr.ndim
+
+    if ndim < 2:
+        raise ValueError('input array should be at least 2D')
+
+    axes = list(axes)
+
+    if len(axes) != 2:
+        raise ValueError('axes should contain exactly two values')
+
+    if not all([float(ax).is_integer() for ax in axes]):
+        raise ValueError('axes should contain only integer values')
+
+    if axes[0] < 0:
+        axes[0] += ndim
+    if axes[1] < 0:
+        axes[1] += ndim
+    if axes[0] < 0 or axes[1] < 0 or axes[0] >= ndim or axes[1] >= ndim:
+        raise ValueError('invalid rotation plane specified')
+
+    axes.sort()
+
+    c, s = special.cosdg(angle), special.sindg(angle)
+
+    rot_matrix = np.array([[c, s],
+                           [-s, c]])
+
+    img_shape = np.asarray(input_arr.shape)
+    in_plane_shape = img_shape[axes]
+    if reshape:
+        # Compute transformed input bounds
+        iy, ix = in_plane_shape
+        out_bounds = rot_matrix @ [[0, 0, iy, iy],
+                                   [0, ix, 0, ix]]
+        # Compute the shape of the transformed input plane
+        out_plane_shape = (np.ptp(out_bounds, axis=1) + 0.5).astype(int)
+    else:
+        out_plane_shape = img_shape[axes]
+
+    out_center = rot_matrix @ ((out_plane_shape - 1) / 2)
+    in_center = (in_plane_shape - 1) / 2
+    offset = in_center - out_center
+
+    output_shape = img_shape
+    output_shape[axes] = out_plane_shape
+    output_shape = tuple(output_shape)
+
+    complex_output = np.iscomplexobj(input_arr)
+    output = _ni_support._get_output(output, input_arr, shape=output_shape,
+                                     complex_output=complex_output)
+
+    if ndim <= 2:
+        affine_transform(input_arr, rot_matrix, offset, output_shape, output,
+                         order, mode, cval, prefilter)
+    else:
+        # If ndim > 2, the rotation is applied over all the planes
+        # parallel to axes
+        planes_coord = itertools.product(
+            *[[slice(None)] if ax in axes else range(img_shape[ax])
+              for ax in range(ndim)])
+
+        out_plane_shape = tuple(out_plane_shape)
+
+        for coordinates in planes_coord:
+            ia = input_arr[coordinates]
+            oa = output[coordinates]
+            affine_transform(ia, rot_matrix, offset, out_plane_shape,
+                             oa, order, mode, cval, prefilter)
+
     return output
