@@ -9,7 +9,9 @@ import numpy as np
 from scipy.ndimage import _nd_image
 import _ni_support
 
-__all__ = ['docfiller']
+__all__ = ['docfiller', 'spline_filter1d', 'spline_filter', 'geometric_transform',
+           'map_coordinates', 'affine_transform', 'shift', 'zoom', 'rotate']
+
 
 
 _input_doc = (
@@ -246,9 +248,6 @@ docfiller = doccer.filldoc(docdict)
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-__all__ = ['spline_filter1d', 'spline_filter', 'geometric_transform',
-           'map_coordinates', 'affine_transform', 'shift', 'zoom', 'rotate']
 
 
 @docfiller
