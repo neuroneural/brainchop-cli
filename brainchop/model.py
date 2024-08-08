@@ -10,6 +10,7 @@ def quantile_normalization(img, qmin, qmax):
     img = (img - np.quantile(img, qmin)) / (np.quantile(img, qmax) - np.quantile(img, qmin))
     return Tensor(img)
 
+
 def load_tfjs_model(json_path, bin_path):
   with open(json_path, "r") as f:
     model_spec = json.load(f)
@@ -29,6 +30,7 @@ def create_activation(name):
   }
   return activation_map[name]
 
+
 def calculate_same_padding(kernel_size, dilation):
   if isinstance(kernel_size, int):
     kernel_size = (kernel_size,) * 3
@@ -41,9 +43,9 @@ def calculate_same_padding(kernel_size, dilation):
   return tuple(padding)
 
 
-def tinygrad_model(json_path, bin_path, x):
+def meshnet(json_path, bin_path, x):
   model_spec, weights_data = load_tfjs_model(json_path, bin_path)
-  x = min_max_normalize(x, model_spec)
+  x = min_max_normalize(x)
   weight_index = 0
   in_channels = 1  # Start with 1 input channel
   spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]

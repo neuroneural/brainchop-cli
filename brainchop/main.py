@@ -7,7 +7,7 @@ import argparse
 from nibabel import save, load, Nifti1Image
 from tinygrad import Tensor
 import numpy as np
-from brainchop.model import tinygrad_model
+from brainchop.model import meshnet
 from brainchop.conform import _conform
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
@@ -168,7 +168,7 @@ def main():
 		img = _conform(img)
 		tensor = np.array(img.dataobj).reshape(1, 1, 256, 256, 256)
 		t = Tensor(tensor.astype(np.float16))
-		out_tensor = tinygrad_model(json_file, bin_file, t)
+		out_tensor = meshnet(json_file, bin_file, t)
 		save(Nifti1Image(out_tensor, img.affine, img.header), args.output)
 		print(f"Output saved as {args.output}")
 	except Exception as e:
