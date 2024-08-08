@@ -1,10 +1,14 @@
 import json
 import numpy as np
-from tinygrad import Tensor 
+from tinygrad import Tensor
 
-def normalize(img):
-  img = (img - img.min()) / (img.max() - img.min())
-  return img
+def min_max_normalize(img):
+    img = (img - img.min()) / (img.max() - img.min())
+    return img
+
+def quantile_normalization(img, qmin, qmax):
+    img = (img - np.quantile(img, qmin)) / (np.quantile(img, qmax) - np.quantile(img, qmin))
+    return Tensor(img)
 
 def load_tfjs_model(json_path, bin_path):
   with open(json_path, "r") as f:
@@ -38,9 +42,8 @@ def calculate_same_padding(kernel_size, dilation):
 
 
 def tinygrad_model(json_path, bin_path, x):
-
   model_spec, weights_data = load_tfjs_model(json_path, bin_path)
-  x = normalize(x)
+  x = min_max_normalize(x, model_spec)
   weight_index = 0
   in_channels = 1  # Start with 1 input channel
   spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]
