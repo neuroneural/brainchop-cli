@@ -34,7 +34,7 @@ def conform(img, output_shape=(256, 256, 256)):
   zoom_factors = np.array(output_shape) / np.array(cubic_data.shape)
   
   # Resize to the desired shape
-  resized_data = zoom(cubic_data, zoom_factors, order=1)
+  resized_data = zoom(cubic_data, zoom_factors, order=1, mode="nearest")
   
   # Update the affine transformation for 1mm isotropic voxels
   new_affine = np.eye(4)
