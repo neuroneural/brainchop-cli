@@ -44,6 +44,8 @@ def update_models():
   global AVAILABLE_MODELS
   AVAILABLE_MODELS = download_models_json()
   print("Model listing updated successfully.")
+  for model, details in AVAILABLE_MODELS.items():
+    print(f"- {model}: {details['description']}")
 
 def list_available_models():
   print("Available models:")

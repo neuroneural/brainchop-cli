@@ -1,10 +1,38 @@
 import json
 import numpy as np
-from tinygrad import Tensor 
+from tinygrad import Tensor
 
-def normalize(img):
+def min_max_normalize(img):
   img = (img - img.min()) / (img.max() - img.min())
   return img
+
+def quantile_normalization(img, qmin, qmax):
+  img = (img - np.quantile(img, qmin)) / (np.quantile(img, qmax) - np.quantile(img, qmin))
+  return Tensor(img)
+
+def normalize(img, spec):
+  normalization = spec.get("_normalization")
+  print(normalization)
+  if normalization is None:
+    return min_max_normalize(img)
+  
+  if not isinstance(normalization, dict):
+    raise ValueError("_normalization must be a dictionary or None")
+
+  norm_type = normalization.get("type")
+  if norm_type == "quantile":
+    print("ding")
+    qmin = normalization.get("min")
+    qmax = normalization.get("max")
+    
+    if qmin is None or qmax is None:
+      raise ValueError("'min' or 'max' not specified")
+    
+    return quantile_normalization(img, qmin, qmax)
+  elif norm_type is None:
+    return min_max_normalize(img)
+  else:
+    raise ValueError(f"Unsupported normalization type: {norm_type}")
 
 def load_tfjs_model(json_path, bin_path):
   with open(json_path, "r") as f:
@@ -38,9 +66,8 @@ def calculate_same_padding(kernel_size, dilation):
 
 
 def tinygrad_model(json_path, bin_path, x):
-
   model_spec, weights_data = load_tfjs_model(json_path, bin_path)
-  x = normalize(x)
+  x = normalize(x, model_spec)
   weight_index = 0
   in_channels = 1  # Start with 1 input channel
   spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]
