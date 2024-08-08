@@ -1,16 +1,15 @@
-# :: from scipy.ndimage._ni_docstrings.py
-"""Docstring components common to several ndimage functions."""
 import warnings
 import numpy as np
 
-from scipy.ndimage import _nd_image
+from brainchop.utils import nd_image as _nd_image
 
 import _ni_support
 
-__all__ = ['spline_filter1d', 
-           'spline_filter', 'geometric_transform','affine_transform']
+__all__ = ['spline_filter1d',
+           'spline_filter',
+           'geometric_transform',
+           'affine_transform']
 
-# :: from scipy.ndimage._interpolation
 # Copyright (C) 2003-2005 Peter J. Verveer
 #
 # Redistribution and use in source and binary forms, with or without
@@ -76,49 +75,6 @@ def spline_filter1d(input, order=3, axis=-1, output=np.float64,
     -------
     spline_filter1d : ndarray
         The filtered input.
-
-    See Also
-    --------
-    spline_filter : Multidimensional spline filter.
-
-    Notes
-    -----
-    All of the interpolation functions in `ndimage` do spline interpolation of
-    the input image. If using B-splines of `order > 1`, the input image
-    values have to be converted to B-spline coefficients first, which is
-    done by applying this 1-D filter sequentially along all
-    axes of the input. All functions that require B-spline coefficients
-    will automatically filter their inputs, a behavior controllable with
-    the `prefilter` keyword argument. For functions that accept a `mode`
-    parameter, the result will only be correct if it matches the `mode`
-    used when filtering.
-
-    For complex-valued `input`, this function processes the real and imaginary
-    components independently.
-
-    .. versionadded:: 1.6.0
-        Complex-valued support added.
-
-    Examples
-    --------
-    We can filter an image using 1-D spline along the given axis:
-
-    >>> from scipy.ndimage import spline_filter1d
-    >>> import numpy as np
-    >>> import matplotlib.pyplot as plt
-    >>> orig_img = np.eye(20)  # create an image
-    >>> orig_img[10, :] = 1.0
-    >>> sp_filter_axis_0 = spline_filter1d(orig_img, axis=0)
-    >>> sp_filter_axis_1 = spline_filter1d(orig_img, axis=1)
-    >>> f, ax = plt.subplots(1, 3, sharex=True)
-    >>> for ind, data in enumerate([[orig_img, "original image"],
-    ...             [sp_filter_axis_0, "spline filter (axis=0)"],
-    ...             [sp_filter_axis_1, "spline filter (axis=1)"]]):
-    ...     ax[ind].imshow(data[0], cmap='gray_r')
-    ...     ax[ind].set_title(data[1])
-    >>> plt.tight_layout()
-    >>> plt.show()
-
     """
     if order < 0 or order > 5:
         raise RuntimeError('spline order not supported')
@@ -157,43 +113,6 @@ def spline_filter(input, order=3, output=np.float64, mode='mirror'):
     -------
     spline_filter : ndarray
         Filtered array. Has the same shape as `input`.
-
-    See Also
-    --------
-    spline_filter1d : Calculate a 1-D spline filter along the given axis.
-
-    Notes
-    -----
-    The multidimensional filter is implemented as a sequence of
-    1-D spline filters. The intermediate arrays are stored
-    in the same data type as the output. Therefore, for output types
-    with a limited precision, the results may be imprecise because
-    intermediate results may be stored with insufficient precision.
-
-    For complex-valued `input`, this function processes the real and imaginary
-    components independently.
-
-    .. versionadded:: 1.6.0
-        Complex-valued support added.
-
-    Examples
-    --------
-    We can filter an image using multidimentional splines:
-
-    >>> from scipy.ndimage import spline_filter
-    >>> import numpy as np
-    >>> import matplotlib.pyplot as plt
-    >>> orig_img = np.eye(20)  # create an image
-    >>> orig_img[10, :] = 1.0
-    >>> sp_filter = spline_filter(orig_img, order=3)
-    >>> f, ax = plt.subplots(1, 2, sharex=True)
-    >>> for ind, data in enumerate([[orig_img, "original image"],
-    ...                             [sp_filter, "spline filter"]]):
-    ...     ax[ind].imshow(data[0], cmap='gray_r')
-    ...     ax[ind].set_title(data[1])
-    >>> plt.tight_layout()
-    >>> plt.show()
-
     """
     if order < 2 or order > 5:
         raise RuntimeError('spline order not supported')
@@ -277,7 +196,7 @@ def geometric_transform(input, mapping, output_shape=None,
     Notes
     -----
     This function also accepts low-level callback functions with one
-    the following signatures and wrapped in `scipy.LowLevelCallable`:
+    the following signatures and wrapped in `smcipy.LowLevelCallable`:
 
     .. code:: c
 
