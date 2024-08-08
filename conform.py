@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-# IMPORTS
 import argparse
 from enum import Enum
 import logging
@@ -24,6 +22,7 @@ from typing import Literal, Optional, Type, Tuple, Union, Iterable, cast
 import numpy as np
 import numpy.typing as npt
 import nibabel as nib
+from scipy.ndimage import affine_transform
 
 VoxSizeOption = Union[float, Literal["min"]]
 
@@ -54,8 +53,6 @@ def __conform_to_one_mm(a: str) -> Optional[float]:
         return a_float
     else:
         raise argparse.ArgumentTypeError(f"'{a}' is not between 0 and 1.")
-
-
 
 
 def __target_dtype(a: str) -> str:
@@ -319,7 +316,6 @@ def map_image(
     np.ndarray
         Mapped image data array.
     """
-    from scipy.ndimage import affine_transform
     from numpy.linalg import inv
 
     if ras2ras is None:
