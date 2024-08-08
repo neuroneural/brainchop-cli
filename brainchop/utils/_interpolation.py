@@ -4,12 +4,11 @@ import warnings
 import numpy as np
 
 from scipy.ndimage import _nd_image
-from scipy._lib._util import normalize_axis_index
 
 import _ni_support
 
-__all__ = ['spline_filter1d', 'spline_filter', 'geometric_transform',
-           'affine_transform']
+__all__ = ['spline_filter1d', 
+           'spline_filter', 'geometric_transform','affine_transform']
 
 # :: from scipy.ndimage._interpolation
 # Copyright (C) 2003-2005 Peter J. Verveer
@@ -42,6 +41,15 @@ __all__ = ['spline_filter1d', 'spline_filter', 'geometric_transform',
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+def normalize_axis_index(axis, ndim):
+    # Check if `axis` is in the correct range and normalize it
+    if axis < -ndim or axis >= ndim:
+        msg = f"axis {axis} is out of bounds for array of dimension {ndim}"
+        raise msg
+
+    if axis < 0:
+        axis = axis + ndim
+    return axis
 
 def spline_filter1d(input, order=3, axis=-1, output=np.float64,
                     mode='mirror'):
