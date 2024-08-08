@@ -13,7 +13,7 @@ def conform(img, output_shape=(256, 256, 256)):
   """
   # Load the image data
   data = img.get_fdata()
-  
+
   # Find the maximum dimension
   max_dim = max(data.shape)
   
@@ -49,9 +49,18 @@ def conform(img, output_shape=(256, 256, 256)):
   new_img = nib.Nifti1Image(resized_data, new_affine)
   return new_img
 
+def align(img):
+  """ Aligns a given nifti file to this specific affine matrix """
+  specific_affine = np.array([
+    [1, 0, 0, -128],
+    [0, 1, 0, -128],
+    [0, 0, 1, -128],
+    [0, 0, 0, 1]])
+  return nib.Nifti1Image(img.get_fdata(), specific_affine)
+
 if __name__ == "__main__":
   input_img = nib.load(input("Path to nifti file: "))
   # Apply the conform function
-  output_img = conform(input_img)
+  output_img = align(conform(input_img))
   # Save the result
   nib.save(output_img, input("Path to output: "))
