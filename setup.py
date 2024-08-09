@@ -1,16 +1,7 @@
 from setuptools import setup, find_packages, Extension
 from setuptools.dist import Distribution
 
-# Function to parse the requirements file
-def parse_requirements(filename):
-    with open(filename) as f:
-        return [line.strip() for line in f if line.strip() and not line.startswith("#")]
-
-# Packages required for setup
 setup_requires = ['numpy']
-
-# Packages required for installation
-install_requires = parse_requirements('requirements.txt')
 
 # Attempt to import numpy, but don't fail if it's not available
 try:
@@ -48,7 +39,12 @@ setup(
     packages=find_packages(),
     ext_modules=[nd_image_module],
     setup_requires=setup_requires,
-    install_requires=install_requires,
+    install_requires=[
+        'numpy',
+        'tinygrad',
+        'requests',
+        'nibabel',
+    ],
     entry_points={
         "console_scripts": [
             "brainchop=brainchop.main:main",
