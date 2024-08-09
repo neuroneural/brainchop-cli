@@ -16,11 +16,5 @@
     "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
     "considerations": "min/max normalization",
     "parameter_name": "DKatlas"
-  },
-  "halfDKatlas": {
-    "folder": "model30chan50cls",
-    "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 50 labels because the contralateral homologues are merged into a single class",
-    "considerations": "quantile normalization",
-    "parameter_name": "halfDKatlas"
   }
 }
