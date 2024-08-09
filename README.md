@@ -24,10 +24,11 @@ Where:
 - `input.nii.gz` is your input NIfTI file
 - `output.nii.gz` is the desired output file name
 
+
 ## Requirements
 
 - Python 3.6+
-- tinygrad : our tiny ML inference engine
+- tinygrad : our tiny and portable (but powerful) ML inference engine
 - numpy : basic tensor operations
 - nibabel : to read nifti files
 - requests : to download models
