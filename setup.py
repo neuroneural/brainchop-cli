@@ -8,7 +8,7 @@ try:
     import numpy
     numpy_include = [numpy.get_include()]
 except ImportError:
-    numpy_include = []
+    numpy_include = ['.', 'brainchop/utils/nd_image']
 
 # Define the extension module
 # btw maybe run python setup.py build_ext --inplace
@@ -29,7 +29,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="brainchop",
-    version="0.1.4",
+    version="0.1.5",
     author="Mike Doan",
     author_email="spikedoanz@gmail.com",
     description="Portable and lightweight brain segmentation using tinygrad",
@@ -51,9 +51,7 @@ setup(
         ],
     },
     include_package_data=True,
-    package_data={
-        "brainchop": ["model.json", "model.bin"],
-    },
+    package_data={},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
