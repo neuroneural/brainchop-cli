@@ -20,6 +20,7 @@ def load_tfjs_model(json_path, bin_path):
 def create_activation(name):
     activation_map = {
         "relu":         lambda x: x.relu(),
+        "gelu":         lambda x: x.gelu(),
         "elu":          lambda x: x.elu(),
         "sigmoid":      lambda x: x.sigmoid(),
         "tanh":         lambda x: x.tanh(),
