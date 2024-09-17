@@ -8,7 +8,7 @@ from nibabel import save, load, Nifti1Image
 from tinygrad import Tensor
 import numpy as np
 from brainchop.model import meshnet
-from brainchop.conform import _conform
+from brainchop.niimath import conform
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
 MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
@@ -163,9 +163,8 @@ def main():
 			sys.exit(1)
 
 	try:
-		img = load(args.input)
 		# Apply _conform to the loaded image
-		img = _conform(img)
+		img, _affine, _header = conform(args.input)
 		tensor = np.array(img.dataobj).reshape(1, 1, 256, 256, 256)
 		t = Tensor(tensor.astype(np.float16))
 		out_tensor = meshnet(json_file, bin_file, t)

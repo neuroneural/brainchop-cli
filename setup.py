@@ -1,31 +1,24 @@
-from setuptools import setup, find_packages, Extension
-from setuptools.dist import Distribution
+from setuptools import setup, find_packages
+import os
+import platform
+import shutil
 
-setup_requires = ['numpy']
+def get_niimath_path():
+    system = platform.system().lower()
+    if system == 'linux':
+        return os.path.join('brainchop', 'niimath', 'linux', 'niimath')
+    elif system == 'darwin':
+        return os.path.join('brainchop', 'niimath', 'macos', 'niimath')
+    elif system == 'windows':
+        return os.path.join('brainchop', 'niimath', 'windows', 'niimath.exe')
+    else:
+        raise OSError(f"Unsupported operating system: {system}")
 
-# Attempt to import numpy, but don't fail if it's not available
-try:
-    import numpy
-    numpy_include = [numpy.get_include()]
-except ImportError:
-    numpy_include = ['.', 'brainchop/utils/nd_image']
-
-# Define the extension module
-# btw maybe run python setup.py build_ext --inplace
-nd_image_module = Extension('brainchop.utils._nd_image',
-                            sources=['brainchop/utils/nd_image/nd_image.c',
-                                     'brainchop/utils/nd_image/ni_filters.c',
-                                     'brainchop/utils/nd_image/ni_fourier.c',
-                                     'brainchop/utils/nd_image/ni_interpolation.c',
-                                     'brainchop/utils/nd_image/ni_measure.c',
-                                     'brainchop/utils/nd_image/ni_morphology.c',
-                                     'brainchop/utils/nd_image/ni_splines.c',
-                                     'brainchop/utils/nd_image/ni_support.c'],
-                            include_dirs=numpy_include,
-                            extra_compile_args=['-std=c99'])
-
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+def copy_niimath_executable(setup_kwargs):
+    niimath_src = get_niimath_path()
+    niimath_dest = os.path.join('brainchop', 'niimath')
+    os.makedirs(niimath_dest, exist_ok=True)
+    shutil.copy2(niimath_src, niimath_dest)
 
 setup(
     name="brainchop",
@@ -33,14 +26,14 @@ setup(
     author="Mike Doan",
     author_email="spikedoanz@gmail.com",
     description="Portable and lightweight brain segmentation using tinygrad",
-    long_description=long_description,
+    long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/neuroneural/brainchop-cli",
     packages=find_packages(),
-    ext_modules=[nd_image_module],
-    setup_requires=setup_requires,
+    setup_requires=[
+        'pybind11>=2.5.0',
+    ],
     install_requires=[
-        'numpy',
         'tinygrad',
         'requests',
         'nibabel',
@@ -51,7 +44,9 @@ setup(
         ],
     },
     include_package_data=True,
-    package_data={},
+    package_data={
+        'brainchop': ['niimath/*'],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -59,3 +54,6 @@ setup(
     ],
     python_requires='>=3.6',
 )
+
+if __name__ == '__main__':
+    copy_niimath_executable(locals())

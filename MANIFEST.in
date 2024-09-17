@@ -1,0 +1,5 @@
+# brainchop-cli/MANIFEST.in
+
+recursive-include brainchop/niimath/linux niimath
+recursive-include brainchop/niimath/macos niimath
+# recursive-include brainchop/niimath/windows niimath.exe
