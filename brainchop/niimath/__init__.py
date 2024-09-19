@@ -107,7 +107,7 @@ def conform(input_image_path, output_image_path="conformed.nii.gz"):
     header = img.header
 
     # Construct niimath arguments
-    args = [input_image_path] + ['-conform'] + [output_image_path] 
+    args = [input_image_path] + ['-conform'] + [output_image_path] + ['-odt', 'char']
 
     # Run niimath
     _run_niimath(args)
