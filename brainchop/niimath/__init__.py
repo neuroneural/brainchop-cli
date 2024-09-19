@@ -4,7 +4,6 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-import shlex
 
 import nibabel as nib # todo: remove nibabel
 
@@ -60,10 +59,6 @@ def _run_niimath(args):
     # Initialize the command with the executable
     cmd = [exe] + args
 
-    # For debugging: print the command being executed
-    cmd_str = ' '.join(shlex.quote(arg) for arg in cmd)
-    print(f"Executing command: {cmd_str}")
-
     try:
         # Execute the command
         result = subprocess.run(
@@ -114,4 +109,7 @@ def conform(input_image_path, output_image_path="conformed.nii.gz"):
 
     # Load and return the conformated image
     conform_img = nib.load(output_image_path) # todo: do this all in mem
+
+    #subprocess.run(['rm', output_image_path]) # delete the conformed image
+
     return conform_img, affine, header
