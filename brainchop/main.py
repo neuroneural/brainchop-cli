@@ -9,7 +9,7 @@ from nibabel import save, load, Nifti1Image
 from tinygrad import Tensor
 import numpy as np
 from brainchop.model import meshnet
-from brainchop.niimath import conform, inverse_conform
+from brainchop.niimath import conform, inverse_conform, bwlabel
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
 MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
@@ -174,6 +174,7 @@ def main():
         save(Nifti1Image(out_tensor, img.affine, img.header), args.output)
 
         # connected component mask
+        bwlabel(args.output)
 
         # inverse transform
         inverse_conform(args.input, args.output)

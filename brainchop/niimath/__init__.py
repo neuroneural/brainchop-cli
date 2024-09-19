@@ -4,8 +4,11 @@ import os
 import sys
 import subprocess
 from pathlib import Path
+import numpy as np
+from tinygrad import Tensor
 
 import nibabel as nib # todo: remove nibabel
+
 
 def _get_executable():
     """
@@ -125,3 +128,23 @@ def inverse_conform(input_image_path, output_image_path):
     comply_args = ['-comply'] + shape + voxel_size + f_high + isLinear
     args = [output_image_path] + comply_args  + [output_image_path]
     _run_niimath(args)
+
+def bwlabel(image_path, neighbors=26):
+    """
+    Performs in place connected component labelling for non-zero voxels 
+    (conn sets neighbors: 6, 18, 26)
+    """
+    mask_path = "bwlabel_mask.nii.gz" # TODO: do this in memory
+    args = [image_path] + ['-bwlabel', str(neighbors)] + [mask_path]
+    _run_niimath(args)
+
+    img = nib.load(image_path)
+
+    image, affine, header = Tensor(np.array(img.dataobj)), img.affine, img.header # obtain image data
+
+    mask = Tensor(np.array(nib.load(mask_path).dataobj)) # obtain mask tensor
+
+    ret = (mask * image).numpy() # apply mask
+
+    subprocess.run(['rm', mask_path])
+    nib.save(nib.Nifti1Image(ret, affine, header), image_path)
