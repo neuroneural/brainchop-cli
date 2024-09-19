@@ -1,6 +1,6 @@
 *nii.gz
 venv/
-*.egg-info
+*.egg-info/
 __pycache__/
 build/
 dist/
