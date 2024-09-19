@@ -110,6 +110,18 @@ def conform(input_image_path, output_image_path="conformed.nii.gz"):
     # Load and return the conformated image
     conform_img = nib.load(output_image_path) # todo: do this all in mem
 
-    #subprocess.run(['rm', output_image_path]) # delete the conformed image
-
     return conform_img, affine, header
+
+def inverse_conform(input_image_path, output_image_path):
+    """
+    Performs an inverse conform in place of the image at output_image_path into
+    the shape of the input_image_path.
+    """
+    img = nib.load(input_image_path)
+    shape = [str(i) for i in img.header.get_data_shape()]
+    voxel_size = ['1']*3
+    f_high = ['0.98'] # top 2%
+    isLinear = ['1'] # replace with 0 for nearest neighbor
+    comply_args = ['-comply'] + shape + voxel_size + f_high + isLinear
+    args = [output_image_path] + comply_args  + [output_image_path]
+    _run_niimath(args)
