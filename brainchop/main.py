@@ -173,13 +173,12 @@ def main():
         # model raw output
         save(Nifti1Image(out_tensor, img.affine, img.header), args.output)
 
-        # connected component mask
-        bwlabel(args.output)
 
         # inverse transform
         inverse_conform(args.input, args.output)
 
-
+        # connected component mask
+        bwlabel(args.output)
 
 
         print(f"Output saved as {args.output}")
