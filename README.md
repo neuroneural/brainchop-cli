@@ -20,6 +20,20 @@ To use BrainChop, run the following command:
 brainchop input.nii.gz -o output.nii.gz
 ```
 
+## Docker
+
+You can also install BrainChop using docker
+```
+git@github.com:neuroneural/brainchop-cli.git
+cd brainchop-cli
+docker build -t brainchop
+```
+
+Then to run, use
+```
+docker run brainchop [[input nifti file]] -o [[output nifti file]]
+```
+
 Where:
 - `input.nii.gz` is your input NIfTI file
 - `output.nii.gz` is the desired output file name

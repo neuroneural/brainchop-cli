@@ -3,23 +3,6 @@ import json
 from pathlib import Path
 import sys
 
-def load_models():
-    local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
-    if local_models_file.exists():
-        with open(local_models_file, "r") as f:
-            return json.load(f)
-    else:
-        return download_models_json()
-
-global BASE_URL
-global MODELS_JSON_URL
-global AVAILALBE_MODELS
-
-BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
-MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
-AVAILABLE_MODELS = load_models()
-
-
 def download_models_json():
     try:
         response = requests.get(MODELS_JSON_URL)
@@ -37,6 +20,22 @@ def download_models_json():
     except Exception as e:
         print(f"Error downloading models.json: {str(e)}")
         sys.exit(1)
+
+def load_models():
+    local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
+    if local_models_file.exists():
+        with open(local_models_file, "r") as f:
+            return json.load(f)
+    else:
+        return download_models_json()
+
+global BASE_URL
+global MODELS_JSON_URL
+global AVAILALBE_MODELS
+
+BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
+MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
+AVAILABLE_MODELS = load_models()
 
 
 def update_models():
