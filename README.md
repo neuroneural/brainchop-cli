@@ -24,9 +24,9 @@ brainchop input.nii.gz -o output.nii.gz
 
 You can also install BrainChop using docker
 ```
-git@github.com:neuroneural/brainchop-cli.git
+git clone git@github.com:neuroneural/brainchop-cli.git
 cd brainchop-cli
-docker build -t brainchop
+docker build -t brainchop .
 ```
 
 Then to run, use
