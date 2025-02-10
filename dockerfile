@@ -1,5 +1,4 @@
-# Use Ubuntu base image for building
-FROM ubuntu:22.04 AS builder
+FROM nvidia/cuda:12.3.1-runtime-ubuntu22.04 AS builder
 # Install build dependencies
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
