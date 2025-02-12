@@ -2,11 +2,13 @@ import os
 import sys
 import argparse
 import subprocess
-from nibabel import save, Nifti1Image
-from tinygrad import Tensor
+from nibabel.nifti1 import save, Nifti1Image
+from tinygrad.tensor import Tensor
 import numpy as np
 from brainchop.model import meshnet
 from brainchop.niimath import conform, inverse_conform, bwlabel
+from tinygrad.device import Device
+from tinygrad.helpers import getenv
 from .utils import update_models, list_available_models, find_model_files, AVAILABLE_MODELS
 
 def find_model_in_path(model_path: str) -> tuple[str | None, str | None]:
@@ -59,6 +61,8 @@ def main():
     parser.add_argument("-c", "--custom", type=str, 
                         help="Path to custom model directory or model file (will look for model.json and model.bin)")
     
+    if getenv("PRINT_DEVICE", 0):
+        print(Device.default)
     args = parser.parse_args()
 
     # Early interrupt options
