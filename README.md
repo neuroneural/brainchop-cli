@@ -34,6 +34,11 @@ Then to run, use
 docker run brainchop [[input nifti file]] -o [[output nifti file]]
 ```
 
+On some systems (like recent 25.05 nixos), the docker run command will need to be prepended with
+```
+docker run --rm -it --device=nvidia.com/gpu=all
+```
+
 Where:
 - `input.nii.gz` is your input NIfTI file
 - `output.nii.gz` is the desired output file name
