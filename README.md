@@ -31,7 +31,7 @@ docker build -t brainchop .
 
 Then to run, use
 ```
-docker run brainchop [[input nifti file]] -o [[output nifti file]]
+docker run --rm -it --device=nvidia.com/gpu=all -v [[output directory]]:/app brainchop [[input nifti file]] -o [[output nifti file]]
 ```
 
 On some systems (like recent 25.05 nixos), the docker run command will need to be prepended with
