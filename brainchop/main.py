@@ -60,6 +60,8 @@ def main():
                         help=f"Name of segmentation model, default: {default_model}")
     parser.add_argument("-c", "--custom", type=str, 
                         help="Path to custom model directory or model file (will look for model.json and model.bin)")
+    parser.add_argument("-ec", "--export-classes", action="store_true", 
+                        help="Export all class label probability maps before argmax")
     
     if getenv("PRINT_DEVICE", 0):
         print(Device.default)
@@ -101,10 +103,23 @@ def main():
         tensor = np.array(img.dataobj).reshape(1, 1, 256, 256, 256)
         t = Tensor(tensor.astype(np.float16))
         
-        out_tensor = meshnet(json_file, bin_file, t)
+        out_tensor, raw_classes = meshnet(json_file, bin_file, t, args.export_classes)
         
         # model raw output
         save(Nifti1Image(out_tensor, img.affine, img.header), args.output)
+        
+        # Export individual class probability maps if requested
+        if args.export_classes and raw_classes is not None:
+            output_base = os.path.splitext(args.output)[0]
+            if output_base.endswith('.nii'):
+                output_base = os.path.splitext(output_base)[0]
+                
+            num_classes = raw_classes.shape[1]
+            for class_idx in range(num_classes):
+                class_output_path = f"{output_base}_class{class_idx}.nii.gz"
+                class_data = raw_classes[0, class_idx]
+                save(Nifti1Image(class_data, img.affine, img.header), class_output_path)
+                print(f"Class {class_idx} probability map saved as {class_output_path}")
         
         # connected component mask
         bwlabel(args.output)

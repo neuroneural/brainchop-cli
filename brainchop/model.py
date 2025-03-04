@@ -122,7 +122,7 @@ class MeshNetModel:
         
         return x, weight_index, out_channels
 
-def meshnet(json_path: str, bin_path: str, x: np.ndarray | Tensor) -> np.ndarray:
+def meshnet(json_path: str, bin_path: str, x: np.ndarray | Tensor, export_classes: bool = False) -> tuple[np.ndarray, np.ndarray | None]:
     model = MeshNetModel()
     model_spec, weights_data = model.load_model_spec(json_path, bin_path)
     
@@ -149,4 +149,9 @@ def meshnet(json_path: str, bin_path: str, x: np.ndarray | Tensor) -> np.ndarray
             activation = model.activation_map[layer["config"]["activation"]]
             x = activation(x)
     
-    return x.argmax(1).numpy()[0]
+    # Return both raw output and argmax if export_classes is True
+    if export_classes:
+        raw_output = x.numpy()
+        return x.argmax(1).numpy()[0], raw_output
+    else:
+        return x.argmax(1).numpy()[0], None
