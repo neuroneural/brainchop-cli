@@ -1,18 +1,11 @@
 import os
-import sys
 import numpy as np
 import nibabel as nib
 from tinygrad.tensor import Tensor
-from pathlib import Path
 from skimage.transform import resize
 from nibabel.orientations import axcodes2ornt, ornt_transform
-from tqdm import tqdm
-import time
-
-# Import the TinyONNX runner
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from multiaxial_brain_segmenter.tinyonnx import OnnxRunner
-
+from tinygrad.helpers import tqdm
+from .tinyonnx import OnnxRunner
 
 # ---------------------------
 # Image Orientation Functions
@@ -125,25 +118,8 @@ def preprocess_head_MRI(nii, anterior_commissure=None, keep_parameters_for_recon
 # TinyGrad ONNX Segmentation Logic
 # ------------------
 def process_slices(runner, img, coords, axis=0, input_names=None):
-    """
-    Process slices through the model and return the predictions.
-    
-    Args:
-        runner: OnnxRunner instance
-        img: The preprocessed image data
-        coords: The coordinate data
-        axis: Axis to slice along (0=sagittal, 1=coronal, 2=axial)
-        input_names: Dictionary mapping input types to model input names
-    
-    Returns:
-        Predictions as a 4D numpy array [height, width, depth, classes]
-    """
     # Initialize output array (7 classes per slice prediction)
     output = np.zeros((img.shape[0], img.shape[1], img.shape[2], 7), dtype=np.float32)
-    
-    # Map axis numbers to names for logging
-    axis_names = {0: "sagittal", 1: "coronal", 2: "axial"}
-    print(f"Processing {img.shape[axis]} {axis_names[axis]} slices...")
     
     # Default input names if not provided
     if input_names is None:
@@ -203,15 +179,6 @@ def get_input_names(model):
     return input_names
 
 def extract_weights_from_onnx(model_path):
-    """
-    Extract weights and biases from the consensus layer ONNX model.
-    
-    Args:
-        model_path: Path to the ONNX model file
-        
-    Returns:
-        tuple: (weights, biases)
-    """
     import onnx
     from onnx import numpy_helper
     
@@ -224,25 +191,11 @@ def extract_weights_from_onnx(model_path):
     for initializer in model.graph.initializer:
         if initializer.name == "model/conv3d/Conv3D/ReadVariableOp:0":
             weights = numpy_helper.to_array(initializer)
-            print(f"Extracted consensus weights with shape {weights.shape}")
         elif initializer.name == "model/conv3d/BiasAdd/ReadVariableOp:0":
             biases = numpy_helper.to_array(initializer)
-            print(f"Extracted consensus biases with shape {biases.shape}")
-    
     return weights, biases
 
 def optimized_consensus(combined_data, weights, biases):
-    """
-    Apply the optimized consensus function using direct matrix multiplication.
-    
-    Args:
-        combined_data: Combined data with shape [height, width, depth, channels]
-        weights: Convolution weights with shape [7, 22, 1, 1, 1]
-        biases: Biases with shape [7]
-        
-    Returns:
-        numpy.ndarray: Final segmentation with shape [height, width, depth]
-    """
     height, width, depth, channels = combined_data.shape
     
     # Reshape weights to [22, 7] for matrix multiplication
@@ -256,7 +209,6 @@ def optimized_consensus(combined_data, weights, biases):
     total_voxels = flat_data.shape[0]
     output_flat = np.zeros(total_voxels, dtype=np.int64)
     
-    print(f"Processing {total_voxels} voxels through optimized consensus...")
     
     for start_idx in tqdm(range(0, total_voxels, batch_size)):
         end_idx = min(start_idx + batch_size, total_voxels)
@@ -303,7 +255,7 @@ def multiaxial_segmentation(img, model_dir):
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found: {model_path}")
     
-    # Preprocess the MRI
+    
     nii_out, coords, anterior_commissure, reconstruction_parms = preprocess_head_MRI(
         img, 
         anterior_commissure=None,
@@ -347,21 +299,11 @@ def multiaxial_segmentation(img, model_dir):
     # Prepare input for consensus model
     img_expanded = np.expand_dims(img_data, -1).astype(np.float32)
     
-    # Concatenate along the channel dimension
     combined_data = np.concatenate([
         img_expanded, 
         model_segmentation_sagittal,
         model_segmentation_coronal,
         model_segmentation_axial
     ], axis=-1)
-    
-    print(f"Combined data shape: {combined_data.shape}")
-    
-    # Apply optimized consensus function
-    start_time = time.time()
     output = optimized_consensus(combined_data, weights, biases)
-    end_time = time.time()
-    
-    print(f"Consensus processing completed in {end_time - start_time:.2f} seconds")
-    
     return output
