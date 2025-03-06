@@ -119,7 +119,7 @@ def preprocess_head_MRI(nii, anterior_commissure=None, keep_parameters_for_recon
 # ------------------
 # TinyGrad ONNX Segmentation Logic
 # ------------------
-def process_slices(runner, img, coords, axis=0, batch_size=2, input_names=None):
+def process_slices(runner, img, coords, axis=0, batch_size=1, input_names=None):
     # Initialize output array (7 classes per slice prediction)
     output = np.zeros((img.shape[0], img.shape[1], img.shape[2], 7), dtype=np.float32)
     
@@ -169,13 +169,13 @@ def process_slices(runner, img, coords, axis=0, batch_size=2, input_names=None):
     output_tensors = [list(out.values())[0] for out in all_outputs]
     
     # Concatenate along batch dimension
-    full_output = Tensor.cat(*output_tensors, dim=0).numpy()
+    full_output = Tensor.cat(*output_tensors, dim=0)
 
     # Apply axis-specific permutation
     if axis == 1:
-        full_output = np.transpose(full_output, (1, 0, 2, 3))
+        full_output = full_output.permute(1, 0, 2, 3)
     elif axis == 2:
-        full_output = np.transpose(full_output, (1, 2, 0, 3))
+        full_output = full_output.permute(1, 2, 0, 3)
 
     return output
 
