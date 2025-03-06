@@ -5,7 +5,9 @@ from tinygrad.tensor import Tensor
 from skimage.transform import resize
 from nibabel.orientations import axcodes2ornt, ornt_transform
 from tinygrad.helpers import tqdm
+import time
 from .tinyonnx import OnnxRunner
+
 
 # ---------------------------
 # Image Orientation Functions
@@ -117,55 +119,72 @@ def preprocess_head_MRI(nii, anterior_commissure=None, keep_parameters_for_recon
 # ------------------
 # TinyGrad ONNX Segmentation Logic
 # ------------------
-def process_slices(runner, img, coords, axis=0, input_names=None):
+def process_slices(runner, img, coords, axis=0, batch_size=2, input_names=None):
     # Initialize output array (7 classes per slice prediction)
     output = np.zeros((img.shape[0], img.shape[1], img.shape[2], 7), dtype=np.float32)
     
-    # Default input names if not provided
     if input_names is None:
         input_names = {"img": "input_1", "coords": "input_2"}
     
     img_input_name = input_names["img"]
     coords_input_name = input_names["coords"]
     
-    # Process each slice
-    for i in tqdm(range(img.shape[axis])):
-        # Extract 2D slice based on the specified axis
-        if axis == 0:  # Sagittal (YZ plane)
-            img_slice = img[i, :, :]
-            coords_slice = coords[i, :, :, :]
-        elif axis == 1:  # Coronal (XZ plane)
-            img_slice = img[:, i, :]
-            coords_slice = coords[:, i, :, :]
-        else:  # Axial (XY plane)
-            img_slice = img[:, :, i]
-            coords_slice = coords[:, :, i, :]
+    num_slices = img.shape[axis]
+    all_img_batches = []
+    all_coords_batches = []
+    all_batch_indices = []
+
+    print('prep batch')
+    # Prepare all input batches
+    for batch_start in range(0, num_slices, batch_size):
+        batch_end = min(batch_start + batch_size, num_slices)
+        batch_size_actual = batch_end - batch_start
         
-        # Prepare inputs with correct shapes
-        img_input = np.expand_dims(np.expand_dims(img_slice, -1), 0).astype(np.float32)
-        coords_input = np.expand_dims(coords_slice, 0).astype(np.float32)
+        if axis == 0:
+            img_batch = img[batch_start:batch_end, :, :].reshape(batch_size_actual, img.shape[1], img.shape[2], 1)
+            coords_batch = coords[batch_start:batch_end, :, :, :]
+        elif axis == 1:
+            img_batch = img[:, batch_start:batch_end, :].transpose(1, 0, 2).reshape(batch_size_actual, img.shape[0], img.shape[2], 1)
+            coords_batch = coords[:, batch_start:batch_end, :, :].transpose(1, 0, 2, 3)
+        else:
+            img_batch = img[:, :, batch_start:batch_end].transpose(2, 0, 1).reshape(batch_size_actual, img.shape[0], img.shape[1], 1)
+            coords_batch = coords[:, :, batch_start:batch_end, :].transpose(2, 0, 1, 3)
         
-        # Create TinyGrad tensors
-        img_tensor = Tensor(img_input, requires_grad=False)
-        coords_tensor = Tensor(coords_input, requires_grad=False)
-        
-        # Run inference with correct input names
-        outputs = runner({
-            img_input_name: img_tensor, 
-            coords_input_name: coords_tensor
-        })
-        
-        # Get output tensor and convert to numpy
-        output_tensor = list(outputs.values())[0]
-        
-        # Store prediction according to the correct axis
-        if axis == 0:  # Sagittal
-            output[i, :, :, :] = output_tensor.numpy()[0]
-        elif axis == 1:  # Coronal
-            output[:, i, :, :] = output_tensor.numpy()[0]
-        else:  # Axial
-            output[:, :, i, :] = output_tensor.numpy()[0]
+        all_img_batches.append(img_batch.astype(np.float32))
+        all_coords_batches.append(coords_batch.astype(np.float32))
+        all_batch_indices.append((batch_start, batch_end))
+
+    print('inference')
+    # Create inputs and run inference
+    all_outputs = []
+    for img_batch, coords_batch in zip(all_img_batches, all_coords_batches):
+        model_input = {
+            img_input_name: Tensor(img_batch),
+            coords_input_name: Tensor(coords_batch)
+        }
+        all_outputs.append(runner(model_input))
+
+    print('stitch')
+    # Process outputs
+    output_tensors = [list(out.values())[0] for out in all_outputs]
     
+    # Concatenate along batch dimension
+    full_output = Tensor.cat(*output_tensors, dim=0).numpy()
+
+    # Apply axis-specific permutation
+    if axis == 1:
+        full_output = np.transpose(full_output, (1, 0, 2, 3))
+    elif axis == 2:
+        full_output = np.transpose(full_output, (1, 2, 0, 3))
+
+    # Assign to output array
+    if axis == 0:
+        output[:, :, :, :] = full_output
+    elif axis == 1:
+        output[:, :, :, :] = full_output
+    else:
+        output[:, :, :, :] = full_output
+
     return output
 
 def get_input_names(model):
