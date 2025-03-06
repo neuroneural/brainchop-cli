@@ -128,9 +128,9 @@ def process_slices(runner, img, coords, axis=0, input_names=None):
     img_input_name = input_names["img"]
     coords_input_name = input_names["coords"]
     
-    # Process each slice
-    for i in tqdm(range(img.shape[axis])):
-        # Extract 2D slice based on the specified axis
+    # First loop: Collect all input slices and their indices
+    inputs = []
+    for i in range(img.shape[axis]):
         if axis == 0:  # Sagittal (YZ plane)
             img_slice = img[i, :, :]
             coords_slice = coords[i, :, :, :]
@@ -144,27 +144,28 @@ def process_slices(runner, img, coords, axis=0, input_names=None):
         # Prepare inputs with correct shapes
         img_input = np.expand_dims(np.expand_dims(img_slice, -1), 0).astype(np.float32)
         coords_input = np.expand_dims(coords_slice, 0).astype(np.float32)
-        
-        # Create TinyGrad tensors
-        img_tensor = Tensor(img_input, requires_grad=False)
-        coords_tensor = Tensor(coords_input, requires_grad=False)
-        
-        # Run inference with correct input names
-        outputs = runner({
+        inputs.append((i, img_input, coords_input))
+    
+    # Second loop: Process all collected inputs through the model
+    outputs = []
+    for i, img_in, coord_in in tqdm(inputs, desc="Processing slices"):
+        img_tensor = Tensor(img_in, requires_grad=False)
+        coords_tensor = Tensor(coord_in, requires_grad=False)
+        model_outputs = runner({
             img_input_name: img_tensor, 
             coords_input_name: coords_tensor
         })
-        
-        # Get output tensor and convert to numpy
-        output_tensor = list(outputs.values())[0]
-        
-        # Store prediction according to the correct axis
-        if axis == 0:  # Sagittal
-            output[i, :, :, :] = output_tensor.numpy()[0]
-        elif axis == 1:  # Coronal
-            output[:, i, :, :] = output_tensor.numpy()[0]
-        else:  # Axial
-            output[:, :, i, :] = output_tensor.numpy()[0]
+        output_tensor = list(model_outputs.values())[0]
+        outputs.append((i, output_tensor.numpy()[0]))
+    
+    # Third loop: Stitch outputs back into the result array
+    for i, out in outputs:
+        if axis == 0:
+            output[i, :, :, :] = out
+        elif axis == 1:
+            output[:, i, :, :] = out
+        else:
+            output[:, :, i, :] = out
     
     return output
 
