@@ -118,9 +118,6 @@ def preprocess_head_MRI(nii, anterior_commissure=None, keep_parameters_for_recon
 # TinyGrad ONNX Segmentation Logic
 # ------------------
 def process_slices(runner, img, coords, axis=0, input_names=None):
-    # Initialize output array (7 classes per slice prediction)
-    output = np.zeros((img.shape[0], img.shape[1], img.shape[2], 7), dtype=np.float32)
-    
     # Default input names if not provided
     if input_names is None:
         input_names = {"img": "input_1", "coords": "input_2"}
@@ -128,7 +125,7 @@ def process_slices(runner, img, coords, axis=0, input_names=None):
     img_input_name = input_names["img"]
     coords_input_name = input_names["coords"]
     
-    # First loop: Collect all input slices and their indices
+    # First loop: Collect all input slices
     inputs = []
     for i in range(img.shape[axis]):
         if axis == 0:  # Sagittal (YZ plane)
@@ -141,33 +138,42 @@ def process_slices(runner, img, coords, axis=0, input_names=None):
             img_slice = img[:, :, i]
             coords_slice = coords[:, :, i, :]
         
-        # Prepare inputs with correct shapes
+        # Prepare inputs with correct shapes (add batch and channel dims)
         img_input = np.expand_dims(np.expand_dims(img_slice, -1), 0).astype(np.float32)
         coords_input = np.expand_dims(coords_slice, 0).astype(np.float32)
-        inputs.append((i, img_input, coords_input))
+        inputs.append((img_input, coords_input))
     
-    # Second loop: Process all collected inputs through the model
+    # Second loop: Process all inputs through the model
     outputs = []
-    for i, img_in, coord_in in tqdm(inputs, desc="Processing slices"):
+    for img_in, coord_in in tqdm(inputs, desc="Processing slices"):
         img_tensor = Tensor(img_in, requires_grad=False)
         coords_tensor = Tensor(coord_in, requires_grad=False)
         model_outputs = runner({
             img_input_name: img_tensor, 
             coords_input_name: coords_tensor
         })
+        # Get output tensor and keep batch dimension
         output_tensor = list(model_outputs.values())[0]
-        outputs.append((i, output_tensor.numpy()[0]))
+        ## This has to be done in numpy for some reason. Doing natively in tinygrad breaks it.
+        outputs.append(output_tensor.numpy())
     
-    # Third loop: Stitch outputs back into the result array
-    for i, out in outputs:
-        if axis == 0:
-            output[i, :, :, :] = out
-        elif axis == 1:
-            output[:, i, :, :] = out
-        else:
-            output[:, :, i, :] = out
+    # Concatenate all outputs along batch dimension (axis=0)
+    #all_outputs = np.concatenate(outputs, axis=0)
+
+    #outputs = [Tensor(o) for o in outputs]
+    #all_outputs = Tensor.cat(*outputs, dim=0).realize().numpy()
+    all_outputs = np.concatenate(outputs, axis=0)
+    # Transpose to match original axis orientation
+    if axis == 0:
+        final_output = all_outputs
+    elif axis == 1:
+        # From (N, H, W, C) to (H, N, W, C)
+        final_output = np.transpose(all_outputs, (1, 0, 2, 3))
+    else:
+        # From (N, H, W, C) to (H, W, N, C)
+        final_output = np.transpose(all_outputs, (1, 2, 0, 3))
     
-    return output
+    return final_output
 
 def get_input_names(model):
     """Extract input names from an ONNX model."""
