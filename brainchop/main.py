@@ -9,7 +9,8 @@ from brainchop.model import meshnet
 from brainchop.niimath import conform, inverse_conform, bwlabel
 from tinygrad.device import Device
 from tinygrad.helpers import getenv
-from .utils import update_models, list_available_models, find_model_files, AVAILABLE_MODELS
+from pathlib import Path
+from .utils import update_models, list_available_models, find_model_files, download_multiaxial_model, AVAILABLE_MODELS
 
 def find_custom_model(model_path: str) -> tuple[str | None, str | None]:
     try:
@@ -36,6 +37,21 @@ def validate_file_exists(file_path: str, description: str) -> None:
     if not os.path.isfile(file_path):
         print(f"Error: {description} not found: {file_path}")
         sys.exit(1)
+
+def ensure_multiaxial_model_files(model_dir: str) -> bool:
+    """Ensure all required ONNX files for multiaxial model exist, download if needed."""
+    model_dir_path = Path(model_dir)
+    required_files = ["sagittal_model.onnx", "coronal_model.onnx", "axial_model.onnx", "consensus_layer.onnx"]
+    
+    # Check if all files exist
+    all_exist = all(os.path.isfile(model_dir_path / file) for file in required_files)
+    
+    if not all_exist:
+        print(f"Some multiaxial model files are missing in {model_dir}")
+        # Try to download from GitHub
+        return download_multiaxial_model(model_dir_path)
+    
+    return True
 
 def process_meshnet_model(args, json_file: str, bin_file: str) -> None:
     validate_file_exists(args.input, "Input file")
@@ -83,13 +99,10 @@ def process_multiaxial_model(args, model_dir: str) -> None:
         # Ensure model_dir is an absolute path
         model_dir = os.path.abspath(model_dir)
         
-        # Validate required model files exist
-        required_files = ["sagittal_model.onnx", "coronal_model.onnx", "axial_model.onnx", "consensus_layer.onnx"]
-        for file in required_files:
-            file_path = os.path.join(model_dir, file)
-            if not os.path.isfile(file_path):
-                print(f"Error: Required model file not found: {file_path}")
-                sys.exit(1)
+        # Check if all required ONNX files exist, download if needed
+        if not ensure_multiaxial_model_files(model_dir):
+            print("Error: Failed to ensure all required multiaxial model files are available")
+            sys.exit(1)
         
         print(f"Using multiaxial model from: {model_dir}")
         
@@ -120,6 +133,8 @@ def main():
     parser.add_argument("-m", "--model", default="", help=f"Name of segmentation model, default: {default_model}")
     parser.add_argument("-c", "--custom", type=str, help="Path to custom model directory or file (MeshNet or Multiaxial model)")
     parser.add_argument("-ec", "--export-classes", action="store_true", help="Export class probability maps (MeshNet only)")
+    parser.add_argument("--cache-dir", type=str, default=str(Path.home() / ".cache" / "brainchop" / "models" / "multiaxial"),
+                        help="Directory to cache downloaded multiaxial models")
 
     if getenv("PRINT_DEVICE", 0):
         print(Device.default)
@@ -166,18 +181,24 @@ def main():
     # No custom path provided, use standard model from repository
     else:
         is_multiaxial = args.model in AVAILABLE_MODELS and AVAILABLE_MODELS[args.model].get("model_type") == "multiaxial"
-        model_dir_or_json, bin_file = find_model_files(args.model)
-
-        if not model_dir_or_json:
-            print("Error: Unable to locate or download the required model files.")
-            sys.exit(1)
-
+        
         if is_multiaxial:
-            process_multiaxial_model(args, model_dir_or_json)
+            # For multiaxial models, use cache directory directly
+            cache_dir = Path(args.cache_dir)
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            process_multiaxial_model(args, str(cache_dir))
         else:
+            # For MeshNet models, use standard approach
+            model_dir_or_json, bin_file = find_model_files(args.model)
+            
+            if not model_dir_or_json:
+                print("Error: Unable to locate or download the required model files.")
+                sys.exit(1)
+            
             if not bin_file:
                 print("Error: MeshNet model requires both JSON and binary files.")
                 sys.exit(1)
+            
             process_meshnet_model(args, model_dir_or_json, bin_file)
 
     if os.path.exists("conformed.nii.gz"):

@@ -31,9 +31,11 @@ def load_models():
 
 global BASE_URL
 global MODELS_JSON_URL
+global MULTIAXIAL_BASE_URL
 global AVAILABLE_MODELS
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
+MULTIAXIAL_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/multiaxial/"
 MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
 AVAILABLE_MODELS = load_models()
 
@@ -48,6 +50,60 @@ def list_available_models():
     print("Available models:")
     for model, details in AVAILABLE_MODELS.items():
         print(f"- {model}: {details['description']}")
+
+def download_file(url, local_path):
+    """Helper function to download a file from URL to local path."""
+    try:
+        print(f"Downloading from {url} to {local_path}...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        with open(local_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"Successfully downloaded to {local_path}")
+        return True
+    except requests.RequestException as e:
+        print(f"Failed to download: {str(e)}")
+        return False
+
+def download_multiaxial_model(target_dir):
+    """Download multiaxial model files to the specified directory."""
+    required_files = [
+        "axial_model.onnx",
+        "coronal_model.onnx", 
+        "sagittal_model.onnx",
+        "consensus_layer.onnx"
+    ]
+    
+    # Ensure target directory exists
+    if isinstance(target_dir, str):
+        target_dir = Path(target_dir)
+    
+    target_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading multiaxial model files to {target_dir}")
+    
+    success = True
+    for file in required_files:
+        url = f"{MULTIAXIAL_BASE_URL}{file}"
+        local_path = target_dir / file
+        
+        # Skip download if file already exists
+        if local_path.exists():
+            print(f"File {file} already exists at {local_path}")
+            continue
+        
+        if not download_file(url, local_path):
+            success = False
+            print(f"Failed to download {file}")
+    
+    if success:
+        print("Successfully downloaded all multiaxial model files")
+    else:
+        print("Failed to download some or all multiaxial model files")
+    
+    return success
 
 def download_model(model_name):
     if model_name not in AVAILABLE_MODELS:
@@ -77,16 +133,7 @@ def download_model(model_name):
         local_path = cache_dir / file
         
         if not local_path.exists():
-            print(f"Downloading {file} from {url}...")
-            try:
-                response = requests.get(url, stream=True)
-                response.raise_for_status()
-                with open(local_path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                print(f"Downloaded {file} to {local_path}")
-            except requests.RequestException as e:
-                print(f"Failed to download {file}: {str(e)}")
+            if not download_file(url, str(local_path)):
                 return None
         else:
             print(f"{file} already exists at {local_path}")
@@ -167,3 +214,23 @@ def find_model_files(model_name):
             print(f"Using cached MeshNet model files from {cache_dir}")
         
         return str(json_file), str(bin_file)
+
+def check_multiaxial_cache():
+    """Check if multiaxial model files exist in the default cache location."""
+    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / "multiaxial"
+    
+    required_files = [
+        "axial_model.onnx",
+        "coronal_model.onnx", 
+        "sagittal_model.onnx",
+        "consensus_layer.onnx"
+    ]
+    
+    if not cache_dir.exists():
+        return False, cache_dir
+    
+    missing_files = [f for f in required_files if not (cache_dir / f).is_file()]
+    if missing_files:
+        return False, cache_dir
+    
+    return True, cache_dir
