@@ -177,14 +177,6 @@ def process_slices(runner, img, coords, axis=0, batch_size=2, input_names=None):
     elif axis == 2:
         full_output = np.transpose(full_output, (1, 2, 0, 3))
 
-    # Assign to output array
-    if axis == 0:
-        output[:, :, :, :] = full_output
-    elif axis == 1:
-        output[:, :, :, :] = full_output
-    else:
-        output[:, :, :, :] = full_output
-
     return output
 
 def get_input_names(model):
