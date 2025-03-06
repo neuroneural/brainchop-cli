@@ -31,12 +31,13 @@ def load_models():
 
 global BASE_URL
 global MODELS_JSON_URL
-global AVAILALBE_MODELS
+global MULTIAXIAL_BASE_URL
+global AVAILABLE_MODELS
 
-BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
+BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
+MULTIAXIAL_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/multiaxial/"
 MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
 AVAILABLE_MODELS = load_models()
-
 
 def update_models():
     global AVAILABLE_MODELS
@@ -50,6 +51,60 @@ def list_available_models():
     for model, details in AVAILABLE_MODELS.items():
         print(f"- {model}: {details['description']}")
 
+def download_file(url, local_path):
+    """Helper function to download a file from URL to local path."""
+    try:
+        print(f"Downloading from {url} to {local_path}...")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        with open(local_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"Successfully downloaded to {local_path}")
+        return True
+    except requests.RequestException as e:
+        print(f"Failed to download: {str(e)}")
+        return False
+
+def download_multiaxial_model(target_dir):
+    """Download multiaxial model files to the specified directory."""
+    required_files = [
+        "axial_model.onnx",
+        "coronal_model.onnx", 
+        "sagittal_model.onnx",
+        "consensus_layer.onnx"
+    ]
+    
+    # Ensure target directory exists
+    if isinstance(target_dir, str):
+        target_dir = Path(target_dir)
+    
+    target_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading multiaxial model files to {target_dir}")
+    
+    success = True
+    for file in required_files:
+        url = f"{MULTIAXIAL_BASE_URL}{file}"
+        local_path = target_dir / file
+        
+        # Skip download if file already exists
+        if local_path.exists():
+            print(f"File {file} already exists at {local_path}")
+            continue
+        
+        if not download_file(url, local_path):
+            success = False
+            print(f"Failed to download {file}")
+    
+    if success:
+        print("Successfully downloaded all multiaxial model files")
+    else:
+        print("Failed to download some or all multiaxial model files")
+    
+    return success
+
 def download_model(model_name):
     if model_name not in AVAILABLE_MODELS:
         print(f"Error: Model '{model_name}' is not available.")
@@ -58,22 +113,27 @@ def download_model(model_name):
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
     cache_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Target cache directory: {cache_dir}")
     
-    files_to_download = ["model.json", "model.bin"]
     downloaded_paths = {}
+    is_multiaxial = AVAILABLE_MODELS[model_name].get("model_type") == "multiaxial"
+    
+    files_to_download = (
+        [
+            "axial_model.onnx",
+            "coronal_model.onnx",
+            "sagittal_model.onnx",
+            "consensus_layer.onnx"
+        ] if is_multiaxial else
+        ["model.json", "model.bin"]
+    )
     
     for file in files_to_download:
         url = f"{BASE_URL}{model_dir}/{file}"
         local_path = cache_dir / file
         
         if not local_path.exists():
-            response = requests.get(url)
-            if response.status_code == 200:
-                with open(local_path, "wb") as f:
-                    f.write(response.content)
-                print(f"Downloaded {file} to {local_path}")
-            else:
-                print(f"Failed to download {file}. Status code: {response.status_code}")
+            if not download_file(url, str(local_path)):
                 return None
         else:
             print(f"{file} already exists at {local_path}")
@@ -84,37 +144,93 @@ def download_model(model_name):
 
 def find_model_files(model_name):
     if model_name == ".":
-        # Look for model files in the current directory
         current_dir = Path.cwd()
         json_file = current_dir / "model.json"
         bin_file = current_dir / "model.bin"
         if json_file.is_file() and bin_file.is_file():
             return str(json_file), str(bin_file)
-        else:
-            print("Model files not found in the current directory.")
-            return None, None
+        
+        # Also check for multiaxial model files in current directory
+        required_multiaxial_files = [
+            "axial_model.onnx",
+            "coronal_model.onnx",
+            "sagittal_model.onnx",
+            "consensus_layer.onnx"
+        ]
+        if all((current_dir / f).is_file() for f in required_multiaxial_files):
+            return str(current_dir), None
+        
+        print("Model files not found in the current directory.")
+        return None, None
     
     if not model_name:
-        # Default to the first model in AVAILABLE_MODELS
         model_name = next(iter(AVAILABLE_MODELS))
+        print(f"No model specified, defaulting to: {model_name}")
     
     if model_name not in AVAILABLE_MODELS:
         print(f"Error: Model '{model_name}' is not available.")
         return None, None
     
-    # Check in ~/.cache/brainchop/models/
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
-    json_file = cache_dir / "model.json"
-    bin_file = cache_dir / "model.bin"
+    print(f"Checking cache directory: {cache_dir}")
     
-    if not json_file.is_file() or not bin_file.is_file():
-        print(f"Model files for '{model_name}' not found locally. Downloading...")
-        downloaded_files = download_model(model_name)
-        if downloaded_files:
-            json_file = Path(downloaded_files["model.json"])
-            bin_file = Path(downloaded_files["model.bin"])
+    is_multiaxial = AVAILABLE_MODELS[model_name].get("model_type") == "multiaxial"
+    
+    if is_multiaxial:
+        required_files = [
+            "axial_model.onnx",
+            "coronal_model.onnx",
+            "sagittal_model.onnx",
+            "consensus_layer.onnx"
+        ]
+        all_files = {f: cache_dir / f for f in required_files}
+        
+        missing_files = [f for f, path in all_files.items() if not path.is_file()]
+        if missing_files:
+            print(f"Missing multiaxial files: {missing_files}. Initiating download...")
+            downloaded_files = download_model(model_name)
+            if not downloaded_files or len(downloaded_files) != len(required_files):
+                print(f"Failed to download all required multiaxial model files: {required_files}")
+                return None, None
+            print(f"Successfully downloaded multiaxial model files to {cache_dir}")
         else:
-            return None, None
+            print(f"Using cached multiaxial model files from {cache_dir}")
+        return str(cache_dir), None
+    else:
+        json_file = cache_dir / "model.json"
+        bin_file = cache_dir / "model.bin"
+        
+        if not json_file.is_file() or not bin_file.is_file():
+            print(f"MeshNet model files not found locally. Downloading...")
+            downloaded_files = download_model(model_name)
+            if downloaded_files:
+                json_file = Path(downloaded_files["model.json"])
+                bin_file = Path(downloaded_files["model.bin"])
+                print(f"Successfully downloaded MeshNet model files to {cache_dir}")
+            else:
+                return None, None
+        else:
+            print(f"Using cached MeshNet model files from {cache_dir}")
+        
+        return str(json_file), str(bin_file)
+
+def check_multiaxial_cache():
+    """Check if multiaxial model files exist in the default cache location."""
+    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / "multiaxial"
     
-    return str(json_file), str(bin_file)
+    required_files = [
+        "axial_model.onnx",
+        "coronal_model.onnx", 
+        "sagittal_model.onnx",
+        "consensus_layer.onnx"
+    ]
+    
+    if not cache_dir.exists():
+        return False, cache_dir
+    
+    missing_files = [f for f in required_files if not (cache_dir / f).is_file()]
+    if missing_files:
+        return False, cache_dir
+    
+    return True, cache_dir
