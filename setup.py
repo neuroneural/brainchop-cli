@@ -37,6 +37,9 @@ setup(
         'tinygrad',
         'requests',
         'nibabel',
+        'onnx>=1.15.0',
+        'scikit-image',
+        'tqdm',
     ],
     entry_points={
         "console_scripts": [
@@ -46,6 +49,7 @@ setup(
     include_package_data=True,
     package_data={
         'brainchop': ['niimath/*'],
+        'multiaxial_brain_segmenter': ['models/*.onnx'],
     },
     classifiers=[
         "Programming Language :: Python :: 3",

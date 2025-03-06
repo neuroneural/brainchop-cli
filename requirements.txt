@@ -2,3 +2,6 @@ numpy
 tinygrad
 nibabel
 requests
+onnx>=1.15.0
+scikit-image
+tqdm

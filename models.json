@@ -16,5 +16,12 @@
     "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
     "considerations": "min/max normalization",
     "parameter_name": "DKatlas"
+  },
+  "multiaxial": {
+    "folder": "multiaxial",
+    "description": "🧠 multi-axial 3D brain segmentation using sagittal, axial, and coronal views with a consensus layer",
+    "considerations": "uses ONNX models",
+    "parameter_name": "multiaxial",
+    "model_type": "multiaxial"
   }
 }
