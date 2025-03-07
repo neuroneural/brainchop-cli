@@ -6,7 +6,8 @@ BrainChop is a lightweight tool for brain segmentation that runs on pretty much 
 
 ## Installation
 
-You can install BrainChop using pip:
+You can install BrainChop using pip (Python > 3.10)
+
 
 ```
 pip install brainchop
@@ -46,7 +47,7 @@ Where:
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.10+
 - tinygrad : our tiny and portable (but powerful) ML inference engine
 - numpy : basic tensor operations
 - nibabel : to read nifti files

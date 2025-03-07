@@ -39,7 +39,6 @@ setup(
         'nibabel',
         'onnx>=1.15.0',
         'scikit-image',
-        'tqdm',
     ],
     entry_points={
         "console_scripts": [
