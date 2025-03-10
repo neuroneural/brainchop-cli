@@ -108,9 +108,9 @@ def process_multiaxial_model(args, model_dir: str) -> None:
         
         conform_result = conform(args.input)
         img = conform_result[0]
-        # img = load(args.input)
-        out_tensor = multiaxial_segmentation(img, model_dir)
-        save(Nifti1Image(out_tensor, img.affine, img.header), args.output)
+        out_image = multiaxial_segmentation(img, model_dir)
+        save(out_image, args.output)
+
         
         bwlabel(args.output)
         if args.inverse_conform:

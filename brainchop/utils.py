@@ -1,6 +1,7 @@
 import requests
 import json
 from pathlib import Path
+import nibabel as nib
 import sys
 
 def download_models_json():
@@ -238,3 +239,34 @@ def check_multiaxial_cache():
         return False, cache_dir
     
     return True, cache_dir
+
+def reorient_to_lia(nii_img):
+    """
+    Reorient a NIfTI image from any orientation to LIA (Left-Inferior-Anterior).
+    
+    Args:
+        nii_img (nibabel.Nifti1Image): The input NIfTI image.
+        
+    Returns:
+        nibabel.Nifti1Image: The reoriented NIfTI image.
+    """
+    # Get the current orientation
+    current_orientation = nib.aff2axcodes(nii_img.affine)
+    print(f"Current orientation: {''.join(current_orientation)}")
+    
+    # Define target orientation as LIA
+    target_orientation = "LIA"
+    
+    # Transform from current to target orientation
+    orig_ornt = nib.io_orientation(nii_img.affine)
+    targ_ornt = axcodes2ornt(target_orientation)
+    transform = ornt_transform(orig_ornt, targ_ornt)
+    
+    # Apply the transformation
+    reoriented_img = nii_img.as_reoriented(transform)
+    
+    # Verify the new orientation
+    new_orientation = nib.aff2axcodes(reoriented_img.affine)
+    print(f"New orientation: {''.join(new_orientation)}")
+    
+    return reoriented_img

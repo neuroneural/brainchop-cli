@@ -8,6 +8,13 @@ from tinygrad.helpers import tqdm
 from .tinyonnx import OnnxRunner
 from .cat import concatenate
 
+def reorient(nii, orientation) -> nib.Nifti1Image:
+    """Reorients a nifti image to specified orientation."""
+    orig_ornt = nib.io_orientation(nii.affine)
+    targ_ornt = axcodes2ornt(orientation)
+    transform = ornt_transform(orig_ornt, targ_ornt)
+    reoriented_nii = nii.as_reoriented(transform)
+    return reoriented_nii
 
 def create_coordinate_matrix(shape, anterior_commissure):
     """Creates a coordinate matrix based on the image shape and anterior commissure."""
@@ -169,7 +176,12 @@ def multiaxial_segmentation(img, model_dir):
         (coronal_model_path, 1, "coronal"),    # axis 1 = coronal
         (axial_model_path, 2, "axial")         # axis 2 = axial
     ]
-    
+
+    orientation = nib.aff2axcodes(img.affine)
+    if ''.join(orientation) != 'RAS':
+        print(f'Image orientation : {orientation}. Changing to RAS..')
+        img = reorient(img, "RAS")
+
     view_outputs = [None, None, None]
     img_data = img.get_fdata()
 
@@ -213,4 +225,6 @@ def multiaxial_segmentation(img, model_dir):
         model_segmentation_axial
     ], axis=-1)
     output = consensus_model(combined_data, weights, biases)
-    return output
+    out_image = nib.Nifti1Image(output, img.affine, img.header)
+    #out_image = reorient(out_image, "LIA")
+    return out_image
