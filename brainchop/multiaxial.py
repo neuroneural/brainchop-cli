@@ -12,11 +12,11 @@ from .tinyonnx import OnnxRunner
 # ---------------------------
 def reorient(nii, orientation) -> nib.Nifti1Image:
     """Reorients a nifti image to specified orientation."""
-    orig_ornt = nib.io_orientation(nii.affine)
-    targ_ornt = axcodes2ornt(orientation)
-    transform = ornt_transform(orig_ornt, targ_ornt)
-    reoriented_nii = nii.as_reoriented(transform)
-    return reoriented_nii
+    #orig_ornt = nib.io_orientation(nii.affine)
+    #targ_ornt = axcodes2ornt(orientation)
+    #transform = ornt_transform(orig_ornt, targ_ornt)
+    #reoriented_nii = nii.as_reoriented(transform)
+    return nii
 
 def create_coordinate_matrix(shape, anterior_commissure):
     """Creates a coordinate matrix based on the image shape and anterior commissure."""
@@ -95,7 +95,6 @@ def preprocess_head_MRI(nii, anterior_commissure=None, keep_parameters_for_recon
         img = np.pad(img, ((0,0),(0,0),(pad3//2, pad3//2+pad3%2)))
         anterior_commissure[2] += pad3//2
     
-    coords = create_coordinate_matrix(img.shape, anterior_commissure)        
     
     # Intensity normalization
     p95 = np.percentile(img, 95)
@@ -202,7 +201,7 @@ def extract_weights_from_onnx(model_path):
             biases = numpy_helper.to_array(initializer)
     return weights, biases
 
-def optimized_consensus(combined_data, weights, biases):
+def consensus_model(combined_data, weights, biases):
     height, width, depth, channels = combined_data.shape
     
     # Reshape weights to [22, 7] for matrix multiplication
@@ -262,14 +261,7 @@ def multiaxial_segmentation(img, model_dir):
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found: {model_path}")
     
-    
-    nii_out, coords, anterior_commissure, reconstruction_parms = preprocess_head_MRI(
-        img, 
-        anterior_commissure=None,
-        keep_parameters_for_reconstruction=True
-    )
-    
-    # Load models
+    # Load axial models
     view_models = [
         (sagittal_model_path, 0, "sagittal"),  # axis 0 = sagittal
         (coronal_model_path, 1, "coronal"),    # axis 1 = coronal
@@ -277,8 +269,20 @@ def multiaxial_segmentation(img, model_dir):
     ]
     
     view_outputs = [None, None, None]
-    img_data = nii_out.get_fdata()
-    
+    img_data = img.get_fdata()
+
+    # Intensity normalization
+    p95 = np.percentile(img_data, 95)
+    img_data = img_data/p95
+
+
+    # Coordinate matrices
+    anterior_commissure = np.array([128,128,128], dtype='int')
+    coords = create_coordinate_matrix(img.shape, anterior_commissure) 
+    coords = coords[:,:,:,:3]/256
+    coords = np.array(coords, dtype='float32')
+
+    # Axial models
     for i, (model_path, axis, name) in enumerate(view_models):
         if model_path is not None:
             print(f"Running {name} model inference...")
@@ -288,8 +292,6 @@ def multiaxial_segmentation(img, model_dir):
             view_outputs[i] = process_slices(
                 runner, img_data, coords, axis=axis, input_names=input_names
             )
-    
-    # Create empty outputs for any models that didn't run
     for i in range(3):
         if view_outputs[i] is None:
             view_outputs[i] = np.zeros((img_data.shape[0], img_data.shape[1], img_data.shape[2], 7), dtype=np.float32)
@@ -299,18 +301,14 @@ def multiaxial_segmentation(img, model_dir):
     model_segmentation_coronal = view_outputs[1]
     model_segmentation_axial = view_outputs[2]
     
-    # Extract consensus model weights
-    print("Extracting consensus model weights and biases...")
+    # Consensus model inference
     weights, biases = extract_weights_from_onnx(consensus_model_path)
-    
-    # Prepare input for consensus model
     img_expanded = np.expand_dims(img_data, -1).astype(np.float32)
-    
     combined_data = np.concatenate([
         img_expanded, 
         model_segmentation_sagittal,
         model_segmentation_coronal,
         model_segmentation_axial
     ], axis=-1)
-    output = optimized_consensus(combined_data, weights, biases)
+    output = consensus_model(combined_data, weights, biases)
     return output
