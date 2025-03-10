@@ -30,11 +30,13 @@ def load_models():
         return download_models_json()
 
 global BASE_URL
-global MODELS_JSON_URL
+global MESHNET_BASE_URL
 global MULTIAXIAL_BASE_URL
+global MODELS_JSON_URL
 global AVAILABLE_MODELS
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
+MESHNET_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
 MULTIAXIAL_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/multiaxial/"
 MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
 AVAILABLE_MODELS = load_models()
@@ -118,18 +120,20 @@ def download_model(model_name):
     downloaded_paths = {}
     is_multiaxial = AVAILABLE_MODELS[model_name].get("model_type") == "multiaxial"
     
-    files_to_download = (
-        [
+    if is_multiaxial:
+        files_to_download = [
             "axial_model.onnx",
             "coronal_model.onnx",
             "sagittal_model.onnx",
             "consensus_layer.onnx"
-        ] if is_multiaxial else
-        ["model.json", "model.bin"]
-    )
+        ]
+        base_url = MULTIAXIAL_BASE_URL
+    else:
+        files_to_download = ["model.json", "model.bin"]
+        base_url = MESHNET_BASE_URL
     
     for file in files_to_download:
-        url = f"{BASE_URL}{model_dir}/{file}"
+        url = f"{base_url}{model_dir}/{file}" if not is_multiaxial else f"{base_url}{file}"
         local_path = cache_dir / file
         
         if not local_path.exists():
