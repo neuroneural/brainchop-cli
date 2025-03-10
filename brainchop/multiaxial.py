@@ -6,17 +6,8 @@ from skimage.transform import resize
 from nibabel.orientations import axcodes2ornt, ornt_transform
 from tinygrad.helpers import tqdm
 from .tinyonnx import OnnxRunner
+from .cat import concatenate
 
-# ---------------------------
-# Image Orientation Functions
-# ---------------------------
-def reorient(nii, orientation) -> nib.Nifti1Image:
-    """Reorients a nifti image to specified orientation."""
-    #orig_ornt = nib.io_orientation(nii.affine)
-    #targ_ornt = axcodes2ornt(orientation)
-    #transform = ornt_transform(orig_ornt, targ_ornt)
-    #reoriented_nii = nii.as_reoriented(transform)
-    return nii
 
 def create_coordinate_matrix(shape, anterior_commissure):
     """Creates a coordinate matrix based on the image shape and anterior commissure."""
@@ -26,153 +17,64 @@ def create_coordinate_matrix(shape, anterior_commissure):
     matrix_with_ones = np.concatenate([coordinates, np.ones((coordinates.shape[0], coordinates.shape[1], coordinates.shape[2], 1))], axis=-1)
     return matrix_with_ones
 
-# ----------------------
-# Preprocessing Functions
-# ----------------------
-def preprocess_head_MRI(nii, anterior_commissure=None, keep_parameters_for_reconstruction=False):
-    """Preprocesses a head MRI image."""    
-    if anterior_commissure is None:
-        print('No anterior commissure location given.. centering to center of image..')
-        anterior_commissure = [nii.shape[0]//2, nii.shape[1]//2, nii.shape[2]//2]
-    else:
-        print(f'anterior commissure given: {anterior_commissure}')
-    orientation = nib.aff2axcodes(nii.affine)
-    
-    if ''.join(orientation) != 'RAS':
-        print(f'Image orientation : {orientation}. Changing to RAS..')
-        nii = reorient(nii, "RAS")
-                
-    # Make image isotropic
-    res = nii.header['pixdim'][1:4]
-    img = nii.get_fdata()
-    new_shape = np.array(np.array(nii.shape)*res, dtype='int')
-    if np.any(np.array(nii.shape) != new_shape):
-        img = resize(img, new_shape, anti_aliasing=True, preserve_range=True)
-       
-    nii.affine[0][0] = 1.
-    nii.affine[1][1] = 1.
-    nii.affine[2][2] = 1.
-    nii.header['pixdim'][1:4] = np.diag(nii.affine)[0:3]
-    
-    # Crop/Pad to make shape 256,256,256
-    d1, d2, d3 = new_shape
-    start = None
-    end = None    
-    
-    if d1 < 256:
-        pad1 = 256-d1
-        img = np.pad(img, ((pad1//2, pad1//2+pad1%2),(0,0),(0,0)))
-        anterior_commissure[0] += pad1//2
-    
-    if d2 > 256: 
-        crop2 = d2-256
-        img = img[:,crop2//2:-(crop2//2+crop2%2)]
-        anterior_commissure[1] -= crop2//2
-            
-    elif d2 < 256:
-        pad2 = 256-d2
-        img = np.pad(img, ((0,0),(pad2//2, pad2//2+pad2%2),(0,0)))
-        anterior_commissure[1] += pad2//2
-        
-    if d3 > 256: 
-        # Head start
-        proj = np.max(img,(0,1))
-        proj[proj < np.percentile(proj, 50) ] = 0
-        proj[proj > 0] = 1
-        end = np.max(np.argwhere(proj == 1))
-        end = np.min([end + 20, d3]) # Leave some space above the head
-        start = end-256
-        if start < 0:
-            crop3 = d3 - 256
-            img = img[:,:,crop3:]
-            anterior_commissure[2] -= crop3
-         
-        else:
-            img = img[:,:,start:end]
-            anterior_commissure[2] -= start
-    elif d3 < 256:
-        pad3 = 256-d3
-        img = np.pad(img, ((0,0),(0,0),(pad3//2, pad3//2+pad3%2)))
-        anterior_commissure[2] += pad3//2
-    
-    
-    # Intensity normalization
-    p95 = np.percentile(img, 95)
-    img = img/p95
-    
-    coords = coords[:,:,:,:3]
-    coords = coords/256.
-    
-    result = [nib.Nifti1Image(img, nii.affine)]
-        
-    result.extend([np.array(coords, dtype='float32'), np.array(anterior_commissure, dtype='int')])
-    
-    if keep_parameters_for_reconstruction:
-        reconstruction_parms = d1, d2, d3, start, end
-        result.append(reconstruction_parms)
-    
-    return tuple(result)
 
 # ------------------
 # TinyGrad ONNX Segmentation Logic
 # ------------------
-def process_slices(runner, img, coords, axis=0, input_names=None):
-    # Default input names if not provided
+def process_slices(runner, img, coords, axis=0, batch_size=2, input_names=None):
     if input_names is None:
         input_names = {"img": "input_1", "coords": "input_2"}
     
     img_input_name = input_names["img"]
     coords_input_name = input_names["coords"]
     
-    # First loop: Collect all input slices
-    inputs = []
-    for i in range(img.shape[axis]):
-        if axis == 0:  # Sagittal (YZ plane)
-            img_slice = img[i, :, :]
-            coords_slice = coords[i, :, :, :]
-        elif axis == 1:  # Coronal (XZ plane)
-            img_slice = img[:, i, :]
-            coords_slice = coords[:, i, :, :]
-        else:  # Axial (XY plane)
-            img_slice = img[:, :, i]
-            coords_slice = coords[:, :, i, :]
-        
-        # Prepare inputs with correct shapes (add batch and channel dims)
-        img_input = np.expand_dims(np.expand_dims(img_slice, -1), 0).astype(np.float32)
-        coords_input = np.expand_dims(coords_slice, 0).astype(np.float32)
-        inputs.append((img_input, coords_input))
-    
-    # Second loop: Process all inputs through the model
-    outputs = []
-    for img_in, coord_in in tqdm(inputs, desc="Processing slices"):
-        img_tensor = Tensor(img_in, requires_grad=False)
-        coords_tensor = Tensor(coord_in, requires_grad=False)
-        model_outputs = runner({
-            img_input_name: img_tensor, 
-            coords_input_name: coords_tensor
-        })
-        # Get output tensor and keep batch dimension
-        output_tensor = list(model_outputs.values())[0]
-        ## This has to be done in numpy for some reason. Doing natively in tinygrad breaks it.
-        outputs.append(output_tensor.numpy())
-    
-    # Concatenate all outputs along batch dimension (axis=0)
-    #all_outputs = np.concatenate(outputs, axis=0)
+    num_slices = img.shape[axis]
+    all_img_batches = []
+    all_coords_batches = []
+    all_batch_indices = []
 
-    #outputs = [Tensor(o) for o in outputs]
-    #all_outputs = Tensor.cat(*outputs, dim=0).realize().numpy()
-    all_outputs = np.concatenate(outputs, axis=0)
-    # Transpose to match original axis orientation
-    if axis == 0:
-        final_output = all_outputs
-    elif axis == 1:
-        # From (N, H, W, C) to (H, N, W, C)
-        final_output = np.transpose(all_outputs, (1, 0, 2, 3))
-    else:
-        # From (N, H, W, C) to (H, W, N, C)
-        final_output = np.transpose(all_outputs, (1, 2, 0, 3))
+    # Prepare all input batches
+    for batch_start in tqdm(range(0, num_slices, batch_size)):
+        batch_end = min(batch_start + batch_size, num_slices)
+        batch_size_actual = batch_end - batch_start
+        
+        if axis == 0:
+            img_batch = img[batch_start:batch_end, :, :].reshape(batch_size_actual, img.shape[1], img.shape[2], 1)
+            coords_batch = coords[batch_start:batch_end, :, :, :]
+        elif axis == 1:
+            img_batch = img[:, batch_start:batch_end, :].transpose(1, 0, 2).reshape(batch_size_actual, img.shape[0], img.shape[2], 1)
+            coords_batch = coords[:, batch_start:batch_end, :, :].transpose(1, 0, 2, 3)
+        else:
+            img_batch = img[:, :, batch_start:batch_end].transpose(2, 0, 1).reshape(batch_size_actual, img.shape[0], img.shape[1], 1)
+            coords_batch = coords[:, :, batch_start:batch_end, :].transpose(2, 0, 1, 3)
+        
+        all_img_batches.append(img_batch.astype(np.float32))
+        all_coords_batches.append(coords_batch.astype(np.float32))
+        all_batch_indices.append((batch_start, batch_end))
+
+    # Create inputs and run inference
+    all_outputs = []
+    for img_batch, coords_batch in zip(all_img_batches, all_coords_batches):
+        model_input = {
+            img_input_name: Tensor(img_batch),
+            coords_input_name: Tensor(coords_batch)
+        }
+        all_outputs.append(runner(model_input))
+
+    # Process outputs
+    output_tensors = [list(out.values())[0].realize() for out in all_outputs]
     
-    return final_output
+    # Concatenate along batch dimension
+    full_output = concatenate(output_tensors, 0)
+
+    # Apply axis-specific permutation
+    if axis == 1:
+        full_output = full_output.permute(1, 0, 2, 3)
+    elif axis == 2:
+        full_output = full_output.permute(1, 2, 0, 3)
+
+    print(full_output.shape)
+    return full_output.numpy()
 
 def get_input_names(model):
     """Extract input names from an ONNX model."""
@@ -278,7 +180,7 @@ def multiaxial_segmentation(img, model_dir):
 
     # Coordinate matrices
     anterior_commissure = np.array([128,128,128], dtype='int')
-    coords = create_coordinate_matrix(img.shape, anterior_commissure) 
+    coords = create_coordinate_matrix(img_data.shape, anterior_commissure) 
     coords = coords[:,:,:,:3]/256
     coords = np.array(coords, dtype='float32')
 
