@@ -23,5 +23,11 @@
     "considerations": "uses ONNX models",
     "parameter_name": "multiaxial",
     "model_type": "multiaxial"
+  },
+  "mindgrab": {
+    "folder": "mindgrab",
+    "description": "tissue extraction",
+    "considerations": "quantile normalization",
+    "parameter_name": "mindgrab"
   }
 }
