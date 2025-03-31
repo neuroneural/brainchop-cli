@@ -45,7 +45,7 @@ BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
 MESHNET_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
 MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
 AVAILABLE_MODELS = load_models()
-NEW_BACKEND = {"mindgrab"}
+NEW_BACKEND = {"mindgrab", "."}
 
 
 def list_models() -> None:
