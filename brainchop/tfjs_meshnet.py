@@ -1,4 +1,4 @@
-# deprecated backend, please use the new backend instead (tiny_meshnet.py)
+# DEPRECATED: please start using the native tiny_meshnet backend instead
 import json
 import numpy as np
 from tinygrad import Tensor
@@ -123,39 +123,57 @@ class MeshNetModel:
         
         return x, weight_index, out_channels
 
-def meshnet(json_path: str, bin_path: str, x: np.ndarray | Tensor, export_classes: bool = False) -> tuple[np.ndarray, np.ndarray | None]:
+def load_tfjs_meshnet(config_fn: str, binary_fn: str):
+    """
+    Load a TFJS MeshNet model and return a function that takes a Tensor and returns a Tensor.
+    
+    Args:
+        config_fn: Path to the JSON configuration file
+        binary_fn: Path to the binary weights file
+        
+    Returns:
+        Callable that takes a Tensor input and returns a Tensor output
+    """
     model = MeshNetModel()
-    model_spec, weights_data = model.load_model_spec(json_path, bin_path)
+    model_spec, weights_data = model.load_model_spec(config_fn, binary_fn)
     
     # Get normalization config from model spec if available
     normalize_config = model_spec.get("_normalize")
     
-    # Ensure float32 precision for input data
-    x = x.astype(np.float32) if isinstance(x, np.ndarray) else x
-    x = model.normalize(x, normalize_config)
+    def forward(x: Tensor) -> Tensor:
+        """
+        Forward pass for the MeshNet model.
+        
+        Args:
+            x: Input Tensor
+            
+        Returns:
+            Output Tensor
+        """
+        # Convert to numpy for normalization if needed
+        x_np = x.numpy() if isinstance(x, Tensor) else x
+        x_norm = model.normalize(x_np, normalize_config)
+        
+        # Convert back to Tensor
+        if not isinstance(x_norm, Tensor):
+            x = Tensor(x_norm.astype(np.float32))
+        else:
+            x = x_norm
+        
+        weight_index = 0
+        in_channels = 1
+        
+        spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]
+        for layer in spec:
+            if layer["class_name"] == "Conv3D":
+                x, weight_index, in_channels = model.process_conv_layer(
+                    x, layer["config"], weights_data, weight_index, in_channels
+                )
+            elif layer["class_name"] == "Activation":
+                activation = model.activation_map[layer["config"]["activation"]]
+                x = activation(x)
+        
+        # Return the raw tensor output
+        return x
     
-    if not isinstance(x, Tensor):
-        x = Tensor(x.astype(np.float32))
-    
-    weight_index = 0
-    in_channels = 1
-    
-    spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]
-    for layer in spec:
-        if layer["class_name"] == "Conv3D":
-            x, weight_index, in_channels = model.process_conv_layer(
-                x, layer["config"], weights_data, weight_index, in_channels
-            )
-        elif layer["class_name"] == "Activation":
-            activation = model.activation_map[layer["config"]["activation"]]
-            x = activation(x)
-    
-    # Return both raw output and argmax if export_classes is True
-    if export_classes:
-        raw_output = x.numpy()
-        return x.argmax(1).numpy()[0], raw_output
-    else:
-        return x.argmax(1).numpy()[0], None
-
-def load_tfjs_meshnet(config_fn, binary_fn):
-    return lambda x: x
+    return forward

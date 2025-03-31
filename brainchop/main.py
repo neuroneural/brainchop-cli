@@ -1,23 +1,16 @@
 import os
-import sys
 import argparse
-import subprocess
-from nibabel.nifti1 import save, Nifti1Image, load
-from tinygrad.tensor import Tensor
-import numpy as np
-
-from brainchop.model import meshnet
-from brainchop.tiny_meshnet import load_meshnet, qnormalize
-from brainchop.niimath import conform, inverse_conform, bwlabel
-
 from pathlib import Path
-from .utils import update_models, list_models, find_model_files, AVAILABLE_MODELS, NEW_BACKEND, cleanup
 
+from tinygrad import Tensor
 
-def validate_fn(file_path: str, description: str) -> None:
-    if not os.path.isfile(file_path):
-        print(f"Error: {description} not found: {file_path}")
-        sys.exit(1)
+from brainchop.utils import (
+        update_models, 
+        list_models, 
+        get_model,
+        AVAILABLE_MODELS, 
+        cleanup)
+
 
 
 def get_parser():
@@ -32,40 +25,32 @@ def get_parser():
                         help="Update the model listing")
     parser.add_argument("-o", "--output", default="output.nii.gz", 
                         help="Output NIfTI file path")
-    parser.add_argument("-m", "--model", default="", 
+    parser.add_argument("-m", "--model", default=next(iter(AVAILABLE_MODELS.keys())), 
                         help=f"Name of segmentation model, default: {next(iter(AVAILABLE_MODELS.keys()))}")
     parser.add_argument("-c", "--custom", type=str, 
-                        help="Path to custom model directory or file (MeshNet or Multiaxial model)")
+                        help="Path to custom model directory (model.json and model.bin)")
     parser.add_argument("-ec", "--export-classes", action="store_true", 
                         help="Export class probability maps (MeshNet only)")
     parser.add_argument("--cache-dir", type=str, 
                         default=str(Path.home() / ".cache" / "brainchop" / "models" / "multiaxial"),
                         help="Directory to cache downloaded multiaxial models")
-    return parser.parse_args()
-
-# tinygrad model :: input (1, ic,256,256,256) -> output (1, oc, 256, 256, 256)
-def get_model(model_name): # -> tinygrad model
-    if model_name in NEW_BACKEND:
-        config_fn, model_fn = find_model_files(model_name)
-        return load_meshnet(config_fn, model_fn) # other configs should be loaded from json
-    else: # oldbackend
-        config_fn, binary_fn = find_model_files(model_name)
-        return load_meshnet_tfjs(config_fn, binary_fn)
-    # even elser: load multiaxial and other models (this should be a standalone file)
-        
+    return parser
 
 
 def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    if args.update: update_models(); return
-    if args.list: list_models() ; return
-    if not args.input: parser.print_help(); return
+    if args.update:     update_models();        return
+    if args.list:       list_models() ;         return
+    if not args.input:  parser.print_help();    return
 
     args.input = os.path.abspath(args.input)
     args.output = os.path.abspath(args.output)
 
+
+    model = get_model(args.model)
+    print(f"    brainchop :: Loaded model {args.model}")
 
 
     # handle custom model
@@ -73,20 +58,6 @@ def main():
     # handle old backend
     # (optional) handle multiaxial
 
-    if args.model == "mindgrab":
-        config_fn, model_fn = find_model_files(args.model)
-        process_tiny_meshnet_model(args, config_fn, model_fn)
-
-    else:
-        model_dir_or_json, bin_file = find_model_files(args.model)
-
-        if not model_dir_or_json:
-            print("Error: Unable to locate or download the required model files.")
-            sys.exit(1)
-        if not bin_file:
-            print("Error: MeshNet model requires both JSON and binary files.")
-            sys.exit(1)
-        process_meshnet_model(args, model_dir_or_json, bin_file)
 
 
     cleanup()

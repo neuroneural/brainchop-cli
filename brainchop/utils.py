@@ -32,12 +32,12 @@ def load_models(): # -> Json
     else:
         return download_model_listing()
 
-global BASE_URL
-global MESHNET_BASE_URL
-global MULTIAXIAL_BASE_URL
-global MODELS_JSON_URL
-global AVAILABLE_MODELS
-global NEW_BACKEND
+def update_models() -> None:
+    AVAILABLE_MODELS = download_model_listing()
+    print("Model listing updated successfully.")
+    for model, details in AVAILABLE_MODELS.items():
+        print(f"- {model}: {details['description']}")
+
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
 MESHNET_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
@@ -45,12 +45,6 @@ MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/m
 AVAILABLE_MODELS = load_models()
 NEW_BACKEND = {"mindgrab"}
 
-def update_models() -> None:
-    global AVAILABLE_MODELS
-    AVAILABLE_MODELS = download_model_listing()
-    print("Model listing updated successfully.")
-    for model, details in AVAILABLE_MODELS.items():
-        print(f"- {model}: {details['description']}")
 
 def list_models() -> None:
     print("Available models:")
@@ -65,8 +59,18 @@ def download(url, local_path) -> None: # -> None | !
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
 
+def unwrap_path(path): # -> String | !
+    assert os.path.isfile(path), f"Error: {path} is not a file"
+    return str(path)
+
+def unwrap_model_name(s: str): # -> String | !
+    assert s in AVAILABLE_MODELS.keys(), f"Error: {s} is not an available model"
+    return s
+
 def find_pth_files(model_name) -> Tuple[Path|Any, Path|Any]:
     """ New native backend for models """
+    if model_name == ".": return "model.json", "model.pth" # local model support
+    model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
     json_fn = cache_dir / "model.json"
@@ -82,6 +86,7 @@ def find_pth_files(model_name) -> Tuple[Path|Any, Path|Any]:
 
 def find_tfjs_files(model_name)-> Tuple[Path|Any, Path|Any]:
     """ Deprecated tfjs weight backend """
+    model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
     json_fn = cache_dir / "model.json"
@@ -94,10 +99,6 @@ def find_tfjs_files(model_name)-> Tuple[Path|Any, Path|Any]:
             download(url, local_path)
     return json_fn, bin_fn
 
-
-def unwrap_path(path):
-    assert os.path.isfile(path), f"Error: {path} is not a file"
-    return str(path)
 
 # tinygrad model :: (unpreprocessed) Tensor(1, ic,256,256,256) -> Tensor(1, oc, 256, 256, 256)
 def get_model(model_name): # -> tinygrad model
