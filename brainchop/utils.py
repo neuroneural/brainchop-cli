@@ -55,6 +55,7 @@ def list_models() -> None:
 
 def download(url, local_path) -> None: # -> None | !
     print(f"Downloading from {url} to {local_path}...")
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
     response = requests.get(url, stream=True)
     response.raise_for_status()
     with open(local_path, "wb") as f:
