@@ -14,22 +14,14 @@ def convert_keys(torch_state_dict, tiny_state_dict):
         new_dict[t] = torch_state_dict[f]
     return new_dict
 
-def pretty_print(state_dict):
-    """Prints a PyTorch model state dict in a readable format"""
-    import re
-    for key, tensor in state_dict.items():
-        shape_match = re.search(r'\((\d+(?:,\s*\d+)*)\)', str(tensor))
-        shape_str = shape_match.group(1) if shape_match else "unknown"
-        print(f"{key}: shape=({shape_str})")
-    print(f"\nTotal layers: {len(state_dict)}")
-
-def qnormalize(img, qmin=0.02, qmax=0.98):
+def qnormalize(img: Tensor, qmin=0.02, qmax=0.98) -> Tensor:
     """Unit interval preprocessing with clipping"""
+    img = img.numpy()
     qlow = np.quantile(img, qmin)
     qhigh = np.quantile(img, qmax)
     img = (img - qlow) / (qhigh - qlow)
     img = np.clip(img, 0, 1)  # Clip the values to be between 0 and 1
-    return img
+    return Tensor(img)
 
 def set_channel_num(config, in_channels, n_classes, channels):
   # input layer
@@ -38,7 +30,7 @@ def set_channel_num(config, in_channels, n_classes, channels):
   # output layer
   config["layers"][-1]["in_channels"] = channels
   config["layers"][-1]["out_channels"] = n_classes
-  # hidden layers
+  # hidden layers 
   for layer in config["layers"][1:-1]:
     layer["in_channels"] = layer["out_channels"] = channels
   return config
@@ -110,49 +102,15 @@ class MeshNet:
     )
     
   def __call__(self, x):
-    # Process all layers except the last one
+    x = qnormalize(x) # TODO: interpret normalization from config file 
     for layer in self.model:
       x = layer(x)
     return x
 
 
-def load_nifti(nifti_path):
-    """Load a NIfTI file and return its data as a numpy array"""
-    img = nib.load(nifti_path)
-    data = img.get_fdata().astype(np.int32)
-    # Store affine for later reconstruction
-    affine = img.affine
-    return data, affine
-
-def save_segmentation(segmentation, affine, output_path):
-    """Save the segmentation as a NIfTI file"""
-    # Convert to numpy array and get class with highest probability (if multi-class)
-    seg_class = segmentation.argmax(1)[0].numpy().astype(np.int32)
-    seg_img = nib.Nifti1Image(seg_class, affine)
-    nib.save(seg_img, output_path)
-    print(f"Segmentation saved to {output_path}")
-
-def run_inference(model, nifti_path, output_path):
-    """Load NIfTI data, run inference with model, and save the result"""
-    print(f"Loading {nifti_path}...")
-    volume_data, affine = load_nifti(nifti_path)
-    
-    print(f"Volume shape: {volume_data.shape}")
-    print("Preprocessing volume...")
-    input_tensor = Tensor(qnormalize(volume_data), dtype=dtypes.float).rearrange("... -> 1 1 ...") 
-    print("Running inference...")
-    start_time = time.time()
-    output = model(input_tensor).realize()
-    inference_time = time.time() - start_time
-    print(f"Inference completed in {inference_time:.2f} seconds")
-    
-    print("Post-processing and saving result...")
-    save_segmentation(output, affine, output_path)
-
-
-def load_meshnet(model_fn:str, config_fn:str, 
-                 in_channels:int = 1, channels:int = 1, out_channels:int = 1):
-    # Interpret channel info from config
+def load_meshnet(config_fn:str, model_fn:str, 
+                 in_channels:int = 1, channels:int = 15, out_channels:int = 2):
+    # TODO: Interpret channel info from config
     model = MeshNet(
         in_channels=in_channels, 
         n_classes=out_channels,
@@ -163,15 +121,3 @@ def load_meshnet(model_fn:str, config_fn:str,
     state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True)
     return model
-    
-
-
-if __name__ == "__main__":
-    # Paths
-    nifti_path = "t1_crop.nii.gz"  # Input NIfTI file
-    model_path = "mindgrab.pth"    # Pretrained model
-    config_path = "mindgrab.json"  # Model config
-    output_path = "segmentation_output.nii.gz"  # Output segmentation
-    model = load_meshnet(model_path,config_path,
-                         1, 15, 2)
-    run_inference(model, nifti_path, output_path)

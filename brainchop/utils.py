@@ -102,7 +102,7 @@ def find_tfjs_files(model_name)-> Tuple[Path|Any, Path|Any]:
     return json_fn, bin_fn
 
 
-# tinygrad model :: (unpreprocessed) Tensor(1, ic,256,256,256) -> Tensor(1, oc, 256, 256, 256)
+# tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
 def get_model(model_name): # -> tinygrad model
     if model_name in NEW_BACKEND:
         config_fn, model_fn = find_pth_files(model_name)
