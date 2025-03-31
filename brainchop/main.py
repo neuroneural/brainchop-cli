@@ -2,15 +2,18 @@ import os
 import argparse
 from pathlib import Path
 
-from tinygrad import Tensor
+import nibabel as nib
+
+import numpy as np
+from tinygrad import Tensor, dtypes
 
 from brainchop.utils import (
         update_models, 
         list_models, 
         get_model,
+        export_classes,
         AVAILABLE_MODELS, 
         cleanup)
-
 
 
 def get_parser():
@@ -48,16 +51,24 @@ def main():
     args.input = os.path.abspath(args.input)
     args.output = os.path.abspath(args.output)
 
-
     model = get_model(args.model)
     print(f"    brainchop :: Loaded model {args.model}")
 
 
-    # handle custom model
-    # handle new backend
-    # handle old backend
-    # (optional) handle multiaxial
+    # load input
+    nifti = nib.load(args.input)
+    image = Tensor(nifti.get_fdata().astype(np.float32)).rearrange("... -> 1 1 ...")
 
+    output_channels = model(image)
+    output = output_channels.argmax(axis=1).reshape(256,256,256).numpy()
+    
+    output_nifti = nib.Nifti1Image(output,nifti.affine)
+    nib.save(output_nifti, args.output)
+    
+
+    if args.export_classes: 
+        export_classes(output_channels, nifti.affine, args.output)
+        print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}") # TODO: this shouldn't prepend
 
 
     cleanup()

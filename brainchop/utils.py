@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Tuple
 
+import nibabel as nib
+
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
 
@@ -32,7 +34,7 @@ def load_models(): # -> Json
     else:
         return download_model_listing()
 
-def update_models() -> None:
+def update_models() -> None: 
     AVAILABLE_MODELS = download_model_listing()
     print("Model listing updated successfully.")
     for model, details in AVAILABLE_MODELS.items():
@@ -117,3 +119,19 @@ def get_model(model_name): # -> tinygrad model
 def cleanup() -> None:
     if os.path.exists("conformed.nii.gz"):
         subprocess.run(["rm", "conformed.nii.gz"])
+
+def export_classes(output_channels, affine, output_path):
+    path_without_ext = os.path.splitext(output_path)[0]
+    if path_without_ext.endswith('.nii'):
+        path_without_ext = os.path.splitext(path_without_ext)[0]
+    
+    # Convert to numpy and squeeze batch dimension
+    channels_np = output_channels.numpy().squeeze(0)
+    
+    # Save each channel
+    for i in range(channels_np.shape[0]):
+        channel = channels_np[i]
+        channel_path = f"{path_without_ext}_c{i}.nii.gz"
+        channel_nifti = nib.Nifti1Image(channel, affine)
+        nib.save(channel_nifti, channel_path)
+        print(f"Saved channel {i} to {channel_path}")

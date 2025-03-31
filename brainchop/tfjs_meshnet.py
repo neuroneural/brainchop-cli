@@ -123,17 +123,7 @@ class MeshNetModel:
         
         return x, weight_index, out_channels
 
-def load_tfjs_meshnet(config_fn: str, binary_fn: str):
-    """
-    Load a TFJS MeshNet model and return a function that takes a Tensor and returns a Tensor.
-    
-    Args:
-        config_fn: Path to the JSON configuration file
-        binary_fn: Path to the binary weights file
-        
-    Returns:
-        Callable that takes a Tensor input and returns a Tensor output
-    """
+def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
     model = MeshNetModel()
     model_spec, weights_data = model.load_model_spec(config_fn, binary_fn)
     
@@ -141,15 +131,6 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str):
     normalize_config = model_spec.get("_normalize")
     
     def forward(x: Tensor) -> Tensor:
-        """
-        Forward pass for the MeshNet model.
-        
-        Args:
-            x: Input Tensor
-            
-        Returns:
-            Output Tensor
-        """
         # Convert to numpy for normalization if needed
         x_np = x.numpy() if isinstance(x, Tensor) else x
         x_norm = model.normalize(x_np, normalize_config)
