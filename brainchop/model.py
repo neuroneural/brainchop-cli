@@ -1,3 +1,4 @@
+# deprecated backend, please use the new backend instead (tiny_meshnet.py)
 import json
 import numpy as np
 from tinygrad import Tensor
