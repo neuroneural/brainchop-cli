@@ -156,3 +156,6 @@ def meshnet(json_path: str, bin_path: str, x: np.ndarray | Tensor, export_classe
         return x.argmax(1).numpy()[0], raw_output
     else:
         return x.argmax(1).numpy()[0], None
+
+def load_tfjs_meshnet(config_fn, binary_fn):
+    return lambda x: x
