@@ -1,272 +1,138 @@
 import requests
+import os
+import subprocess
 import json
 from pathlib import Path
+from typing import Any, Tuple
+
 import nibabel as nib
-import sys
 
-def download_models_json():
-    try:
-        response = requests.get(MODELS_JSON_URL)
-        response.raise_for_status()
-        models = response.json()
-        
-        local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
-        local_models_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(local_models_file, "w") as f:
-            json.dump(models, f, indent=2)
-        
-        print(f"Downloaded models.json file to {local_models_file}")
-        return models
-    except Exception as e:
-        print(f"Error downloading models.json: {str(e)}")
-        sys.exit(1)
+from .tfjs_meshnet import load_tfjs_meshnet
+from .tiny_meshnet import load_meshnet
 
-def load_models():
+# ! : is of type termination (meaning runtime is interrupted)
+
+def download_model_listing(): # -> Json | !
+    response = requests.get(MODELS_JSON_URL)
+    response.raise_for_status()
+    models = response.json()
+    
+    local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
+    local_models_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    with open(local_models_file, "w") as f:
+        json.dump(models, f, indent=2)
+    
+    print(f"Downloaded models.json file to {local_models_file}")
+    return models
+
+def load_models(): # -> Json
     local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
     if local_models_file.exists():
         with open(local_models_file, "r") as f:
             return json.load(f)
     else:
-        return download_models_json()
+        return download_model_listing()
 
-global BASE_URL
-global MESHNET_BASE_URL
-global MULTIAXIAL_BASE_URL
-global MODELS_JSON_URL
-global AVAILABLE_MODELS
-
-BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
-MESHNET_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
-MULTIAXIAL_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/multiaxial/"
-MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
-AVAILABLE_MODELS = load_models()
-
-def update_models():
-    global AVAILABLE_MODELS
-    AVAILABLE_MODELS = download_models_json()
+def update_models() -> None: 
+    AVAILABLE_MODELS = download_model_listing()
     print("Model listing updated successfully.")
     for model, details in AVAILABLE_MODELS.items():
         print(f"- {model}: {details['description']}")
 
-def list_available_models():
+
+BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
+MESHNET_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
+MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
+AVAILABLE_MODELS = load_models()
+NEW_BACKEND = {"mindgrab", "."}
+
+
+def list_models() -> None:
     print("Available models:")
     for model, details in AVAILABLE_MODELS.items():
         print(f"- {model}: {details['description']}")
 
-def download_file(url, local_path):
-    """Helper function to download a file from URL to local path."""
-    try:
-        print(f"Downloading from {url} to {local_path}...")
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        
-        with open(local_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        print(f"Successfully downloaded to {local_path}")
-        return True
-    except requests.RequestException as e:
-        print(f"Failed to download: {str(e)}")
-        return False
+def download(url, local_path) -> None: # -> None | !
+    print(f"Downloading from {url} to {local_path}...")
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+    with open(local_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
 
-def download_multiaxial_model(target_dir):
-    """Download multiaxial model files to the specified directory."""
-    required_files = [
-        "axial_model.onnx",
-        "coronal_model.onnx", 
-        "sagittal_model.onnx",
-        "consensus_layer.onnx"
-    ]
-    
-    # Ensure target directory exists
-    if isinstance(target_dir, str):
-        target_dir = Path(target_dir)
-    
-    target_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Downloading multiaxial model files to {target_dir}")
-    
-    success = True
-    for file in required_files:
-        url = f"{MULTIAXIAL_BASE_URL}{file}"
-        local_path = target_dir / file
-        
-        # Skip download if file already exists
-        if local_path.exists():
-            print(f"File {file} already exists at {local_path}")
-            continue
-        
-        if not download_file(url, local_path):
-            success = False
-            print(f"Failed to download {file}")
-    
-    if success:
-        print("Successfully downloaded all multiaxial model files")
-    else:
-        print("Failed to download some or all multiaxial model files")
-    
-    return success
+def unwrap_path(path): # -> String | !
+    assert os.path.isfile(path), f"Error: {path} is not a file"
+    return str(path)
 
-def download_model(model_name):
-    if model_name not in AVAILABLE_MODELS:
-        print(f"Error: Model '{model_name}' is not available.")
-        return None
-    
+def unwrap_model_name(s: str): # -> String | !
+    assert s in AVAILABLE_MODELS.keys(), f"Error: {s} is not an available model"
+    return s
+
+def find_pth_files(model_name) -> Tuple[Path|Any, Path|Any]:
+    """ New native backend for models """
+    if model_name == ".": return "model.json", "model.pth" # local model support
+    model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Target cache directory: {cache_dir}")
-    
-    downloaded_paths = {}
-    is_multiaxial = AVAILABLE_MODELS[model_name].get("model_type") == "multiaxial"
-    
-    if is_multiaxial:
-        files_to_download = [
-            "axial_model.onnx",
-            "coronal_model.onnx",
-            "sagittal_model.onnx",
-            "consensus_layer.onnx"
-        ]
-        base_url = MULTIAXIAL_BASE_URL
-    else:
-        files_to_download = ["model.json", "model.bin"]
-        base_url = MESHNET_BASE_URL
-    
-    for file in files_to_download:
-        url = f"{base_url}{model_dir}/{file}" if not is_multiaxial else f"{base_url}{file}"
+    json_fn = cache_dir / "model.json"
+    pth_fn = cache_dir / "model.pth"
+
+    base_url = MESHNET_BASE_URL
+    for file in ["model.json", "model.pth"]:
+        url = f"{base_url}{model_dir}/{file}"
         local_path = cache_dir / file
-        
         if not local_path.exists():
-            if not download_file(url, str(local_path)):
-                return None
-        else:
-            print(f"{file} already exists at {local_path}")
-        
-        downloaded_paths[file] = str(local_path)
-    
-    return downloaded_paths
+            download(url, local_path)
+    return json_fn, pth_fn
 
-def find_model_files(model_name):
-    if model_name == ".":
-        current_dir = Path.cwd()
-        json_file = current_dir / "model.json"
-        bin_file = current_dir / "model.bin"
-        if json_file.is_file() and bin_file.is_file():
-            return str(json_file), str(bin_file)
-        
-        # Also check for multiaxial model files in current directory
-        required_multiaxial_files = [
-            "axial_model.onnx",
-            "coronal_model.onnx",
-            "sagittal_model.onnx",
-            "consensus_layer.onnx"
-        ]
-        if all((current_dir / f).is_file() for f in required_multiaxial_files):
-            return str(current_dir), None
-        
-        print("Model files not found in the current directory.")
-        return None, None
-    
-    if not model_name:
-        model_name = next(iter(AVAILABLE_MODELS))
-        print(f"No model specified, defaulting to: {model_name}")
-    
-    if model_name not in AVAILABLE_MODELS:
-        print(f"Error: Model '{model_name}' is not available.")
-        return None, None
-    
+def find_tfjs_files(model_name)-> Tuple[Path|Any, Path|Any]:
+    """ Deprecated tfjs weight backend """
+    model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
-    print(f"Checking cache directory: {cache_dir}")
-    
-    is_multiaxial = AVAILABLE_MODELS[model_name].get("model_type") == "multiaxial"
-    
-    if is_multiaxial:
-        required_files = [
-            "axial_model.onnx",
-            "coronal_model.onnx",
-            "sagittal_model.onnx",
-            "consensus_layer.onnx"
-        ]
-        all_files = {f: cache_dir / f for f in required_files}
-        
-        missing_files = [f for f, path in all_files.items() if not path.is_file()]
-        if missing_files:
-            print(f"Missing multiaxial files: {missing_files}. Initiating download...")
-            downloaded_files = download_model(model_name)
-            if not downloaded_files or len(downloaded_files) != len(required_files):
-                print(f"Failed to download all required multiaxial model files: {required_files}")
-                return None, None
-            print(f"Successfully downloaded multiaxial model files to {cache_dir}")
-        else:
-            print(f"Using cached multiaxial model files from {cache_dir}")
-        return str(cache_dir), None
-    else:
-        json_file = cache_dir / "model.json"
-        bin_file = cache_dir / "model.bin"
-        
-        if not json_file.is_file() or not bin_file.is_file():
-            print(f"MeshNet model files not found locally. Downloading...")
-            downloaded_files = download_model(model_name)
-            if downloaded_files:
-                json_file = Path(downloaded_files["model.json"])
-                bin_file = Path(downloaded_files["model.bin"])
-                print(f"Successfully downloaded MeshNet model files to {cache_dir}")
-            else:
-                return None, None
-        else:
-            print(f"Using cached MeshNet model files from {cache_dir}")
-        
-        return str(json_file), str(bin_file)
+    json_fn = cache_dir / "model.json"
+    bin_fn = cache_dir / "model.bin"
+    base_url = MESHNET_BASE_URL
+    for file in ["model.json", "model.bin"]:
+        url = f"{base_url}{model_dir}/{file}"
+        local_path = cache_dir / file
+        if not local_path.exists():
+            download(url, local_path)
+    return json_fn, bin_fn
 
-def check_multiaxial_cache():
-    """Check if multiaxial model files exist in the default cache location."""
-    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / "multiaxial"
-    
-    required_files = [
-        "axial_model.onnx",
-        "coronal_model.onnx", 
-        "sagittal_model.onnx",
-        "consensus_layer.onnx"
-    ]
-    
-    if not cache_dir.exists():
-        return False, cache_dir
-    
-    missing_files = [f for f in required_files if not (cache_dir / f).is_file()]
-    if missing_files:
-        return False, cache_dir
-    
-    return True, cache_dir
 
-def reorient_to_lia(nii_img):
-    """
-    Reorient a NIfTI image from any orientation to LIA (Left-Inferior-Anterior).
+# tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
+def get_model(model_name): # -> tinygrad model
+    if model_name in NEW_BACKEND:
+        config_fn, model_fn = find_pth_files(model_name)
+        config_fn = unwrap_path(config_fn)
+        model_fn = unwrap_path(model_fn)
+        return load_meshnet(config_fn, model_fn) # TODO: other configs should be loaded from json
+    else: # oldbackend
+        config_fn, binary_fn = find_tfjs_files(model_name)
+        config_fn = unwrap_path(config_fn)
+        binary_fn = unwrap_path(binary_fn)
+        return load_tfjs_meshnet(config_fn, binary_fn)
+    # even elser: load multiaxial and other models (this should be a standalone file)
+
+def cleanup() -> None:
+    if os.path.exists("conformed.nii.gz"):
+        subprocess.run(["rm", "conformed.nii.gz"])
+
+def export_classes(output_channels, affine, output_path):
+    path_without_ext = os.path.splitext(output_path)[0]
+    if path_without_ext.endswith('.nii'):
+        path_without_ext = os.path.splitext(path_without_ext)[0]
     
-    Args:
-        nii_img (nibabel.Nifti1Image): The input NIfTI image.
-        
-    Returns:
-        nibabel.Nifti1Image: The reoriented NIfTI image.
-    """
-    # Get the current orientation
-    current_orientation = nib.aff2axcodes(nii_img.affine)
-    print(f"Current orientation: {''.join(current_orientation)}")
+    # Convert to numpy and squeeze batch dimension
+    channels_np = output_channels.numpy().squeeze(0)
     
-    # Define target orientation as LIA
-    target_orientation = "LIA"
-    
-    # Transform from current to target orientation
-    orig_ornt = nib.io_orientation(nii_img.affine)
-    targ_ornt = axcodes2ornt(target_orientation)
-    transform = ornt_transform(orig_ornt, targ_ornt)
-    
-    # Apply the transformation
-    reoriented_img = nii_img.as_reoriented(transform)
-    
-    # Verify the new orientation
-    new_orientation = nib.aff2axcodes(reoriented_img.affine)
-    print(f"New orientation: {''.join(new_orientation)}")
-    
-    return reoriented_img
+    # Save each channel
+    for i in range(channels_np.shape[0]):
+        channel = channels_np[i]
+        channel_path = f"{path_without_ext}_c{i}.nii.gz"
+        channel_nifti = nib.Nifti1Image(channel, affine)
+        nib.save(channel_nifti, channel_path)
+        print(f"Saved channel {i} to {channel_path}")
