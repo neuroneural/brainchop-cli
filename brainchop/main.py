@@ -33,10 +33,7 @@ def get_parser():
     parser.add_argument("-c", "--custom", type=str, 
                         help="Path to custom model directory (model.json and model.bin)")
     parser.add_argument("-ec", "--export-classes", action="store_true", 
-                        help="Export class probability maps (MeshNet only)")
-    parser.add_argument("--cache-dir", type=str, 
-                        default=str(Path.home() / ".cache" / "brainchop" / "models" / "multiaxial"),
-                        help="Directory to cache downloaded multiaxial models")
+                        help="Export class probability maps")
     return parser
 
 
