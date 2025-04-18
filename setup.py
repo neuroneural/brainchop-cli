@@ -37,8 +37,6 @@ setup(
         'tinygrad',
         'requests',
         'nibabel',
-        'onnx>=1.15.0',
-        'scikit-image',
     ],
     entry_points={
         "console_scripts": [
