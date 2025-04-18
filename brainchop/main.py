@@ -6,7 +6,7 @@ import nibabel as nib
 
 import numpy as np
 from tinygrad import Tensor, dtypes
-from brainchop.niimath import conform
+from brainchop.niimath import conform, inverse_conform, bwlabel
 
 from brainchop.utils import (
         update_models, 
@@ -54,8 +54,7 @@ def main():
 
 
     # load input
-    conform_result = conform(args.input)
-    nifti = conform_result[0]
+    nifti = conform(args.input)[0]
     image = Tensor(nifti.get_fdata().astype(np.float32)).rearrange("... -> 1 1 ...")
 
     output_channels = model(image)
@@ -63,11 +62,13 @@ def main():
     
     output_nifti = nib.Nifti1Image(output,nifti.affine)
     nib.save(output_nifti, args.output)
+    bwlabel(args.output)
+    if args.inverse_conform: inverse_conform(args.input, args.output)
     
 
     if args.export_classes: 
         export_classes(output_channels, nifti.affine, args.output)
-        print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}") # TODO: this shouldn't prepend
+        print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
     cleanup()
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ def copy_niimath_executable(setup_kwargs):
 
 setup(
     name="brainchop",
-    version="0.1.10",
+    version="0.1.11",
     author="Mike Doan",
     author_email="spikedoanz@gmail.com",
     description="Portable and lightweight brain segmentation using tinygrad",
