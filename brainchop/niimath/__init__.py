@@ -189,16 +189,6 @@ def conform(input_image_path, output_image_path="conformed.nii", comply=False):
     return conform_img, header
 
 
-def _largest_cluster_mask(data: Tensor):
-    # pull data into a NumPy array and count labels in C
-    arr = data.numpy().astype(np.int32).ravel()
-    counts = np.bincount(arr)
-    # ignore label 0 if that's background; otherwise drop “1:”
-    largest_label = int(counts[1:].argmax() + 1)
-
-    return data == Tensor(largest_label)
-
-
 def largest_cluster_mask(data):
     counts = np.bincount(data.ravel().astype(np.int32))
     largest_label = int(counts[1:].argmax() + 1)
