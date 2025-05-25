@@ -120,11 +120,12 @@ def main():
 
     cmd = [str(model_output_path)]
     if args.inverse_conform or args.model == "mindgrab":
-        cmd += ["-reslice_nn", args.input]
+        # cmd += ["-reslice_nn", args.input]
+        pass
     if args.model == "mindgrab":
         if args.border > 1:
             cmd += ["-sedt", "-add", str(args.border), "-bin"]
-        cmd += ["-mul", args.input]
+        # cmd += ["-mul", args.input]
     cmd += ["-gz", "1", str(args.output)]
 
     _run_niimath(cmd)
