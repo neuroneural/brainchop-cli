@@ -119,10 +119,12 @@ def main():
         print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
 
     cmd = [str(model_output_path)]
-    if args.inverse_conform:
+    if args.inverse_conform or args.model == "mindgrab":
         cmd += ["-reslice_nn", args.input]
-    if args.model == "mindgrab" and args.border > 1:
-        cmd += ["-sedt", "-add", str(args.border), "-bin"]
+    if args.model == "mindgrab":
+        if args.border > 1:
+            cmd += ["-sedt", "-add", str(args.border), "-bin"]
+        cmd += ["-mul", args.input]
     cmd += ["-gz", "1", str(args.output)]
 
     _run_niimath(cmd)
