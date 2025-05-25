@@ -2,8 +2,10 @@ import requests
 import os
 import subprocess
 import json
+import numpy as np
 from pathlib import Path
 from typing import Any, Tuple
+from .niimath import _write_nifti
 
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
@@ -152,9 +154,13 @@ def export_classes(output_channels, header: bytes, output_path: str):
     # pull into NumPy and drop the batch dim
     ch_np = output_channels.numpy().squeeze(0)  # shape (C, Z, Y, X)
 
+    header = bytearray(header)
+    header[70:74] = b"\x10\x00\x20\x00"
+    header = bytes(header)
+
     # write each channel with our _write_nifti
     for i in range(ch_np.shape[0]):
-        chan = ch_np[i].astype(np.uint8)
-        out_fname = f"{base}_c{i}.nii.gz"
+        chan = ch_np[i].transpose((2, 1, 0))
+        out_fname = f"{base}_c{i}.nii"
         _write_nifti(out_fname, chan, header)
         print(f"Saved channel {i} to {out_fname}")
