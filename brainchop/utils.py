@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 from typing import Any, Tuple
 
-import nibabel as nib
-
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
 
@@ -136,18 +134,27 @@ def cleanup() -> None:
         subprocess.run(["rm", "conformed.nii"])
 
 
-def export_classes(output_channels, affine, output_path):
-    path_without_ext = os.path.splitext(output_path)[0]
-    if path_without_ext.endswith(".nii"):
-        path_without_ext = os.path.splitext(path_without_ext)[0]
+def export_classes(output_channels, header: bytes, output_path: str):
+    """
+    Split the model’s output channels and write each as a separate NIfTI
+    using a pre‐built 352 B header (with vox_offset reset, ext_flag zeroed).
 
-    # Convert to numpy and squeeze batch dimension
-    channels_np = output_channels.numpy().squeeze(0)
+    Args:
+        output_channels: tinygrad Tensor of shape (1, C, Z, Y, X)
+        header:          352‐byte NIfTI header (bytes), no extensions
+        output_path:     filename for first channel (e.g. "out.nii.gz")
+    """
+    # strip extensions so we can append “_c{i}.nii.gz”
+    base, _ = os.path.splitext(output_path)
+    if base.endswith(".nii"):
+        base, _ = os.path.splitext(base)
 
-    # Save each channel
-    for i in range(channels_np.shape[0]):
-        channel = channels_np[i]
-        channel_path = f"{path_without_ext}_c{i}.nii.gz"
-        channel_nifti = nib.Nifti1Image(channel, affine)
-        nib.save(channel_nifti, channel_path)
-        print(f"Saved channel {i} to {channel_path}")
+    # pull into NumPy and drop the batch dim
+    ch_np = output_channels.numpy().squeeze(0)  # shape (C, Z, Y, X)
+
+    # write each channel with our _write_nifti
+    for i in range(ch_np.shape[0]):
+        chan = ch_np[i].astype(np.uint8)
+        out_fname = f"{base}_c{i}.nii.gz"
+        _write_nifti(out_fname, chan, header)
+        print(f"Saved channel {i} to {out_fname}")
