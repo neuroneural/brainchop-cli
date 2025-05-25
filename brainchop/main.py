@@ -108,9 +108,14 @@ def main():
     )
 
     output_channels = model(image / image.max())
-    output = output_channels.argmax(axis=1).rearrange("1 x y z -> z y x")
+    output = (
+        output_channels.argmax(axis=1)
+        .rearrange("1 x y z -> z y x")
+        .numpy()
+        .astype(np.uint8)
+    )
 
-    _write_nifti(str(model_output_path), output.numpy().astype(np.uint8), header)
+    _write_nifti(str(model_output_path), output, header)
 
     bwlabel(str(model_output_path), image=output)
 
@@ -120,12 +125,14 @@ def main():
 
     cmd = [str(model_output_path)]
     if args.inverse_conform or args.model == "mindgrab":
-        # cmd += ["-reslice_nn", args.input]
-        pass
+        cmd += ["-reslice_nn", args.input]
     if args.model == "mindgrab":
         if args.border > 1:
             cmd += ["-sedt", "-add", str(args.border), "-bin"]
-        # cmd += ["-mul", args.input]
+        cmd += [
+            "-mul",
+            args.input,
+        ]  # todo: add an option to also save the mask if mindgrab
     cmd += ["-gz", "1", str(args.output)]
 
     _run_niimath(cmd)
