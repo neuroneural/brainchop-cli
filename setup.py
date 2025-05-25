@@ -8,7 +8,7 @@ reqs = Path("requirements.txt").read_text().splitlines()
 
 setup(
     name="brainchop",
-    version="0.1.11",
+    version="0.1.12",
     author="Mike Doan",
     author_email="spikedoanz@gmail.com",
     description="Portable and lightweight brain segmentation using tinygrad",
@@ -35,5 +35,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.10",
 )
