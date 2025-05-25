@@ -1,6 +1,4 @@
 numpy
 tinygrad
-nibabel
+niimath
 requests
-onnx>=1.15.0
-scikit-image

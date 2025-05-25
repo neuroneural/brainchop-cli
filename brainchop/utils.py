@@ -2,31 +2,33 @@ import requests
 import os
 import subprocess
 import json
+import numpy as np
 from pathlib import Path
 from typing import Any, Tuple
-
-import nibabel as nib
+from .niimath import _write_nifti
 
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
 
 # ! : is of type termination (meaning runtime is interrupted)
 
-def download_model_listing(): # -> Json | !
+
+def download_model_listing():  # -> Json | !
     response = requests.get(MODELS_JSON_URL)
     response.raise_for_status()
     models = response.json()
-    
+
     local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
     local_models_file.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with open(local_models_file, "w") as f:
         json.dump(models, f, indent=2)
-    
+
     print(f"Downloaded models.json file to {local_models_file}")
     return models
 
-def load_models(): # -> Json
+
+def load_models():  # -> Json
     local_models_file = Path.home() / ".cache" / "brainchop" / "models.json"
     if local_models_file.exists():
         with open(local_models_file, "r") as f:
@@ -34,7 +36,8 @@ def load_models(): # -> Json
     else:
         return download_model_listing()
 
-def update_models() -> None: 
+
+def update_models() -> None:
     AVAILABLE_MODELS = download_model_listing()
     print("Model listing updated successfully.")
     for model, details in AVAILABLE_MODELS.items():
@@ -43,7 +46,9 @@ def update_models() -> None:
 
 BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/"
 MESHNET_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/meshnet/"
-MODELS_JSON_URL = "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
+MODELS_JSON_URL = (
+    "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
+)
 AVAILABLE_MODELS = load_models()
 NEW_BACKEND = {"mindgrab", "."}
 
@@ -53,7 +58,8 @@ def list_models() -> None:
     for model, details in AVAILABLE_MODELS.items():
         print(f"- {model}: {details['description']}")
 
-def download(url, local_path) -> None: # -> None | !
+
+def download(url, local_path) -> None:  # -> None | !
     print(f"Downloading from {url} to {local_path}...")
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     response = requests.get(url, stream=True)
@@ -62,17 +68,21 @@ def download(url, local_path) -> None: # -> None | !
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
 
-def unwrap_path(path): # -> String | !
+
+def unwrap_path(path):  # -> String | !
     assert os.path.isfile(path), f"Error: {path} is not a file"
     return str(path)
 
-def unwrap_model_name(s: str): # -> String | !
+
+def unwrap_model_name(s: str):  # -> String | !
     assert s in AVAILABLE_MODELS.keys(), f"Error: {s} is not an available model"
     return s
 
-def find_pth_files(model_name) -> Tuple[Path|Any, Path|Any]:
-    """ New native backend for models """
-    if model_name == ".": return "model.json", "model.pth" # local model support
+
+def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
+    """New native backend for models"""
+    if model_name == ".":
+        return "model.json", "model.pth"  # local model support
     model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
@@ -87,8 +97,9 @@ def find_pth_files(model_name) -> Tuple[Path|Any, Path|Any]:
             download(url, local_path)
     return json_fn, pth_fn
 
-def find_tfjs_files(model_name)-> Tuple[Path|Any, Path|Any]:
-    """ Deprecated tfjs weight backend """
+
+def find_tfjs_files(model_name) -> Tuple[Path | Any, Path | Any]:
+    """Deprecated tfjs weight backend"""
     model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
@@ -104,35 +115,52 @@ def find_tfjs_files(model_name)-> Tuple[Path|Any, Path|Any]:
 
 
 # tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
-def get_model(model_name): # -> tinygrad model
+def get_model(model_name):  # -> tinygrad model
     if model_name in NEW_BACKEND:
         config_fn, model_fn = find_pth_files(model_name)
         config_fn = unwrap_path(config_fn)
         model_fn = unwrap_path(model_fn)
-        return load_meshnet(config_fn, model_fn) # TODO: other configs should be loaded from json
-    else: # oldbackend
+        return load_meshnet(
+            config_fn, model_fn
+        )  # TODO: other configs should be loaded from json
+    else:  # oldbackend
         config_fn, binary_fn = find_tfjs_files(model_name)
         config_fn = unwrap_path(config_fn)
         binary_fn = unwrap_path(binary_fn)
         return load_tfjs_meshnet(config_fn, binary_fn)
     # even elser: load multiaxial and other models (this should be a standalone file)
 
-def cleanup() -> None:
-    if os.path.exists("conformed.nii.gz"):
-        subprocess.run(["rm", "conformed.nii.gz"])
 
-def export_classes(output_channels, affine, output_path):
-    path_without_ext = os.path.splitext(output_path)[0]
-    if path_without_ext.endswith('.nii'):
-        path_without_ext = os.path.splitext(path_without_ext)[0]
-    
-    # Convert to numpy and squeeze batch dimension
-    channels_np = output_channels.numpy().squeeze(0)
-    
-    # Save each channel
-    for i in range(channels_np.shape[0]):
-        channel = channels_np[i]
-        channel_path = f"{path_without_ext}_c{i}.nii.gz"
-        channel_nifti = nib.Nifti1Image(channel, affine)
-        nib.save(channel_nifti, channel_path)
-        print(f"Saved channel {i} to {channel_path}")
+def cleanup() -> None:
+    if os.path.exists("conformed.nii"):
+        subprocess.run(["rm", "conformed.nii"])
+
+
+def export_classes(output_channels, header: bytes, output_path: str):
+    """
+    Split the model’s output channels and write each as a separate NIfTI
+    using a pre‐built 352 B header (with vox_offset reset, ext_flag zeroed).
+
+    Args:
+        output_channels: tinygrad Tensor of shape (1, C, Z, Y, X)
+        header:          352‐byte NIfTI header (bytes), no extensions
+        output_path:     filename for first channel (e.g. "out.nii.gz")
+    """
+    # strip extensions so we can append “_c{i}.nii.gz”
+    base, _ = os.path.splitext(output_path)
+    if base.endswith(".nii"):
+        base, _ = os.path.splitext(base)
+
+    # pull into NumPy and drop the batch dim
+    ch_np = output_channels.numpy().squeeze(0)  # shape (C, Z, Y, X)
+
+    header = bytearray(header)
+    header[70:74] = b"\x10\x00\x20\x00"
+    header = bytes(header)
+
+    # write each channel with our _write_nifti
+    for i in range(ch_np.shape[0]):
+        chan = ch_np[i].transpose((2, 1, 0))
+        out_fname = f"{base}_c{i}.nii"
+        _write_nifti(out_fname, chan, header)
+        print(f"Saved channel {i} to {out_fname}")

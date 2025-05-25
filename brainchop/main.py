@@ -2,39 +2,77 @@ import os
 import argparse
 from pathlib import Path
 
-import nibabel as nib
-
 import numpy as np
 from tinygrad import Tensor, dtypes
-from brainchop.niimath import conform, inverse_conform, bwlabel
+from brainchop.niimath import (
+    conform,
+    bwlabel,
+    _write_nifti,
+    _run_niimath,
+    _get_temp_dir,
+)
 
 from brainchop.utils import (
-        update_models, 
-        list_models, 
-        get_model,
-        export_classes,
-        AVAILABLE_MODELS, 
-        cleanup)
+    update_models,
+    list_models,
+    get_model,
+    export_classes,
+    AVAILABLE_MODELS,
+    cleanup,
+)
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(description="BrainChop: portable brain segmentation tool")
-    parser.add_argument("input", nargs="?", 
-                        help="Input NIfTI file path")
-    parser.add_argument("-l", "--list", action="store_true", 
-                        help="List available models")
-    parser.add_argument("-i", "--inverse_conform", action="store_true", 
-                        help="Perform inverse conformation into original image space")
-    parser.add_argument("-u", "--update", action="store_true", 
-                        help="Update the model listing")
-    parser.add_argument("-o", "--output", default="output.nii.gz", 
-                        help="Output NIfTI file path")
-    parser.add_argument("-m", "--model", default=next(iter(AVAILABLE_MODELS.keys())), 
-                        help=f"Name of segmentation model, default: {next(iter(AVAILABLE_MODELS.keys()))}")
-    parser.add_argument("-c", "--custom", type=str, 
-                        help="Path to custom model directory (model.json and model.bin)")
-    parser.add_argument("-ec", "--export-classes", action="store_true", 
-                        help="Export class probability maps")
+    parser = argparse.ArgumentParser(
+        description="BrainChop: portable brain segmentation tool"
+    )
+    parser.add_argument("input", nargs="?", help="Input NIfTI file path")
+    parser.add_argument(
+        "-l", "--list", action="store_true", help="List available models"
+    )
+    parser.add_argument(
+        "-i",
+        "--inverse_conform",
+        action="store_true",
+        help="Perform inverse conformation into original image space",
+    )
+    parser.add_argument(
+        "-u", "--update", action="store_true", help="Update the model listing"
+    )
+    parser.add_argument(
+        "-o", "--output", default="output.nii.gz", help="Output NIfTI file path"
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        default=next(iter(AVAILABLE_MODELS.keys())),
+        help=f"Name of segmentation model, default: {next(iter(AVAILABLE_MODELS.keys()))}",
+    )
+    parser.add_argument(
+        "-c",
+        "--custom",
+        type=str,
+        help="Path to custom model directory (model.json and model.bin)",
+    )
+    parser.add_argument(
+        "--comply",
+        action="store_true",
+        default=False,
+        help="Insert compliance arguments to `niimath` before '-conform'",
+    )
+    parser.add_argument(
+        "-ec",
+        "--export-classes",
+        action="store_true",
+        help="Export class probability maps",
+    )
+    parser.add_argument(
+        "-b",
+        "--border",
+        type=int,
+        default=1,
+        help="Mask border threshold in mm. Default is 1.",
+    )
     return parser
 
 
@@ -42,9 +80,19 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    if args.update:     update_models();        return
-    if args.list:       list_models() ;         return
-    if not args.input:  parser.print_help();    return
+    temp_dir = _get_temp_dir()
+    model_output = temp_dir / "model_output.nii"
+    model_output_path = Path(model_output).absolute()
+
+    if args.update:
+        update_models()
+        return
+    if args.list:
+        list_models()
+        return
+    if not args.input:
+        parser.print_help()
+        return
 
     args.input = os.path.abspath(args.input)
     args.output = os.path.abspath(args.output)
@@ -52,24 +100,43 @@ def main():
     model = get_model(args.model)
     print(f"    brainchop :: Loaded model {args.model}")
 
-
     # load input
-    nifti = conform(args.input)[0]
-    image = Tensor(nifti.get_fdata().astype(np.float32)).rearrange("... -> 1 1 ...")
+    volume, header = conform(args.input, comply=args.comply)
 
-    output_channels = model(image)
-    output = output_channels.argmax(axis=1).reshape(256,256,256).numpy()
-    
-    output_nifti = nib.Nifti1Image(output,nifti.affine)
-    nib.save(output_nifti, args.output)
-    bwlabel(args.output)
-    if args.inverse_conform: inverse_conform(args.input, args.output)
-    
+    image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
+        "... -> 1 1 ..."
+    )
 
-    if args.export_classes: 
-        export_classes(output_channels, nifti.affine, args.output)
+    output_channels = model(image / image.max())
+    output = output_channels.argmax(axis=1).rearrange("1 x y z -> z y x")
+
+    _write_nifti(str(model_output_path), output.numpy().astype(np.uint8), header)
+
+    bwlabel(str(model_output_path), image=output)
+
+    if args.export_classes:
+        export_classes(output_channels, header, args.output)
         print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
+
+    cmd = [str(model_output_path)]
+    if args.inverse_conform or args.model == "mindgrab":
+        # cmd += ["-reslice_nn", args.input]
+        pass
+    if args.model == "mindgrab":
+        if args.border > 1:
+            cmd += ["-sedt", "-add", str(args.border), "-bin"]
+        # cmd += ["-mul", args.input]
+    cmd += ["-gz", "1", str(args.output)]
+
+    _run_niimath(cmd)
+
     cleanup()
+
+    try:
+        model_output_path.unlink()  # Use pathlib's unlink
+    except OSError:
+        pass  # Handle case where file doesn't exist or can't be removed
+
 
 if __name__ == "__main__":
     main()
