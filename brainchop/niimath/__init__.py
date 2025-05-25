@@ -108,8 +108,10 @@ def _read_nifti(filename, voxel_size=1):
 
         data = np.frombuffer(f.read(), dtype=dtypes[voxel_size])
 
+    # Zero out the history offset and location
     header[348:352] = b"\x00\x00\x00\x00"
-    header[108:112] = struct.pack("<f", float(HEADER_SIZE))
+    header[108:112] = b"\x00\x00\xb0\x43"
+
     header = bytes(header)
 
     if data.size != VOXEL_COUNT:
