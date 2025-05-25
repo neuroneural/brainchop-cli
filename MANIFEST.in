@@ -1,8 +1,8 @@
 # brainchop-cli/MANIFEST.in
 
-recursive-include brainchop/niimath/linux niimath
-recursive-include brainchop/niimath/macos niimath
-# recursive-include brainchop/niimath/windows niimath.exe
+# Include requirements.txt
+include requirements.txt
 
-# Include multiaxial brain segmenter ONNX models
-recursive-include multiaxial_brain_segmenter/models *.onnx
+# Include brainchop module files
+include brainchop/net.js
+include brainchop/net.safetensors
