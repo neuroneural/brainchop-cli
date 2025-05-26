@@ -43,6 +43,14 @@ def get_parser():
         "-o", "--output", default="output.nii.gz", help="Output NIfTI file path"
     )
     parser.add_argument(
+        "-a",
+        "--mask",
+        nargs="?",  # 0 or 1 arguments
+        const="mask.nii.gz",  # if they just say `--mask` with no value
+        default=None,  # if they don’t mention `--mask` at all
+        help="If provided and using mindgrab, write out the mask (defaults to mask.nii.gz when used without a value)",
+    )
+    parser.add_argument(
         "-m",
         "--model",
         default=next(iter(AVAILABLE_MODELS.keys())),
@@ -70,8 +78,8 @@ def get_parser():
         "-b",
         "--border",
         type=int,
-        default=1,
-        help="Mask border threshold in mm. Default is 1.",
+        default=0,
+        help="Mask border threshold in mm. Default is 0. Makes a difference only if the model is `mindgrab`",
     )
     return parser
 
@@ -108,9 +116,14 @@ def main():
     )
 
     output_channels = model(image / image.max())
-    output = output_channels.argmax(axis=1).rearrange("1 x y z -> z y x")
+    output = (
+        output_channels.argmax(axis=1)
+        .rearrange("1 x y z -> z y x")
+        .numpy()
+        .astype(np.uint8)
+    )
 
-    _write_nifti(str(model_output_path), output.numpy().astype(np.uint8), header)
+    _write_nifti(str(model_output_path), output, header)
 
     bwlabel(str(model_output_path), image=output)
 
@@ -120,12 +133,14 @@ def main():
 
     cmd = [str(model_output_path)]
     if args.inverse_conform or args.model == "mindgrab":
-        # cmd += ["-reslice_nn", args.input]
-        pass
+        cmd += ["-reslice_nn", args.input]
+
     if args.model == "mindgrab":
-        if args.border > 1:
+        if args.border > 0:
             cmd += ["-sedt", "-add", str(args.border), "-bin"]
-        # cmd += ["-mul", args.input]
+        if args.mask is not None:
+            _run_niimath(cmd + ["-gz", "1", args.mask])
+        cmd += ["-mul", args.input]
     cmd += ["-gz", "1", str(args.output)]
 
     _run_niimath(cmd)

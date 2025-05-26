@@ -189,14 +189,10 @@ def conform(input_image_path, output_image_path="conformed.nii", comply=False):
     return conform_img, header
 
 
-def largest_cluster_mask(data: Tensor):
-    # pull data into a NumPy array and count labels in C
-    arr = data.numpy().astype(np.int32).ravel()
-    counts = np.bincount(arr)
-    # ignore label 0 if that's background; otherwise drop “1:”
-    largest_label = int(counts[1:].argmax() + 1)
-
-    return data == Tensor(largest_label)
+def largest_cluster(data):
+    counts = np.bincount(data.ravel().astype(np.int32))
+    largest_label = counts[1:].argmax() + 1
+    return largest_label
 
 
 def bwlabel(image_path, neighbors=26, image=None):
@@ -221,12 +217,12 @@ def bwlabel(image_path, neighbors=26, image=None):
     _run_niimath(args)
 
     if image is None:
-        image = Tensor(_read_nifti(image_path)[0])
+        image = _read_nifti(image_path)[0].astype(np.uint8)
 
     clusters, header = _read_nifti(mask_path)
-    mask = largest_cluster_mask(Tensor(clusters))
-
-    _write_nifti(image_path, (mask * image).numpy().astype(np.uint8), header)
+    cluster_label = largest_cluster(clusters)
+    image[clusters != cluster_label] = 0
+    _write_nifti(image_path, image, header)
 
     try:
         mask_path.unlink()  # Use pathlib's unlink instead of subprocess rm
