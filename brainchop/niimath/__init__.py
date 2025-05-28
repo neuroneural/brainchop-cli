@@ -1,5 +1,6 @@
 import os, sys, shutil
 import struct
+import gzip
 import subprocess
 from pathlib import Path
 import numpy as np
@@ -72,6 +73,46 @@ def _run_niimath(args):
     except subprocess.CalledProcessError as e:
         print(f"niimath failed with error:\n{e.stderr}", file=sys.stderr)
         raise RuntimeError(f"niimath failed with error:\n{e.stderr}") from e
+
+
+def read_header_bytes(path, size=352):
+    if path.endswith((".nii.gz", ".gz")):
+        opener = gzip.open
+    else:
+        opener = open
+    with opener(path, "rb") as f:
+        return f.read(size)
+
+
+def niimath_dtype(path: str):
+    header = read_header_bytes(path)
+    # 1) detect endianness via sizeof_hdr (should be 348)
+    le_size = struct.unpack("<i", header[0:4])[0]
+    if le_size == 348:
+        endian = "<"
+    else:
+        # try big‑endian
+        be_size = struct.unpack(">i", header[0:4])[0]
+        if be_size == 348:
+            endian = ">"
+        else:
+            raise ValueError(f"Unrecognized sizeof_hdr: {le_size!r}/{be_size!r}")
+
+    # 2) unpack using the detected endianness
+    datatype, bitpix = struct.unpack(f"{endian}hh", header[70:74])
+
+    dtype_map = {
+        2: "char",  # uint8
+        4: "short",  # int16
+        8: "int",  # int32
+        16: "float",  # float32
+        64: "double",  # float64
+        512: "ushort",  # uint16
+        768: "long",  # int64
+        1024: "uint",  # uint32
+        1280: "ulong",  # uint64
+    }
+    return dtype_map.get(datatype, f"unknown({datatype})")
 
 
 def _read_nifti(filename, voxel_size=1):
@@ -157,7 +198,7 @@ def conform(input_image_path, output_image_path="conformed.nii", comply=False):
         "1",
         "1",
         "1",
-        "0.98",
+        "1",
         "1",
     ]
     # Construct niimath arguments

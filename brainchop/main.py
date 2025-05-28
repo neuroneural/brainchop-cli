@@ -10,6 +10,7 @@ from brainchop.niimath import (
     _write_nifti,
     _run_niimath,
     _get_temp_dir,
+    niimath_dtype,
 )
 
 from brainchop.utils import (
@@ -108,6 +109,7 @@ def main():
     model = get_model(args.model)
     print(f"    brainchop :: Loaded model {args.model}")
 
+    output_dtype = niimath_dtype(args.input)
     # load input
     volume, header = conform(args.input, comply=args.comply)
 
@@ -139,9 +141,9 @@ def main():
         if args.border > 0:
             cmd += ["-sedt", "-add", str(args.border), "-bin"]
         if args.mask is not None:
-            _run_niimath(cmd + ["-gz", "1", args.mask])
+            _run_niimath(cmd + ["-gz", "1", args.mask, "-odt", "char"])
         cmd += ["-mul", args.input]
-    cmd += ["-gz", "1", str(args.output)]
+    cmd += ["-gz", "1", str(args.output), "-odt", output_dtype]
 
     _run_niimath(cmd)
 
