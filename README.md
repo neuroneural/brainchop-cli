@@ -50,7 +50,6 @@ Where:
 - Python 3.10+
 - tinygrad : our tiny and portable (but powerful) ML inference engine
 - numpy : basic tensor operations
-- nibabel : to read nifti files
 - requests : to download models
 
 ## License
