@@ -1,5 +1,6 @@
 import os
 import argparse
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -7,9 +8,6 @@ from tinygrad import Tensor, dtypes
 from brainchop.niimath import (
     conform,
     bwlabel,
-    _write_nifti,
-    _run_niimath,
-    _get_temp_dir,
     niimath_dtype,
 )
 
@@ -95,10 +93,6 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    temp_dir = _get_temp_dir()
-    model_output = temp_dir / "model_output.nii"
-    model_output_path = Path(model_output).absolute()
-
     if args.update:
         update_models()
         return
@@ -123,7 +117,7 @@ def main():
         "... -> 1 1 ..."
     )
 
-    output_channels = model(image / image.max())
+    output_channels = model(image)
     output = (
         output_channels.argmax(axis=1)
         .rearrange("1 x y z -> z y x")
@@ -131,15 +125,14 @@ def main():
         .astype(np.uint8)
     )
 
-    _write_nifti(str(model_output_path), output, header)
-
-    bwlabel(str(model_output_path), image=output)
+    labels, new_header = bwlabel(header, output)
+    full_input = new_header + labels.tobytes()
 
     if args.export_classes:
         export_classes(output_channels, header, args.output)
         print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
 
-    cmd = [str(model_output_path)]
+    cmd = ["niimath", "-"]
     if args.inverse_conform or args.model == "mindgrab":
         cmd += ["-reslice_nn", args.input]
 
@@ -147,18 +140,17 @@ def main():
         if args.border > 0:
             cmd += ["-close", "1", str(args.border), "0"]
         if args.mask is not None:
-            _run_niimath(cmd + ["-gz", "1", args.mask, "-odt", "char"])
+            subprocess.run(
+                cmd + ["-gz", "1", args.mask, "-odt", "char"],
+                input=full_input,
+                check=True,
+            )
         cmd += ["-mul", args.input]
     cmd += ["-gz", "1", str(args.output), "-odt", output_dtype]
 
-    _run_niimath(cmd)
+    subprocess.run(cmd, input=full_input, check=True)
 
     cleanup()
-
-    try:
-        model_output_path.unlink()  # Use pathlib's unlink
-    except OSError:
-        pass  # Handle case where file doesn't exist or can't be removed
 
 
 if __name__ == "__main__":
