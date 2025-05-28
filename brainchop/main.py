@@ -145,7 +145,7 @@ def main():
 
     if args.model == "mindgrab":
         if args.border > 0:
-            cmd += ["-sedt", "-add", str(args.border), "-bin"]
+            cmd += ["-close", "1", str(args.border), "0"]
         if args.mask is not None:
             _run_niimath(cmd + ["-gz", "1", args.mask, "-odt", "char"])
         cmd += ["-mul", args.input]
