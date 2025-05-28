@@ -70,6 +70,12 @@ def get_parser():
         help="Insert compliance arguments to `niimath` before '-conform'",
     )
     parser.add_argument(
+        "--ct",
+        action="store_true",
+        default=False,
+        help="Convert CT scans from 'Hounsfield' to 'Cormack' units to emphasize soft tissue contrast",
+    )
+    parser.add_argument(
         "-ec",
         "--export-classes",
         action="store_true",
@@ -111,7 +117,7 @@ def main():
 
     output_dtype = niimath_dtype(args.input)
     # load input
-    volume, header = conform(args.input, comply=args.comply)
+    volume, header = conform(args.input, comply=args.comply, ct=args.ct)
 
     image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
         "... -> 1 1 ..."
