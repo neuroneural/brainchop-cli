@@ -109,7 +109,7 @@ def main():
     model = get_model(args.model)
     print(f"    brainchop :: Loaded model {args.model}")
 
-    output_dtype = niimath_dtype(args.input)
+    output_dtype = "char"
     # load input
     volume, header = conform(args.input, comply=args.comply, ct=args.ct)
 
@@ -146,6 +146,7 @@ def main():
                 check=True,
             )
         cmd += ["-mul", args.input]
+        output_dtype = niimath_dtype(args.input)
     cmd += ["-gz", "1", str(args.output), "-odt", output_dtype]
 
     subprocess.run(cmd, input=full_input, check=True)
