@@ -168,7 +168,38 @@ def _write_nifti(path, data, header):
         f.write(data.tobytes())
 
 
-def conform(
+def conform(input_image_path, comply=False, ct=False):
+    """
+    Conform a NIfTI image to 256³ uint8 using niimath, returning
+    the volume (256×256×256) and the 352‑byte header.
+    """
+    inp = Path(input_image_path).absolute()
+    if not inp.exists():
+        raise FileNotFoundError(f"Input NIfTI file not found: {inp}")
+
+    comply_args = ["-comply", "256", "256", "256", "1", "1", "1", "1", "1"]
+
+    cmd = ["niimath", str(inp)]
+    if ct:
+        cmd += ["-h2c"]
+    if comply:
+        cmd += comply_args
+    cmd += ["-conform", "-gz", "0", "-", "-odt", "char"]
+
+    # run niimath, capture stdout (header+raw voxels)
+    res = subprocess.run(cmd, capture_output=True, check=True)
+    out = res.stdout
+
+    # split off header and data
+    header = out[:352]
+    data = out[352:]
+
+    # reshape into (256,256,256) uint8 volume
+    volume = np.frombuffer(data, dtype=np.uint8).reshape((256, 256, 256))
+    return volume, header
+
+
+def _conform(
     input_image_path, output_image_path="conformed.nii", comply=False, ct=False
 ):
     """
@@ -240,7 +271,25 @@ def largest_cluster(data):
     return largest_label
 
 
-def bwlabel(image_path, neighbors=26, image=None):
+def bwlabel(header: bytes, vol_data: np.ndarray, neighbors=26):
+    # fire niimath, pipe in header+data, capture its stdout
+    res = subprocess.run(
+        ["niimath", "-", "-bwlabel", str(neighbors), "-gz", "0", "-", "-odt", "char"],
+        input=header + vol_data.tobytes(),
+        capture_output=True,
+        check=True,
+    )
+    out = res.stdout
+    # split off the 352‑byte header
+    out_header, out_data = out[:352], out[352:]
+    # reinterpret and reshape into (Z,Y,X)
+    clusters = np.frombuffer(out_data, dtype=np.uint8).reshape(vol_data.shape)
+    cluster_label = largest_cluster(clusters)
+    vol_data[clusters != cluster_label] = 0
+    return vol_data, out_header
+
+
+def _bwlabel(image_path, neighbors=26, image=None):
     """
     Performs in place connected component labelling for non-zero voxels
     (conn sets neighbors: 6, 18, 26)
