@@ -168,7 +168,9 @@ def _write_nifti(path, data, header):
         f.write(data.tobytes())
 
 
-def conform(input_image_path, output_image_path="conformed.nii", comply=False):
+def conform(
+    input_image_path, output_image_path="conformed.nii", comply=False, ct=False
+):
     """
     Conform a NIfTI image to the specified shape using niimath.
 
@@ -211,6 +213,8 @@ def conform(input_image_path, output_image_path="conformed.nii", comply=False):
         "-odt",
         "char",
     ]
+    if ct:
+        args[1:1] = ["-h2c"]
     if comply:
         args[1:1] = comply_args
 
