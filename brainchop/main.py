@@ -8,6 +8,7 @@ from tinygrad import Tensor, dtypes
 from brainchop.niimath import (
     conform,
     bwlabel,
+    grow_border,
     niimath_dtype,
 )
 
@@ -133,20 +134,23 @@ def main():
         print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
 
     cmd = ["niimath", "-"]
-    if args.inverse_conform or args.model == "mindgrab":
+    if args.inverse_conform and not args.model == "mindgrab":
         cmd += ["-reslice_nn", args.input]
 
     if args.model == "mindgrab":
+        cmd = ["niimath", str(args.input)]
         if args.border > 0:
-            cmd += ["-close", "1", str(args.border), "0"]
+            full_input = grow_border(full_input, args.border)
         if args.mask is not None:
+            cmdm = ["niimath", "-"]
+            cmdm += ["-reslice_nn", args.input]
             subprocess.run(
-                cmd + ["-gz", "1", args.mask, "-odt", "char"],
+                cmdm + ["-gz", "1", args.mask, "-odt", "char"],
                 input=full_input,
                 check=True,
             )
-        cmd += ["-mul", args.input]
-        output_dtype = niimath_dtype(args.input)
+        cmd += ["-reslice_mask", "-"]
+        output_dtype = "input_force"
     cmd += ["-gz", "1", str(args.output), "-odt", output_dtype]
 
     subprocess.run(cmd, input=full_input, check=True)

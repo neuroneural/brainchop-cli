@@ -265,6 +265,115 @@ def _conform(
     return conform_img, header
 
 
+def header2dimensions(header_bytes):
+    """
+    Extracts the meaningful dimensions (nx, ny, nz, nt, nu, nv, nw)
+    from a NIfTI header ignoring trailing dimensions of size 0.
+
+    Args:
+        header_bytes: A bytes object containing the NIfTI header (at least 352 bytes).
+
+    Returns:
+        A tuple containing the meaningful dimensions (nx, ny, nz, nt, nu, nv, nw).
+        Returns an empty tuple if the header_bytes are not valid or too short.
+    """
+    if not isinstance(header_bytes, bytes) or len(header_bytes) < 352:
+        print("Error: Invalid or incomplete header_bytes provided.")
+        return ()
+
+    try:
+        # Unpack the dimensions from bytes 40-56 of the header
+        dimensions = struct.unpack_from("<hhhh hhhh", header_bytes, offset=40)
+
+        # The first element of the dimensions array is ndim.
+        # The subsequent elements correspond to
+        # nx, ny, nz, nt, nu, nv, nw.
+        # We should extract dimensions based on ndim.
+        ndim = dimensions[0]
+
+        # Meaningful dimensions start from index 1 (nx) up to ndim.
+        # If ndim is less than 1 (though spec says > 0), or greater than 7,
+        # we still want to return the first `ndim` dimensions.
+        # If ndim is 1, we return only nx.
+        # If ndim is 3, we return nx, ny, nz.
+        # We take the slice from index 1 up to min(ndim + 1, 8)
+        # because dimensions is 0-indexed, and we want ndim elements
+        # starting from index 1. min(ndim + 1, 8) ensures we don't go
+        # out of bounds of the dimensions tuple which has 8 elements.
+
+        meaningful_dims = dimensions[1 : min(ndim + 1, 8)]
+
+        return meaningful_dims
+
+    except struct.error as e:
+        print(f"Error unpacking dimensions from header: {e}")
+        return ()
+
+
+def header2datatype(header: bytes):
+    # 1) detect endianness via sizeof_hdr (should be 348)
+    le_size = struct.unpack("<i", header[0:4])[0]
+    if le_size == 348:
+        endian = "<"
+    else:
+        # try big‑endian
+        be_size = struct.unpack(">i", header[0:4])[0]
+        if be_size == 348:
+            endian = ">"
+        else:
+            raise ValueError(f"Unrecognized sizeof_hdr: {le_size!r}/{be_size!r}")
+
+    # 2) unpack using the detected endianness
+    datatype, bitpix = struct.unpack(f"{endian}hh", header[70:74])
+    return datatype, bitpix
+
+
+def header2dtype(header: bytes):
+    datatype, _ = header2datatype(header)
+
+    dtype_map = {
+        2: np.uint8,
+        4: np.int16,
+        8: np.int32,
+        16: np.float32,
+        64: np.float64,
+        512: np.uint16,
+        768: np.int64,
+        1024: np.uint32,
+        1280: np.uint64,
+    }
+    return dtype_map.get(datatype, np.uint8)  # fallback to uint8
+
+
+def niimath_pipe_process(cmd: list, full_input: bytes):
+    res = subprocess.run(cmd, input=full_input, capture_output=True, check=True)
+    out = res.stdout
+    # split off the 352‑byte header
+    out_header, out_data = out[:352], out[352:]
+    shape = header2dimensions(out_header)
+    # reinterpret and reshape into (Z,Y,X)
+    numpyarray = np.frombuffer(out_data, dtype=header2dtype(out_header)).reshape(shape)
+    return numpyarray, out_header
+
+
+def grow_border(full_input: bytes, border: int):
+    cmd = [
+        "niimath",
+        "-",
+        "-close",
+        "1",
+        str(border),
+        "0",
+        "-gz",
+        "0",
+        "-",
+        "-odt",
+        "char",
+    ]
+    res = subprocess.run(cmd, input=full_input, capture_output=True, check=True)
+    return res.stdout
+
+
 def largest_cluster(data):
     counts = np.bincount(data.ravel().astype(np.int32))
     largest_label = counts[1:].argmax() + 1
