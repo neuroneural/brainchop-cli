@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Tuple
 from .niimath import _write_nifti
 
+
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
 
@@ -164,3 +165,55 @@ def export_classes(output_channels, header: bytes, output_path: str):
         out_fname = f"{base}_c{i}.nii"
         _write_nifti(out_fname, chan, header)
         print(f"Saved channel {i} to {out_fname}")
+
+
+def crop_to_cutoff(arr: np.ndarray, cutoff_percent: float = 2.0):
+    if not isinstance(arr, np.ndarray) or arr.ndim != 3:
+        raise ValueError("Input must be a 3D numpy array.")
+
+    # Compute cutoff using percentile without creating full flattened copy
+    cutoff_value = np.percentile(arr, cutoff_percent)
+
+    # Compute bounding axes projections faster than manual looping
+    def axis_indices_max(arr, axis):
+        axis_opt = {0: (1, 2), 1: (0, 2), 2: (0, 1)}
+        projected_mask = np.any(arr > cutoff_value, axis=axis_opt[axis])
+        indices = np.where(projected_mask)[0]
+        return (indices[0], indices[-1]) if indices.size > 0 else (0, -1)
+
+    x_min, x_max = 0, 255  # axis_indices_max(arr, 0)
+    y_min, y_max = axis_indices_max(arr, 1)
+    z_min, z_max = axis_indices_max(arr, 2)
+
+    # Handle complete elimination
+    if x_min > x_max or y_min > y_max or z_min > z_max:
+        return np.empty((0, 0, 0), dtype=arr.dtype), (0, 0, 0, 0, 0, 0)
+
+    cropped_arr = arr[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1]
+    return cropped_arr, (x_min, x_max, y_min, y_max, z_min, z_max)
+
+
+def pad_to_original_size(
+    cropped_arr: np.ndarray, coords: tuple, original_shape: tuple = (256, 256, 256)
+):
+    x_min, x_max, y_min, y_max, z_min, z_max = coords
+
+    # Fast padding using zero padding with offset slicing
+    padded_arr = np.zeros(original_shape, dtype=cropped_arr.dtype)
+
+    # Check if crop is empty
+    if (slice_size := cropped_arr.size) == 0:
+        return padded_arr
+
+    # Calculate crop dimensions dynamically instead copying shape
+    x_size = x_max - x_min + 1
+    y_size = y_max - y_min + 1
+    z_size = z_max - z_min + 1
+
+    # Coordinate-aware slicing that adjusts automatically to empty cases
+    if x_size > 0 and y_size > 0 and z_size > 0:
+        padded_arr[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = (
+            cropped_arr
+        )
+
+    return padded_arr

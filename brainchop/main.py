@@ -19,6 +19,8 @@ from brainchop.utils import (
     export_classes,
     AVAILABLE_MODELS,
     cleanup,
+    crop_to_cutoff,
+    pad_to_original_size,
 )
 
 
@@ -75,6 +77,14 @@ def get_parser():
         help="Convert CT scans from 'Hounsfield' to 'Cormack' units to emphasize soft tissue contrast",
     )
     parser.add_argument(
+        "--crop",
+        nargs="?",  # 0 or 1 arguments
+        type=float,
+        const=2,  # if they just say `--crop` with no value
+        default=False,  # if they don’t mention `--crop` at all
+        help="Crop the input for faster execution. May reduce accuracy.(defaults to percentile 2 cutoff)",
+    )
+    parser.add_argument(
         "-ec",
         "--export-classes",
         action="store_true",
@@ -113,18 +123,25 @@ def main():
     output_dtype = "char"
     # load input
     volume, header = conform(args.input, comply=args.comply, ct=args.ct)
+    if args.crop:
+        volume, coords = crop_to_cutoff(volume, args.crop)
+        print(f"    brainchop :: cropped to {volume.shape}")
 
     image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
         "... -> 1 1 ..."
     )
 
     output_channels = model(image)
+
     output = (
         output_channels.argmax(axis=1)
         .rearrange("1 x y z -> z y x")
         .numpy()
         .astype(np.uint8)
     )
+
+    if args.crop:
+        output = pad_to_original_size(output, coords)
 
     labels, new_header = bwlabel(header, output)
     full_input = new_header + labels.tobytes()
