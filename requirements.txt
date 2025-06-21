@@ -2,3 +2,4 @@ numpy
 tinygrad
 niimath>=1.0.20250529
 requests
+clang
