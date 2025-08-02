@@ -7,6 +7,7 @@ import numpy as np
 from tinygrad import Tensor, dtypes
 from brainchop.niimath import (
     conform,
+    set_header_intent_label,
     bwlabel,
     grow_border,
     niimath_dtype,
@@ -144,7 +145,7 @@ def main():
         output = pad_to_original_size(output, coords)
 
     labels, new_header = bwlabel(header, output)
-    full_input = new_header + labels.tobytes()
+    full_input = set_header_intent_label(new_header) + labels.tobytes()
 
     if args.export_classes:
         export_classes(output_channels, header, args.output)
