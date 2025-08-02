@@ -87,17 +87,7 @@ def read_header_bytes(path, size=352):
 def niimath_dtype(path: str):
     header = read_header_bytes(path)
     # 1) detect endianness via sizeof_hdr (should be 348)
-    le_size = struct.unpack("<i", header[0:4])[0]
-    if le_size == 348:
-        endian = "<"
-    else:
-        # try big‑endian
-        be_size = struct.unpack(">i", header[0:4])[0]
-        if be_size == 348:
-            endian = ">"
-        else:
-            raise ValueError(f"Unrecognized sizeof_hdr: {le_size!r}/{be_size!r}")
-
+    endian = header2endian(header)
     # 2) unpack using the detected endianness
     datatype, bitpix = struct.unpack(f"{endian}hh", header[70:74])
 
@@ -310,7 +300,7 @@ def header2dimensions(header_bytes):
         return ()
 
 
-def header2datatype(header: bytes):
+def header2endian(header: bytes):
     # 1) detect endianness via sizeof_hdr (should be 348)
     le_size = struct.unpack("<i", header[0:4])[0]
     if le_size == 348:
@@ -322,7 +312,35 @@ def header2datatype(header: bytes):
             endian = ">"
         else:
             raise ValueError(f"Unrecognized sizeof_hdr: {le_size!r}/{be_size!r}")
+    return endian
 
+
+def set_header_intent(header: bytes, intent_code: int) -> bytes:
+    """Sets the NIFTI intent code to `intent_code` in the header."""
+    # 1) detect endianness
+    endian = header2endian(header)
+
+    # Convert to mutable bytearray to allow modification
+    header_array = bytearray(header)
+
+    # NIFTI intent code for labels is 1007. It is a short at offset 68.
+    intent_offset = 68
+
+    # Pack the new intent_code into the header_array at the correct offset
+    struct.pack_into(f"{endian}h", header_array, intent_offset, intent_code)
+
+    # Return the modified header as an immutable bytes object
+    return bytes(header_array)
+
+
+def set_header_intent_label(header: bytes) -> bytes:
+    """Sets the NIFTI intent code to 'label' (1002) in the header."""
+    return set_header_intent(header, 1002)
+
+
+def header2datatype(header: bytes):
+    # 1) detect endianness
+    endian = header2endian(header)
     # 2) unpack using the detected endianness
     datatype, bitpix = struct.unpack(f"{endian}hh", header[70:74])
     return datatype, bitpix
