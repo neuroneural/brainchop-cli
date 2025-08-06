@@ -1,5 +1,5 @@
 numpy
 tinygrad
-niimath>=1.0.20250529
+niimath>=1.0.20250804
 requests
 clang
