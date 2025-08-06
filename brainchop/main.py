@@ -35,7 +35,7 @@ def get_parser():
     )
     parser.add_argument(
         "-i",
-        "--inverse_conform",
+        "--inverse-conform",
         action="store_true",
         help="Perform inverse conformation into original image space",
     )
@@ -87,7 +87,7 @@ def get_parser():
     )
     parser.add_argument(
         "-ss",
-        "--skull_strip",
+        "--skull-strip",
         action="store_true",
         help="Return just the brain compartment. An alias for -m mindgrab, that overrides -m parameter",
     )
