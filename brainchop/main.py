@@ -86,6 +86,12 @@ def get_parser():
         help="Crop the input for faster execution. May reduce accuracy.(defaults to percentile 2 cutoff)",
     )
     parser.add_argument(
+        "-ss",
+        "--skull_strip",
+        action="store_true",
+        help="Return just the brain compartment. An alias for -m mindgrab, that overrides -m parameter",
+    )
+    parser.add_argument(
         "-ec",
         "--export-classes",
         action="store_true",
@@ -118,8 +124,12 @@ def main():
     args.input = os.path.abspath(args.input)
     args.output = os.path.abspath(args.output)
 
-    model = get_model(args.model)
-    print(f"    brainchop :: Loaded model {args.model}")
+    modelname = args.model
+    if args.skull_strip:
+        modelname = "mindgrab"
+        args.model = modelname
+    model = get_model(modelname)
+    print(f"    brainchop :: Loaded model {modelname}")
 
     output_dtype = "char"
     # load input
