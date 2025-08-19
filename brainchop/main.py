@@ -161,6 +161,8 @@ def main():
         export_classes(output_channels, header, args.output)
         print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
 
+    # Determine gzip flag based on output file extension
+    gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
     cmd = ["niimath", "-"]
     if args.inverse_conform and not args.model == "mindgrab":
         cmd += ["-reslice_nn", args.input]
@@ -179,7 +181,7 @@ def main():
             )
         cmd += ["-reslice_mask", "-"]
         output_dtype = "input_force"
-    cmd += ["-gz", "1", str(args.output), "-odt", output_dtype]
+    cmd += ["-gz", gzip_flag, str(args.output), "-odt", output_dtype]
 
     subprocess.run(cmd, input=full_input, check=True)
 
