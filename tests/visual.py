@@ -62,5 +62,9 @@ for cmd in output_mrpeek_cmds: print(cmd_to_str(cmd))
 if getenv("DRYRUN"): exit(0)
 
 # 4. run all commands (sequential for now)
-all_cmds = mrpeek_cmds + brainchop_cmds + output_mrpeek_cmds
-for cmd in all_cmds: subprocess.run(cmd)
+all_cmds = zip(mrpeek_cmds, brainchop_cmds, output_mrpeek_cmds)
+for cmd_pack in all_cmds: 
+  for cmd in cmd_pack:
+    print(">>> RUNNING: ", cmd_to_str(cmd))
+    subprocess.run(cmd)
+  print("=" * 80)
