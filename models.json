@@ -17,13 +17,6 @@
     "considerations": "min/max normalization",
     "parameter_name": "DKatlas"
   },
-  "multiaxial": {
-    "folder": "multiaxial",
-    "description": "🧠 multi-axial 3D brain segmentation using sagittal, axial, and coronal views with a consensus layer",
-    "considerations": "uses ONNX models",
-    "parameter_name": "multiaxial",
-    "model_type": "multiaxial"
-  },
   "mindgrab": {
     "folder": "mindgrab",
     "description": "tissue extraction",

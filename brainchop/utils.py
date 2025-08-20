@@ -13,7 +13,6 @@ from .tiny_meshnet import load_meshnet
 
 # ! : is of type termination (meaning runtime is interrupted)
 
-
 def download_model_listing():  # -> Json | !
     response = requests.get(MODELS_JSON_URL)
     response.raise_for_status()
