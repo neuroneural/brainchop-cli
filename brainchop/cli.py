@@ -107,11 +107,131 @@ def get_parser():
     return parser
 
 
+def preprocess_input(args):
+    """
+    Handle input preprocessing: loading, conforming, and cropping.
+    
+    Returns:
+        tuple: (image_tensor, volume, header, crop_coords)
+    """
+    # Load and conform input volume
+    volume, header = conform(args.input, comply=args.comply, ct=args.ct)
+    crop_coords = None
+    
+    # Apply cropping if requested
+    if args.crop:
+        volume, crop_coords = crop_to_cutoff(volume, args.crop)
+        print(f"    brainchop :: cropped to {volume.shape}")
+    
+    # Convert to tensor format expected by model
+    image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
+        "... -> 1 1 ..."
+    )
+    
+    return image, volume, header, crop_coords
+
+
+def run_inference(model, image):
+    """
+    Execute model inference on the preprocessed image.
+    
+    Args:
+        model: The loaded segmentation model
+        image: Preprocessed image tensor
+        
+    Returns:
+        Tensor: Raw model output channels
+    """
+    return model(image)
+
+
+def postprocess_output(output_channels, header, crop_coords=None):
+    """
+    Handle output postprocessing: argmax, padding, and labeling.
+    
+    Args:
+        output_channels: Raw model output tensor
+        header: Original NIfTI header
+        crop_coords: Coordinates for uncropping (if cropping was applied)
+        
+    Returns:
+        tuple: (processed_labels_data, new_header)
+    """
+    # Convert model output to segmentation labels
+    output = (
+        output_channels.argmax(axis=1)
+        .rearrange("1 x y z -> z y x")
+        .numpy()
+        .astype(np.uint8)
+    )
+    
+    # Restore original size if cropping was applied
+    if crop_coords is not None:
+        output = pad_to_original_size(output, crop_coords)
+    
+    # Generate labeled output with proper header
+    labels, new_header = bwlabel(header, output)
+    processed_data = set_header_intent_label(new_header) + labels.tobytes()
+    
+    return processed_data, new_header
+
+
+def write_output(processed_data, args):
+    """
+    Handle file output operations including niimath commands and subprocess calls.
+    
+    Args:
+        processed_data: Processed segmentation data ready for output
+        args: Command line arguments containing output settings
+    """
+    output_dtype = "char"
+    
+    # Handle class probability export if requested
+    if args.export_classes:
+        # Note: This requires access to output_channels, will need to be called separately
+        print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
+    
+    # Determine gzip compression based on file extension
+    gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
+    
+    # Build base niimath command
+    cmd = ["niimath", "-"]
+    if args.inverse_conform and args.model != "mindgrab":
+        cmd += ["-reslice_nn", args.input]
+    
+    # Handle mindgrab-specific processing
+    data_to_write = processed_data
+    if args.model == "mindgrab":
+        cmd = ["niimath", str(args.input)]
+        
+        # Apply border growth if specified
+        if args.border > 0:
+            data_to_write = grow_border(processed_data, args.border)
+        
+        # Write mask file if requested
+        if args.mask is not None:
+            cmdm = ["niimath", "-"]
+            cmdm += ["-reslice_nn", args.input]
+            subprocess.run(
+                cmdm + ["-gz", "1", args.mask, "-odt", "char"],
+                input=data_to_write,
+                check=True,
+            )
+        
+        cmd += ["-reslice_mask", "-"]
+        output_dtype = "input_force"
+    
+    # Finalize command and execute
+    cmd += ["-gz", gzip_flag, str(args.output), "-odt", output_dtype]
+    subprocess.run(cmd, input=data_to_write, check=True)
+
+
 def run_cli():
-    """Main CLI function that handles all brainchop command-line operations."""
+    """Main CLI function that orchestrates brainchop command-line operations."""
     parser = get_parser()
     args = parser.parse_args()
 
+    # Handle simple commands that don't require processing
     if args.update:
         update_models()
         return
@@ -122,9 +242,11 @@ def run_cli():
         parser.print_help()
         return
 
+    # Prepare file paths
     args.input = os.path.abspath(args.input)
     args.output = os.path.abspath(args.output)
 
+    # Load model
     modelname = args.model
     if args.skull_strip:
         modelname = "mindgrab"
@@ -132,60 +254,17 @@ def run_cli():
     model = get_model(modelname)
     print(f"    brainchop :: Loaded model {modelname}")
 
-    output_dtype = "char"
-    # load input
-    volume, header = conform(args.input, comply=args.comply, ct=args.ct)
-    if args.crop:
-        volume, coords = crop_to_cutoff(volume, args.crop)
-        print(f"    brainchop :: cropped to {volume.shape}")
-
-    image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
-        "... -> 1 1 ..."
-    )
-
-    output_channels = model(image)
-
-    output = (
-        output_channels.argmax(axis=1)
-        .rearrange("1 x y z -> z y x")
-        .numpy()
-        .astype(np.uint8)
-    )
-
-    if args.crop:
-        output = pad_to_original_size(output, coords)
-
-    labels, new_header = bwlabel(header, output)
-    full_input = set_header_intent_label(new_header) + labels.tobytes()
-
+    # Execute processing pipeline
+    image, volume, header, crop_coords = preprocess_input(args)
+    output_channels = run_inference(model, image)
+    processed_data, new_header = postprocess_output(output_channels, header, crop_coords)
+    
+    # Handle class export before writing main output
     if args.export_classes:
         export_classes(output_channels, header, args.output)
         print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
-
-    # Determine gzip flag based on output file extension
-    gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
-    cmd = ["niimath", "-"]
-    if args.inverse_conform and not args.model == "mindgrab":
-        cmd += ["-reslice_nn", args.input]
-
-    if args.model == "mindgrab":
-        cmd = ["niimath", str(args.input)]
-        if args.border > 0:
-            full_input = grow_border(full_input, args.border)
-        if args.mask is not None:
-            cmdm = ["niimath", "-"]
-            cmdm += ["-reslice_nn", args.input]
-            subprocess.run(
-                cmdm + ["-gz", "1", args.mask, "-odt", "char"],
-                input=full_input,
-                check=True,
-            )
-        cmd += ["-reslice_mask", "-"]
-        output_dtype = "input_force"
-    cmd += ["-gz", gzip_flag, str(args.output), "-odt", output_dtype]
-
-    subprocess.run(cmd, input=full_input, check=True)
-
+    
+    write_output(processed_data, args)
     cleanup()
 
 
