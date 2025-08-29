@@ -25,11 +25,48 @@ from brainchop.utils import (
 )
 
 
+def generate_output_filename(input_path, modelname, index, output_dir=None):
+    """
+    Generate output filename based on input filename, model name, and index.
+    
+    Args:
+        input_path: Path to input file
+        modelname: Name of the segmentation model used
+        index: Processing index/order
+        output_dir: Optional output directory (uses current dir if None)
+        
+    Returns:
+        str: Generated output filename in format {input_name}_{modelname}_output_{index}.nii.gz
+    """
+    input_file = Path(input_path)
+    
+    # Extract base name without extensions (.nii.gz or .nii)
+    base_name = input_file.name
+    if base_name.endswith('.nii.gz'):
+        base_name = base_name[:-7]  # Remove .nii.gz
+    elif base_name.endswith('.nii'):
+        base_name = base_name[:-4]  # Remove .nii
+    else:
+        # Remove any extension for non-nii files
+        base_name = input_file.stem
+    
+    # Generate output filename with model name and index
+    output_filename = f"{base_name}_{modelname}_output_{index}.nii.gz"
+    
+    # Use output directory if specified, otherwise use current directory
+    if output_dir:
+        output_path = Path(output_dir) / output_filename
+    else:
+        output_path = Path(output_filename)
+    
+    return str(output_path.absolute())
+
+
 def get_parser():
     parser = argparse.ArgumentParser(
         description="BrainChop: portable brain segmentation tool"
     )
-    parser.add_argument("input", nargs="?", help="Input NIfTI file path")
+    parser.add_argument("input", nargs="*", help="Input NIfTI file path(s)")
     parser.add_argument(
         "-l", "--list", action="store_true", help="List available models"
     )
@@ -43,7 +80,7 @@ def get_parser():
         "-u", "--update", action="store_true", help="Update the model listing"
     )
     parser.add_argument(
-        "-o", "--output", default="output.nii.gz", help="Output NIfTI file path"
+        "-o", "--output", default="output.nii.gz", help="Output NIfTI file path (for single input) or output directory (for multiple inputs)"
     )
     parser.add_argument(
         "-a",
@@ -104,6 +141,13 @@ def get_parser():
         default=0,
         help="Mask border threshold in mm. Default is 0. Makes a difference only if the model is `mindgrab`",
     )
+    parser.add_argument(
+        "-bs",
+        "--batch-size",
+        type=int,
+        default=1,
+        help="Batch size for processing multiple inputs (default: 1)",
+    )
     return parser
 
 
@@ -121,7 +165,7 @@ def preprocess_input(args):
     # Apply cropping if requested
     if args.crop:
         volume, crop_coords = crop_to_cutoff(volume, args.crop)
-        print(f"    brainchop :: cropped to {volume.shape}")
+        print(f"brainchop :: cropped to {volume.shape}")
     
     # Convert to tensor format expected by model
     image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
@@ -131,18 +175,122 @@ def preprocess_input(args):
     return image, volume, header, crop_coords
 
 
+def preprocess_batch(input_files, args):
+    """
+    Handle batch preprocessing: loading, conforming, and cropping multiple inputs.
+    
+    Args:
+        input_files: List of input file paths
+        args: Command line arguments
+    
+    Returns:
+        tuple: (batched_tensor, list_of_volumes, list_of_headers, list_of_crop_coords)
+    """
+    batch_tensors = []
+    volumes = []
+    headers = []
+    crop_coords_list = []
+    
+    for input_file in input_files:
+        # Create temporary args for this input
+        temp_args = argparse.Namespace(**vars(args))
+        temp_args.input = input_file
+        
+        # Preprocess individual file
+        image_tensor, volume, header, crop_coords = preprocess_input(temp_args)
+        
+        # Remove the batch dimension (1) from individual tensor to prepare for batching
+        image_tensor = image_tensor.squeeze(0)  # Shape: (1, H, W, D)
+        
+        batch_tensors.append(image_tensor)
+        volumes.append(volume)
+        headers.append(header)
+        crop_coords_list.append(crop_coords)
+    
+    # Stack tensors along batch dimension
+    batched_tensor = Tensor.stack(batch_tensors, dim=0)  # Shape: (BS, 1, H, W, D)
+    
+    return batched_tensor, volumes, headers, crop_coords_list
+
+
+def preprocess_batch(input_files, args):
+    """
+    Handle batch preprocessing: loading, conforming, and cropping multiple inputs.
+    
+    Args:
+        input_files: List of input file paths
+        args: Command line arguments
+    
+    Returns:
+        tuple: (batched_tensor, list_of_volumes, list_of_headers, list_of_crop_coords)
+    """
+    batch_tensors = []
+    volumes = []
+    headers = []
+    crop_coords_list = []
+    
+    for input_file in input_files:
+        # Create temporary args for this input
+        temp_args = argparse.Namespace(**vars(args))
+        temp_args.input = input_file
+        
+        # Preprocess individual file
+        image_tensor, volume, header, crop_coords = preprocess_input(temp_args)
+        
+        # Remove the batch dimension (1) from individual tensor to prepare for batching
+        image_tensor = image_tensor.squeeze(0)  # Shape: (1, H, W, D)
+        
+        batch_tensors.append(image_tensor)
+        volumes.append(volume)
+        headers.append(header)
+        crop_coords_list.append(crop_coords)
+    
+    # Stack tensors along batch dimension
+    batched_tensor = Tensor.stack(batch_tensors, dim=0)  # Shape: (BS, 1, H, W, D)
+    
+    return batched_tensor, volumes, headers, crop_coords_list
+
+
 def run_inference(model, image):
     """
     Execute model inference on the preprocessed image.
     
     Args:
         model: The loaded segmentation model
-        image: Preprocessed image tensor
+        image: Preprocessed image tensor (single or batched)
         
     Returns:
         Tensor: Raw model output channels
     """
     return model(image)
+
+
+def run_batch_inference(model, batched_image):
+    """
+    Execute model inference on batched preprocessed images.
+    
+    Args:
+        model: The loaded segmentation model
+        batched_image: Batched preprocessed image tensor (BS, 1, H, W, D)
+        
+    Returns:
+        Tensor: Raw batched model output channels
+    """
+    return model(batched_image)
+
+
+def run_batch_inference(model, batched_image):
+    """
+    Execute model inference on batched preprocessed images.
+    
+    Args:
+        model: The loaded segmentation model
+        batched_image: Batched preprocessed image tensor (BS, 1, H, W, D)
+        
+    Returns:
+        Tensor: Raw batched model output channels
+    """
+    return model(batched_image)
 
 
 def postprocess_output(output_channels, header, crop_coords=None):
@@ -176,6 +324,62 @@ def postprocess_output(output_channels, header, crop_coords=None):
     return processed_data, new_header
 
 
+def postprocess_batch_output(batched_output_channels, headers, crop_coords_list):
+    """
+    Handle batch output postprocessing: argmax, padding, and labeling for multiple outputs.
+    
+    Args:
+        batched_output_channels: Raw batched model output tensor (BS, C, H, W, D)
+        headers: List of original NIfTI headers
+        crop_coords_list: List of coordinates for uncropping (if cropping was applied)
+        
+    Returns:
+        list: List of (processed_labels_data, new_header) tuples
+    """
+    results = []
+    batch_size = batched_output_channels.shape[0]
+    
+    for i in range(batch_size):
+        # Extract individual output from batch
+        output_channels = batched_output_channels[i:i+1]  # Keep batch dimension for consistency
+        header = headers[i]
+        crop_coords = crop_coords_list[i]
+        
+        # Process individual output
+        processed_data, new_header = postprocess_output(output_channels, header, crop_coords)
+        results.append((processed_data, new_header))
+    
+    return results
+
+
+def postprocess_batch_output(batched_output_channels, headers, crop_coords_list):
+    """
+    Handle batch output postprocessing: argmax, padding, and labeling for multiple outputs.
+    
+    Args:
+        batched_output_channels: Raw batched model output tensor (BS, C, H, W, D)
+        headers: List of original NIfTI headers
+        crop_coords_list: List of coordinates for uncropping (if cropping was applied)
+        
+    Returns:
+        list: List of (processed_labels_data, new_header) tuples
+    """
+    results = []
+    batch_size = batched_output_channels.shape[0]
+    
+    for i in range(batch_size):
+        # Extract individual output from batch
+        output_channels = batched_output_channels[i:i+1]  # Keep batch dimension for consistency
+        header = headers[i]
+        crop_coords = crop_coords_list[i]
+        
+        # Process individual output
+        processed_data, new_header = postprocess_output(output_channels, header, crop_coords)
+        results.append((processed_data, new_header))
+    
+    return results
+
+
 def write_output(processed_data, args):
     """
     Handle file output operations including niimath commands and subprocess calls.
@@ -189,7 +393,7 @@ def write_output(processed_data, args):
     # Handle class probability export if requested
     if args.export_classes:
         # Note: This requires access to output_channels, will need to be called separately
-        print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
+        print(f"brainchop :: Exported classes to c[channel_number]_{args.output}")
     
     # Determine gzip compression based on file extension
     gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
@@ -242,9 +446,14 @@ def run_cli():
         parser.print_help()
         return
 
-    # Prepare file paths
-    args.input = os.path.abspath(args.input)
+    # Prepare file paths - convert input list to absolute paths
+    input_files = [os.path.abspath(input_file) for input_file in args.input]
+    
+    # Store original output value before converting to absolute path
+    original_output = args.output
     args.output = os.path.abspath(args.output)
+    
+    print(f"brainchop :: Processing {len(input_files)} input file(s)")
 
     # Load model
     modelname = args.model
@@ -252,19 +461,72 @@ def run_cli():
         modelname = "mindgrab"
         args.model = modelname
     model = get_model(modelname)
-    print(f"    brainchop :: Loaded model {modelname}")
+    print(f"brainchop :: Loaded model {modelname}")
 
-    # Execute processing pipeline
-    image, volume, header, crop_coords = preprocess_input(args)
-    output_channels = run_inference(model, image)
-    processed_data, new_header = postprocess_output(output_channels, header, crop_coords)
+    # Process input files in batches
+    batch_size = args.batch_size
+    print(f"brainchop :: Using batch size: {batch_size}")
     
-    # Handle class export before writing main output
-    if args.export_classes:
-        export_classes(output_channels, header, args.output)
-        print(f"    brainchop :: Exported classes to c[channel_number]_{args.output}")
+    for batch_start in range(0, len(input_files), batch_size):
+        batch_end = min(batch_start + batch_size, len(input_files))
+        batch_files = input_files[batch_start:batch_end]
+        
+        print(f"brainchop :: Processing batch {batch_start//batch_size + 1} ({len(batch_files)} files)")
+        
+        # Process batch using proper batching
+        print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
+        batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(batch_files, args)
+        
+        print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
+        batched_output_channels = run_batch_inference(model, batched_tensor)
+        
+        print(f"brainchop :: Postprocessing batch outputs...")
+        batch_results = postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
+        
+# Process batch using proper batching
+        print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
+        batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(batch_files, args)
+        
+        print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
+        batched_output_channels = run_batch_inference(model, batched_tensor)
+        
+        print(f"brainchop :: Postprocessing batch outputs...")
+        batch_results = postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
+        
+        # Process each file's results
+        for i, input_file in enumerate(batch_files):
+            global_index = batch_start + i + 1
+            processed_data, new_header = batch_results[i]
+            
+            # Generate output filename based on input filename, model, and index
+            # Always use the new naming format unless user explicitly specified a custom output
+            if original_output == "output.nii.gz":
+                # Default output - always use the new dynamic naming format
+                output_file = generate_output_filename(input_file, modelname, global_index, None)
+            elif len(input_files) == 1:
+                # Single file with custom output specified - use the custom output
+                output_file = args.output
+            else:
+                # Multiple files with custom output directory - generate dynamic name in that directory
+                output_dir = str(Path(args.output).parent)
+                output_file = generate_output_filename(input_file, modelname, global_index, output_dir)
+            
+            print(f"Processing file {global_index}/{len(input_files)}: {input_file} -> {output_file}")
+            
+            # Create a temporary args object for this specific input
+            current_args = argparse.Namespace(**vars(args))
+            current_args.input = input_file
+            current_args.output = output_file
+            
+            # Handle class export before writing main output
+            if args.export_classes:
+                # For batched processing, we need to extract the individual output channels
+                individual_output_channels = batched_output_channels[i:i+1]
+                export_classes(individual_output_channels, headers[i], current_args.output)
+                print(f"brainchop :: Exported classes to c[channel_number]_{current_args.output}")
+            
+            write_output(processed_data, current_args)
     
-    write_output(processed_data, args)
     cleanup()
 
 
