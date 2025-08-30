@@ -1,6 +1,7 @@
 import os
 import argparse
 import subprocess
+import json
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +24,84 @@ from brainchop.utils import (
     crop_to_cutoff,
     pad_to_original_size,
 )
+
+
+def load_optimization_cache(model_name):
+    """
+    Load optimization cache for a given model.
+    
+    Args:
+        model_name: Name of the model
+        
+    Returns:
+        dict: Optimization cache data with 'beams' list, or empty structure if not found
+    """
+    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_name
+    cache_file = cache_dir / "optimizations.json"
+    
+    if cache_file.exists():
+        try:
+            with open(cache_file, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            # If file is corrupted, return empty structure
+            pass
+    
+    return {"beams": []}
+
+
+def save_optimization_cache(model_name, batch_size, beam_value):
+    """
+    Save optimization data to cache.
+    
+    Args:
+        model_name: Name of the model
+        batch_size: Batch size used
+        beam_value: BEAM value that was successful
+    """
+    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_name
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / "optimizations.json"
+    
+    # Load existing cache
+    cache_data = load_optimization_cache(model_name)
+    
+    # Check if this BS/BEAM combination already exists
+    for entry in cache_data["beams"]:
+        if entry["BS"] == batch_size and entry["BEAM"] == beam_value:
+            return  # Already cached
+    
+    # Add new entry
+    cache_data["beams"].append({"BS": batch_size, "BEAM": beam_value})
+    
+    # Sort by batch size for easier reading
+    cache_data["beams"].sort(key=lambda x: (x["BS"], x["BEAM"]))
+    
+    # Save to file
+    with open(cache_file, 'w') as f:
+        json.dump(cache_data, f, indent=2)
+
+
+def get_best_beam_for_batch_size(model_name, batch_size):
+    """
+    Get the best (largest) BEAM value for a given batch size.
+    
+    Args:
+        model_name: Name of the model
+        batch_size: Current batch size
+        
+    Returns:
+        int: Best BEAM value for this batch size, or None if not found
+    """
+    cache_data = load_optimization_cache(model_name)
+    
+    # Find all BEAM values for this batch size
+    beam_values = [entry["BEAM"] for entry in cache_data["beams"] if entry["BS"] == batch_size]
+    
+    if beam_values:
+        return max(beam_values)
+    
+    return None
 
 
 def generate_output_filename(input_path, modelname, index, output_dir=None):
@@ -208,45 +287,7 @@ def preprocess_batch(input_files, args):
         crop_coords_list.append(crop_coords)
     
     # Stack tensors along batch dimension
-    batched_tensor = Tensor.stack(batch_tensors, dim=0)  # Shape: (BS, 1, H, W, D)
-    
-    return batched_tensor, volumes, headers, crop_coords_list
-
-
-def preprocess_batch(input_files, args):
-    """
-    Handle batch preprocessing: loading, conforming, and cropping multiple inputs.
-    
-    Args:
-        input_files: List of input file paths
-        args: Command line arguments
-    
-    Returns:
-        tuple: (batched_tensor, list_of_volumes, list_of_headers, list_of_crop_coords)
-    """
-    batch_tensors = []
-    volumes = []
-    headers = []
-    crop_coords_list = []
-    
-    for input_file in input_files:
-        # Create temporary args for this input
-        temp_args = argparse.Namespace(**vars(args))
-        temp_args.input = input_file
-        
-        # Preprocess individual file
-        image_tensor, volume, header, crop_coords = preprocess_input(temp_args)
-        
-        # Remove the batch dimension (1) from individual tensor to prepare for batching
-        image_tensor = image_tensor.squeeze(0)  # Shape: (1, H, W, D)
-        
-        batch_tensors.append(image_tensor)
-        volumes.append(volume)
-        headers.append(header)
-        crop_coords_list.append(crop_coords)
-    
-    # Stack tensors along batch dimension
-    batched_tensor = Tensor.stack(batch_tensors, dim=0)  # Shape: (BS, 1, H, W, D)
+    batched_tensor = Tensor.stack(*batch_tensors, dim=0)  # Shape: (BS, 1, H, W, D)
     
     return batched_tensor, volumes, headers, crop_coords_list
 
@@ -455,11 +496,22 @@ def run_cli():
     
     print(f"brainchop :: Processing {len(input_files)} input file(s)")
 
-    # Load model
+    # Determine model name
     modelname = args.model
     if args.skull_strip:
         modelname = "mindgrab"
         args.model = modelname
+
+    # Check for cached optimization and set BEAM environment variable
+    batch_size = args.batch_size
+    best_beam = get_best_beam_for_batch_size(modelname, batch_size)
+    original_beam = os.environ.get("BEAM")
+    
+    if best_beam is not None:
+        os.environ["BEAM"] = str(best_beam)
+        print(f"brainchop :: Using cached optimization BEAM={best_beam} for batch size {batch_size}")
+    
+    # Load model (will use the BEAM environment variable if set)
     model = get_model(modelname)
     print(f"brainchop :: Loaded model {modelname}")
 
@@ -471,26 +523,26 @@ def run_cli():
         batch_end = min(batch_start + batch_size, len(input_files))
         batch_files = input_files[batch_start:batch_end]
         
-        print(f"brainchop :: Processing batch {batch_start//batch_size + 1} ({len(batch_files)} files)")
+        #print(f"brainchop :: Processing batch {batch_start//batch_size + 1} ({len(batch_files)} files)")
         
         # Process batch using proper batching
-        print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
+        #print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
         batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(batch_files, args)
         
-        print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
+        #print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
         batched_output_channels = run_batch_inference(model, batched_tensor)
         
-        print(f"brainchop :: Postprocessing batch outputs...")
+        #print(f"brainchop :: Postprocessing batch outputs...")
         batch_results = postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
         
-# Process batch using proper batching
-        print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
+        # Process batch using proper batching
+        #print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
         batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(batch_files, args)
         
-        print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
+        #print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
         batched_output_channels = run_batch_inference(model, batched_tensor)
         
-        print(f"brainchop :: Postprocessing batch outputs...")
+        #print(f"brainchop :: Postprocessing batch outputs...")
         batch_results = postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
         
         # Process each file's results
@@ -526,6 +578,22 @@ def run_cli():
                 print(f"brainchop :: Exported classes to c[channel_number]_{current_args.output}")
             
             write_output(processed_data, current_args)
+    
+    # Save optimization data to cache if BEAM was used
+    current_beam = os.environ.get("BEAM")
+    if current_beam is not None:
+        try:
+            beam_value = int(current_beam)
+            save_optimization_cache(modelname, batch_size, beam_value)
+            print(f"brainchop :: Cached optimization BEAM={beam_value} for batch size {batch_size}")
+        except ValueError:
+            pass  # Invalid BEAM value, skip caching
+    
+    # Restore original BEAM environment variable
+    if original_beam is not None:
+        os.environ["BEAM"] = original_beam
+    elif "BEAM" in os.environ:
+        del os.environ["BEAM"]
     
     cleanup()
 
