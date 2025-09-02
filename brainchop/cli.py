@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 import numpy as np
-from tinygrad import Tensor
+from tinygrad.tensor import Tensor
 from brainchop.niimath import (
     conform,
     set_header_intent_label,
@@ -104,6 +104,107 @@ def get_best_beam_for_batch_size(model_name, batch_size):
     return None
 
 
+def is_first_run(model_name, batch_size):
+    """
+    Check if this is the first run for a given model and batch size.
+    
+    Args:
+        model_name: Name of the model
+        batch_size: Batch size to check
+        
+    Returns:
+        bool: True if no optimization exists for this model/batch_size combo
+    """
+    cache_data = load_optimization_cache(model_name)
+    
+    # Check if any optimization exists for this batch size
+    for entry in cache_data["beams"]:
+        if entry["BS"] == batch_size:
+            return False
+    
+    return True
+
+
+def preoptimize(model_name, beam, batch_size=1):
+    """
+    Pre-optimize a model by running it with a random input tensor and specified BEAM value.
+    
+    Args:
+        model_name: Name of the model to optimize
+        beam: BEAM optimization value to use
+        batch_size: Batch size for the input tensor (default: 1)
+    """
+    print(f"brainchop :: Pre-optimizing model '{model_name}' with BEAM={beam}, BS={batch_size}...")
+    print(f"brainchop :: This may take a few moments for the initial compilation...")
+    
+    # Store original BEAM value
+    original_beam = os.environ.get("BEAM")
+    
+    try:
+        # Set BEAM environment variable for optimization
+        os.environ["BEAM"] = str(beam)
+        
+        # Load the model with the specified BEAM value
+        model = get_model(model_name)
+        
+        # Generate random input tensor with shape (BS, 1, 256, 256, 256)
+        random_input = np.random.randn(batch_size, 1, 256, 256, 256).astype(np.float32)
+        input_tensor = Tensor(random_input)
+        
+        print(f"brainchop :: Running optimization pass...")
+        
+        # Run inference to trigger compilation/optimization
+        output = model(input_tensor)
+        
+        # Force computation to complete (realize the tensor)
+        output.realize()
+        
+        print(f"brainchop :: Pre-optimization complete! Model is now optimized for BS={batch_size}")
+        
+        # Save this optimization to cache
+        save_optimization_cache(model_name, batch_size, beam)
+        
+        return True
+        
+    except Exception as e:
+        print(f"brainchop :: Pre-optimization failed: {e}")
+        return False
+        
+    finally:
+        # Restore original BEAM environment variable
+        if original_beam is not None:
+            os.environ["BEAM"] = original_beam
+        elif "BEAM" in os.environ:
+            del os.environ["BEAM"]
+
+
+def prompt_for_optimization(model_name, batch_size):
+    """
+    Prompt user to optimize the model on first run.
+    
+    Args:
+        model_name: Name of the model
+        batch_size: Batch size to optimize for
+        
+    Returns:
+        bool: True if optimization was performed successfully, False otherwise
+    """
+    print(f"\nbrainchop :: First run detected for model '{model_name}' with batch size {batch_size}")
+    print(f"brainchop :: Would you like to pre-optimize the model for faster subsequent runs?")
+    print(f"brainchop :: This will compile the model with BEAM=2 optimization (recommended)")
+    
+    while True:
+        response = input("brainchop :: Optimize now? [y/n]: ").strip().lower()
+        
+        if response == 'y':
+            return preoptimize(model_name, beam=2, batch_size=batch_size)
+        elif response == 'n':
+            print("brainchop :: Skipping optimization. Proceeding with unoptimized model...")
+            return False
+        else:
+            print("brainchop :: Please enter 'y' for yes or 'n' for no")
+
+
 def generate_output_filename(input_path, modelname, index, output_dir=None):
     """
     Generate output filename based on input filename, model name, and index.
@@ -166,7 +267,7 @@ def get_parser():
         "--mask",
         nargs="?",  # 0 or 1 arguments
         const="mask.nii.gz",  # if they just say `--mask` with no value
-        default=None,  # if they don’t mention `--mask` at all
+        default=None,  # if they don't mention `--mask` at all
         help="If provided and using mindgrab, write out the mask (defaults to mask.nii.gz when used without a value)",
     )
     parser.add_argument(
@@ -198,7 +299,7 @@ def get_parser():
         nargs="?",  # 0 or 1 arguments
         type=float,
         const=2,  # if they just say `--crop` with no value
-        default=False,  # if they don’t mention `--crop` at all
+        default=False,  # if they don't mention `--crop` at all
         help="Crop the input for faster execution. May reduce accuracy.(defaults to percentile 2 cutoff)",
     )
     parser.add_argument(
@@ -226,6 +327,11 @@ def get_parser():
         type=int,
         default=1,
         help="Batch size for processing multiple inputs (default: 1)",
+    )
+    parser.add_argument(
+        "--no-optimize",
+        action="store_true",
+        help="Skip the optimization prompt on first run",
     )
     return parser
 
@@ -320,20 +426,6 @@ def run_batch_inference(model, batched_image):
     return model(batched_image)
 
 
-def run_batch_inference(model, batched_image):
-    """
-    Execute model inference on batched preprocessed images.
-    
-    Args:
-        model: The loaded segmentation model
-        batched_image: Batched preprocessed image tensor (BS, 1, H, W, D)
-        
-    Returns:
-        Tensor: Raw batched model output channels
-    """
-    return model(batched_image)
-
-
 def postprocess_output(output_channels, header, crop_coords=None):
     """
     Handle output postprocessing: argmax, padding, and labeling.
@@ -363,34 +455,6 @@ def postprocess_output(output_channels, header, crop_coords=None):
     processed_data = set_header_intent_label(new_header) + labels.tobytes()
     
     return processed_data, new_header
-
-
-def postprocess_batch_output(batched_output_channels, headers, crop_coords_list):
-    """
-    Handle batch output postprocessing: argmax, padding, and labeling for multiple outputs.
-    
-    Args:
-        batched_output_channels: Raw batched model output tensor (BS, C, H, W, D)
-        headers: List of original NIfTI headers
-        crop_coords_list: List of coordinates for uncropping (if cropping was applied)
-        
-    Returns:
-        list: List of (processed_labels_data, new_header) tuples
-    """
-    results = []
-    batch_size = batched_output_channels.shape[0]
-    
-    for i in range(batch_size):
-        # Extract individual output from batch
-        output_channels = batched_output_channels[i:i+1]  # Keep batch dimension for consistency
-        header = headers[i]
-        crop_coords = crop_coords_list[i]
-        
-        # Process individual output
-        processed_data, new_header = postprocess_output(output_channels, header, crop_coords)
-        results.append((processed_data, new_header))
-    
-    return results
 
 
 def postprocess_batch_output(batched_output_channels, headers, crop_coords_list):
@@ -502,8 +566,16 @@ def run_cli():
         modelname = "mindgrab"
         args.model = modelname
 
-    # Check for cached optimization and set BEAM environment variable
+    # Check if this is the first run for this model/batch_size combination
     batch_size = args.batch_size
+    if not args.no_optimize and is_first_run(modelname, batch_size):
+        # Prompt for optimization on first run
+        optimization_success = prompt_for_optimization(modelname, batch_size)
+        if optimization_success:
+            print(f"brainchop :: Model optimized successfully. Continuing with processing...")
+        print()  # Add blank line for clarity
+
+    # Check for cached optimization and set BEAM environment variable
     best_beam = get_best_beam_for_batch_size(modelname, batch_size)
     original_beam = os.environ.get("BEAM")
     
@@ -516,33 +588,17 @@ def run_cli():
     print(f"brainchop :: Loaded model {modelname}")
 
     # Process input files in batches
-    batch_size = args.batch_size
     print(f"brainchop :: Using batch size: {batch_size}")
     
     for batch_start in range(0, len(input_files), batch_size):
         batch_end = min(batch_start + batch_size, len(input_files))
         batch_files = input_files[batch_start:batch_end]
         
-        #print(f"brainchop :: Processing batch {batch_start//batch_size + 1} ({len(batch_files)} files)")
-        
         # Process batch using proper batching
-        #print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
         batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(batch_files, args)
         
-        #print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
         batched_output_channels = run_batch_inference(model, batched_tensor)
         
-        #print(f"brainchop :: Postprocessing batch outputs...")
-        batch_results = postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
-        
-        # Process batch using proper batching
-        #print(f"brainchop :: Preprocessing batch of {len(batch_files)} files...")
-        batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(batch_files, args)
-        
-        #print(f"brainchop :: Running inference on batch tensor shape: {batched_tensor.shape}")
-        batched_output_channels = run_batch_inference(model, batched_tensor)
-        
-        #print(f"brainchop :: Postprocessing batch outputs...")
         batch_results = postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
         
         # Process each file's results
@@ -579,13 +635,12 @@ def run_cli():
             
             write_output(processed_data, current_args)
     
-    # Save optimization data to cache if BEAM was used
+    # Save optimization data to cache if BEAM was used (and not already saved during pre-optimization)
     current_beam = os.environ.get("BEAM")
-    if current_beam is not None:
+    if current_beam is not None and not is_first_run(modelname, batch_size):
         try:
             beam_value = int(current_beam)
             save_optimization_cache(modelname, batch_size, beam_value)
-            print(f"brainchop :: Cached optimization BEAM={beam_value} for batch size {batch_size}")
         except ValueError:
             pass  # Invalid BEAM value, skip caching
     

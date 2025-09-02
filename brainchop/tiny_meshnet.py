@@ -126,5 +126,5 @@ def load_meshnet(
     )
     state_dict = torch_load(model_fn)
     state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
-    load_state_dict(model, state_dict, strict=True)
+    load_state_dict(model, state_dict, strict=True, verbose=False)
     return model
