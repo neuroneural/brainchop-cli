@@ -14,13 +14,13 @@ def convert_keys(torch_state_dict, tiny_state_dict):
     return new_dict
 
 
-def qnormalize(img: Tensor, qmin=0.02, qmax=0.98) -> Tensor:
-    """Unit interval preprocessing with clipping"""
+def qnormalize(img: Tensor, qmin=0.02, qmax=0.98, eps=1e-3) -> Tensor:
+    """Unit interval preprocessing with clipping and safe division for bf16"""
     img = img.numpy()
     qlow = np.quantile(img, qmin)
     qhigh = np.quantile(img, qmax)
-    img = (img - qlow) / (qhigh - qlow)
-    img = np.clip(img, 0, 1)  # Clip the values to be between 0 and 1
+    img = (img - qlow) / (qhigh - qlow + eps)
+    img = np.clip(img, 0, 1)
     return Tensor(img)
 
 
