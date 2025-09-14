@@ -196,10 +196,10 @@ def get_model(model_name):  # -> tinygrad model
         arch_version = detect_architecture_version(Path(config_fn))
         
         if arch_version == "new":
-            print("brainchop :: Loading model with new architecture format")
+            #print("brainchop :: Loading model with new architecture format")
             return build_model(config_fn, model_fn)
         else:
-            print("brainchop :: Loading model with legacy architecture format")
+            #print("brainchop :: Loading model with legacy architecture format")
             return load_meshnet(config_fn, model_fn)
     else:  # oldbackend
         config_fn, binary_fn = find_tfjs_files(model_name)

@@ -201,9 +201,6 @@ def build_model(spec_path: str, weights_path: str):
             state_dict = {k: f.get_tensor(k) for k in f.keys()}
     else:
         state_dict = torch_load(weights_path)
-        print("Loaded weights:")
-        for k in state_dict:
-            print(f"  {k}: {state_dict[k].shape}")
     
     # Build preprocessing
     preprocess_fn = _build_preprocess(spec.preprocessing)
@@ -407,7 +404,7 @@ def _build_functional_layer(layer_spec: Layer):
         return lambda x: x.avg_pool2d(kernel_size, stride, padding)
     
     else:
-        print(f"Warning: Operation {layer_spec.op} not implemented, skipping")
+        #print(f"Warning: Operation {layer_spec.op} not implemented, skipping")
         return None
 
 
@@ -443,7 +440,7 @@ def _load_weights_into_model(model, model_layers, state_dict):
                 
             layer_groups[layer_idx][sublayer_idx][param_name] = key
     
-    print(f"Found {len(layer_groups)} layer groups in state dict")
+    #print(f"Found {len(layer_groups)} layer groups in state dict")
     
     # Map to our model layers - need to handle the interleaved conv+batchnorm pattern
     weighted_layers = [info for info in model_layers if info['consumes_weights']]
@@ -462,7 +459,7 @@ def _load_weights_into_model(model, model_layers, state_dict):
     for model_layer_idx, layer_info in enumerate(weighted_layers):
         layer = layer_info['layer']
         
-        print(f"Loading weights for model layer {model_layer_idx} (torch block {block_idx}, layer {layer_in_block})")
+        #print(f"Loading weights for model layer {model_layer_idx} (torch block {block_idx}, layer {layer_in_block})")
         
         if layer_info['op'] in [Op.CONV1D, Op.CONV2D, Op.CONV3D, Op.LINEAR]:
             # Load conv/linear weights from block_idx.layer_in_block
@@ -472,14 +469,15 @@ def _load_weights_into_model(model, model_layers, state_dict):
                 if 'weight' in sublayer:
                     weight_key = sublayer['weight']
                     layer.weight = Tensor(state_dict[weight_key].numpy())
-                    print(f"  Loaded weight: {weight_key} -> {layer.weight.shape}")
+                    #print(f"  Loaded weight: {weight_key} -> {layer.weight.shape}")
                     
                 if 'bias' in sublayer:
                     bias_key = sublayer['bias']
                     layer.bias = Tensor(state_dict[bias_key].numpy())
-                    print(f"  Loaded bias: {bias_key} -> {layer.bias.shape}")
+                    #print(f"  Loaded bias: {bias_key} -> {layer.bias.shape}")
             else:
-                print(f"  Warning: No weights found for conv layer at block {block_idx}, sublayer {layer_in_block}")
+                #print(f"  Warning: No weights found for conv layer at block {block_idx}, sublayer {layer_in_block}")
+                pass
             
             # After conv, expect batchnorm next (except for final layer)
             layer_in_block += 1
@@ -492,24 +490,25 @@ def _load_weights_into_model(model, model_layers, state_dict):
                 if 'weight' in sublayer:
                     weight_key = sublayer['weight']
                     layer.weight = Tensor(state_dict[weight_key].numpy())
-                    print(f"  Loaded BN weight: {weight_key} -> {layer.weight.shape}")
+                    #print(f"  Loaded BN weight: {weight_key} -> {layer.weight.shape}")
                     
                 if 'bias' in sublayer:
                     bias_key = sublayer['bias']
                     layer.bias = Tensor(state_dict[bias_key].numpy())
-                    print(f"  Loaded BN bias: {bias_key} -> {layer.bias.shape}")
+                    #print(f"  Loaded BN bias: {bias_key} -> {layer.bias.shape}")
                     
                 if 'running_mean' in sublayer:
                     mean_key = sublayer['running_mean']
                     layer.running_mean = Tensor(state_dict[mean_key].numpy())
-                    print(f"  Loaded BN running_mean: {mean_key} -> {layer.running_mean.shape}")
+                    #print(f"  Loaded BN running_mean: {mean_key} -> {layer.running_mean.shape}")
                     
                 if 'running_var' in sublayer:
                     var_key = sublayer['running_var']
                     layer.running_var = Tensor(state_dict[var_key].numpy())
-                    print(f"  Loaded BN running_var: {var_key} -> {layer.running_var.shape}")
+                    #print(f"  Loaded BN running_var: {var_key} -> {layer.running_var.shape}")
             else:
-                print(f"  Warning: No weights found for batchnorm layer at block {block_idx}, sublayer {layer_in_block}")
+                #print(f"  Warning: No weights found for batchnorm layer at block {block_idx}, sublayer {layer_in_block}")
+                pass
             
             # After batchnorm, move to next block
             block_idx += 1
