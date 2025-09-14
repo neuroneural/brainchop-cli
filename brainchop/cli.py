@@ -11,7 +11,6 @@ from brainchop.niimath import (
     set_header_intent_label,
     bwlabel,
     grow_border,
-    niimath_dtype,
 )
 
 from brainchop.utils import (
@@ -138,7 +137,7 @@ def preoptimize(model_name, beam, batch_size=1, custom_config=None, custom_weigh
         custom_weights: Path to custom model weights (optional)
     """
     print(f"brainchop :: Pre-optimizing model '{model_name}' with BEAM={beam}, BS={batch_size}...")
-    print(f"brainchop :: This may take a few moments for the initial compilation...")
+    print("brainchop :: This may take a few moments for the initial compilation...")
     
     # Store original BEAM value
     original_beam = os.environ.get("BEAM")
@@ -157,7 +156,7 @@ def preoptimize(model_name, beam, batch_size=1, custom_config=None, custom_weigh
         random_input = np.random.randn(batch_size, 1, 256, 256, 256).astype(np.float32)
         input_tensor = Tensor(random_input)
         
-        print(f"brainchop :: Running optimization pass...")
+        print("brainchop :: Running optimization pass...")
         
         # Run inference to trigger compilation/optimization
         output = model(input_tensor)
@@ -198,8 +197,8 @@ def prompt_for_optimization(model_name, batch_size, custom_config=None, custom_w
         bool: True if optimization was performed successfully, False otherwise
     """
     print(f"\nbrainchop :: First run detected for model '{model_name}' with batch size {batch_size}")
-    print(f"brainchop :: Would you like to pre-optimize the model for faster subsequent runs?")
-    print(f"brainchop :: This will compile the model with BEAM=2 optimization (recommended)")
+    print("brainchop :: Would you like to pre-optimize the model for faster subsequent runs?")
+    print("brainchop :: This will compile the model with BEAM=2 optimization (recommended)")
     
     while True:
         response = input("brainchop :: Optimize now? [y/n]: ").strip().lower()
@@ -615,7 +614,7 @@ def run_cli():
         optimization_success = prompt_for_optimization(modelname, batch_size, 
                                                       custom_config, custom_weights)
         if optimization_success:
-            print(f"brainchop :: Model optimized successfully. Continuing with processing...")
+            print("brainchop :: Model optimized successfully. Continuing with processing...")
         print()  # Add blank line for clarity
 
     # Check for cached optimization and set BEAM environment variable

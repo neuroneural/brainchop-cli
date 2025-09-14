@@ -1,4 +1,6 @@
-import os, sys, shutil
+import os
+import sys
+import shutil
 import struct
 import gzip
 import subprocess

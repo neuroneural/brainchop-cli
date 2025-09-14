@@ -189,10 +189,7 @@ def build_model(spec_path: str, weights_path: str):
     Returns:
         Callable model with loaded weights
     """
-    from tinygrad import nn
     from tinygrad.nn.state import torch_load, load_state_dict, get_state_dict
-    from tinygrad.tensor import Tensor
-    import numpy as np
     
     spec = load_spec(spec_path)
     

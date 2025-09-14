@@ -197,10 +197,10 @@ def get_model(model_name):  # -> tinygrad model
         arch_version = detect_architecture_version(Path(config_fn))
         
         if arch_version == "new":
-            print(f"brainchop :: Loading model with new architecture format")
+            print("brainchop :: Loading model with new architecture format")
             return build_model(config_fn, model_fn)
         else:
-            print(f"brainchop :: Loading model with legacy architecture format")
+            print("brainchop :: Loading model with legacy architecture format")
             return load_meshnet(config_fn, model_fn)
     else:  # oldbackend
         config_fn, binary_fn = find_tfjs_files(model_name)
@@ -237,12 +237,12 @@ def get_model_from_custom_path(config_path: str, weights_path: str):
     arch_version = detect_architecture_version(config_p)
     
     if arch_version == "new":
-        print(f"brainchop :: Loading custom model with new architecture format")
+        print("brainchop :: Loading custom model with new architecture format")
         if weights_p.suffix == ".bin":
             raise ValueError("New architecture format requires .pth weights file, got .bin")
         return build_model(str(config_p), str(weights_p))
     else:
-        print(f"brainchop :: Loading custom model with legacy architecture format")
+        print("brainchop :: Loading custom model with legacy architecture format")
         if weights_p.suffix == ".bin":
             return load_tfjs_meshnet(str(config_p), str(weights_p))
         else:

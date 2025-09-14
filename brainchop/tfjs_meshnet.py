@@ -2,7 +2,7 @@
 import json
 import numpy as np
 from tinygrad import Tensor
-from typing import Tuple, Dict, Any, List, Callable
+from typing import Tuple, Dict, Any
 
 class MeshNetModel:
     def __init__(self):
