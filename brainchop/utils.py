@@ -1,4 +1,3 @@
-# tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
 import requests
 import os
 import subprocess
@@ -6,6 +5,7 @@ import json
 import numpy as np
 from pathlib import Path
 from typing import Any, Tuple
+from urllib.parse import urlparse
 from .niimath import _write_nifti
 
 
@@ -112,7 +112,7 @@ def detect_architecture_version(json_path: Path) -> str:
 def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
     """New native backend for models"""
     if model_name == ".":
-        return "model.json", "model.pth"  # local model support
+        return Path("model.json"), Path("model.pth")  # local model support
     model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
@@ -144,8 +144,50 @@ def find_tfjs_files(model_name) -> Tuple[Path | Any, Path | Any]:
     return json_fn, bin_fn
 
 
+def _load_model_from_uri(uri: str):
+    """Loads a model from a file URI, correctly handling all path formats."""
+    parsed_uri = urlparse(uri)
+    if parsed_uri.scheme != 'file':
+        raise ValueError(f"Unsupported URI scheme: {parsed_uri.scheme}")
+
+    # Reconstruct path for non-standard cases like file://Users/spike/...
+    path_str = parsed_uri.path
+    if parsed_uri.netloc and parsed_uri.netloc != 'localhost':
+        path_str = "/" + parsed_uri.netloc + path_str
+
+    # **THE FIX**: If urlparse gives a path like '/~', strip the leading '/'
+    # so that .expanduser() can correctly interpret the tilde.
+    if path_str.startswith('/~'):
+        path_str = path_str[1:]
+
+    # Now, expand the tilde and resolve to an absolute path
+    model_dir = Path(path_str).expanduser().resolve()
+
+    if not model_dir.is_dir():
+        raise FileNotFoundError(f"Model directory not found: {model_dir}")
+
+    config_fn = model_dir / "model.json"
+    pth_fn = model_dir / "model.pth"
+    bin_fn = model_dir / "model.bin"
+
+    if not config_fn.exists():
+        raise FileNotFoundError(f"model.json not found in {model_dir}")
+
+    if pth_fn.exists():
+        weights_fn = pth_fn
+    elif bin_fn.exists():
+        weights_fn = bin_fn
+    else:
+        raise FileNotFoundError(f"No model weights (.pth or .bin) found in {model_dir}")
+
+    return get_model_from_custom_path(str(config_fn), str(weights_fn))
+
+
 # tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
 def get_model(model_name):  # -> tinygrad model
+    if model_name.startswith("file://"):
+        return _load_model_from_uri(model_name)
+        
     if model_name in NEW_BACKEND:
         config_fn, model_fn = find_pth_files(model_name)
         config_fn = unwrap_path(config_fn)
@@ -165,7 +207,6 @@ def get_model(model_name):  # -> tinygrad model
         config_fn = unwrap_path(config_fn)
         binary_fn = unwrap_path(binary_fn)
         return load_tfjs_meshnet(config_fn, binary_fn)
-    # even elser: load multiaxial and other models (this should be a standalone file)
 
 
 def get_model_from_custom_path(config_path: str, weights_path: str):
@@ -173,34 +214,39 @@ def get_model_from_custom_path(config_path: str, weights_path: str):
     Load a model from custom paths, auto-detecting the architecture format.
     
     Args:
-        config_path: Path to the model JSON configuration
-        weights_path: Path to the model weights (.pth or .bin)
+        config_path: Path to the model JSON configuration. Can be "." to load the local model.
+        weights_path: Path to the model weights (.pth or .bin). Can be "." to load the local model.
         
     Returns:
         Loaded model callable
     """
-    config_path = Path(config_path)
-    weights_path = Path(weights_path)
+    # If the special "." local model name is passed, defer to the standard get_model logic.
+    # This creates a dedicated code branch for explicitly specified local models.
+    if config_path == "." or weights_path == ".":
+        return get_model(".")
+
+    config_p = Path(config_path)
+    weights_p = Path(weights_path)
     
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-    if not weights_path.exists():
-        raise FileNotFoundError(f"Weights file not found: {weights_path}")
+    if not config_p.exists():
+        raise FileNotFoundError(f"Config file not found: {config_p}")
+    if not weights_p.exists():
+        raise FileNotFoundError(f"Weights file not found: {weights_p}")
     
     # Detect architecture version
-    arch_version = detect_architecture_version(config_path)
+    arch_version = detect_architecture_version(config_p)
     
     if arch_version == "new":
         print(f"brainchop :: Loading custom model with new architecture format")
-        if weights_path.suffix == ".bin":
+        if weights_p.suffix == ".bin":
             raise ValueError("New architecture format requires .pth weights file, got .bin")
-        return build_model(str(config_path), str(weights_path))
+        return build_model(str(config_p), str(weights_p))
     else:
         print(f"brainchop :: Loading custom model with legacy architecture format")
-        if weights_path.suffix == ".bin":
-            return load_tfjs_meshnet(str(config_path), str(weights_path))
+        if weights_p.suffix == ".bin":
+            return load_tfjs_meshnet(str(config_p), str(weights_p))
         else:
-            return load_meshnet(str(config_path), str(weights_path))
+            return load_meshnet(str(config_p), str(weights_p))
 
 
 def cleanup() -> None:
