@@ -314,7 +314,7 @@ def _build_layer(layer: Layer) -> Callable:
         return nn.GroupNorm(
             num_groups=num_groups,
             num_channels=layer.params.get("num_channels", num_groups),
-            affine=layer.params.get("affine", True)
+            affine=layer.params.get("affine", False)
         )
     
     elif layer.op == Op.BATCH_NORM3D:
