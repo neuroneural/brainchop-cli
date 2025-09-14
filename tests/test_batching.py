@@ -4,13 +4,8 @@ Tests batch sizes 1, 2, 4, 8, 16 on default model and mindgrab
 """
 
 import subprocess
-import os
-import tempfile
 import shutil
-import hashlib
 from pathlib import Path
-from typing import Any
-from brainchop.utils import load_models
 from tinygrad.helpers import fetch, getenv
 
 CACHEDIR = Path.home() / ".cache" / "brainchop" / "batching_test"
@@ -148,9 +143,9 @@ def test_batching_comprehensive():
                 
                 # Check for batch tensor processing in output
                 if f"batch tensor shape: ({batch_size}, 1, 256, 256, 256)" in result.stdout:
-                    print(f"✓ VERIFIED: Correct batch tensor shape detected")
+                    print("✓ VERIFIED: Correct batch tensor shape detected")
                 else:
-                    print(f"⚠ WARNING: Expected batch tensor shape not found in output")
+                    print("⚠ WARNING: Expected batch tensor shape not found in output")
                 
                 # Check if output files were created
                 created_files = 0
@@ -179,7 +174,7 @@ def test_batching_comprehensive():
         print("-" * 40)
     
     # Summary
-    print(f"\n" + "="*80)
+    print("\n" + "="*80)
     print("BATCHING TEST SUMMARY")
     print("="*80)
     print(f"Successful tests: {success_count}/{total_tests}")

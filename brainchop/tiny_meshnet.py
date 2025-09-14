@@ -1,8 +1,7 @@
-from tinygrad import Tensor, nn, dtypes
+from tinygrad import Tensor, nn
 from tinygrad.nn.state import torch_load, load_state_dict
 import json
 import numpy as np
-import time
 
 
 def convert_keys(torch_state_dict, tiny_state_dict):

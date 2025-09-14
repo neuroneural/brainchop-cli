@@ -1,7 +1,4 @@
 from setuptools import setup, find_packages
-import os
-import platform
-import shutil
 from pathlib import Path
 
 reqs = Path("requirements.txt").read_text().splitlines()
