@@ -18,6 +18,7 @@ from brainchop.utils import (
     update_models,
     list_models,
     get_model,
+    get_model_from_custom_path,
     export_classes,
     AVAILABLE_MODELS,
     cleanup,
@@ -125,7 +126,7 @@ def is_first_run(model_name, batch_size):
     return True
 
 
-def preoptimize(model_name, beam, batch_size=1):
+def preoptimize(model_name, beam, batch_size=1, custom_config=None, custom_weights=None):
     """
     Pre-optimize a model by running it with a random input tensor and specified BEAM value.
     
@@ -133,6 +134,8 @@ def preoptimize(model_name, beam, batch_size=1):
         model_name: Name of the model to optimize
         beam: BEAM optimization value to use
         batch_size: Batch size for the input tensor (default: 1)
+        custom_config: Path to custom model config (optional)
+        custom_weights: Path to custom model weights (optional)
     """
     print(f"brainchop :: Pre-optimizing model '{model_name}' with BEAM={beam}, BS={batch_size}...")
     print(f"brainchop :: This may take a few moments for the initial compilation...")
@@ -145,7 +148,10 @@ def preoptimize(model_name, beam, batch_size=1):
         os.environ["BEAM"] = str(beam)
         
         # Load the model with the specified BEAM value
-        model = get_model(model_name)
+        if custom_config and custom_weights:
+            model = get_model_from_custom_path(custom_config, custom_weights)
+        else:
+            model = get_model(model_name)
         
         # Generate random input tensor with shape (BS, 1, 256, 256, 256)
         random_input = np.random.randn(batch_size, 1, 256, 256, 256).astype(np.float32)
@@ -178,13 +184,15 @@ def preoptimize(model_name, beam, batch_size=1):
             del os.environ["BEAM"]
 
 
-def prompt_for_optimization(model_name, batch_size):
+def prompt_for_optimization(model_name, batch_size, custom_config=None, custom_weights=None):
     """
     Prompt user to optimize the model on first run.
     
     Args:
         model_name: Name of the model
         batch_size: Batch size to optimize for
+        custom_config: Path to custom model config (optional)
+        custom_weights: Path to custom model weights (optional)
         
     Returns:
         bool: True if optimization was performed successfully, False otherwise
@@ -197,7 +205,8 @@ def prompt_for_optimization(model_name, batch_size):
         response = input("brainchop :: Optimize now? [y/n]: ").strip().lower()
         
         if response == 'y':
-            return preoptimize(model_name, beam=2, batch_size=batch_size)
+            return preoptimize(model_name, beam=2, batch_size=batch_size, 
+                              custom_config=custom_config, custom_weights=custom_weights)
         elif response == 'n':
             print("brainchop :: Skipping optimization. Proceeding with unoptimized model...")
             return False
@@ -280,7 +289,7 @@ def get_parser():
         "-c",
         "--custom",
         type=str,
-        help="Path to custom model directory (model.json and model.bin)",
+        help="Path to custom model directory (containing model.json and model.pth or model.bin)",
     )
     parser.add_argument(
         "--comply",
@@ -560,17 +569,51 @@ def run_cli():
     
     print(f"brainchop :: Processing {len(input_files)} input file(s)")
 
-    # Determine model name
+    # Determine model name and handle custom models
     modelname = args.model
+    custom_config = None
+    custom_weights = None
+    
     if args.skull_strip:
         modelname = "mindgrab"
         args.model = modelname
+    
+    # Handle custom model path
+    if args.custom:
+        custom_dir = Path(args.custom)
+        if not custom_dir.exists():
+            print(f"Error: Custom model directory not found: {custom_dir}")
+            return
+        
+        # Look for model files in custom directory
+        json_files = list(custom_dir.glob("model.json"))
+        pth_files = list(custom_dir.glob("model.pth"))
+        bin_files = list(custom_dir.glob("model.bin"))
+        
+        if not json_files:
+            print(f"Error: No model.json found in {custom_dir}")
+            return
+        
+        custom_config = str(json_files[0])
+        
+        # Determine weights file based on what's available
+        if pth_files:
+            custom_weights = str(pth_files[0])
+        elif bin_files:
+            custom_weights = str(bin_files[0])
+        else:
+            print(f"Error: No model.pth or model.bin found in {custom_dir}")
+            return
+        
+        modelname = "custom"
+        print(f"brainchop :: Using custom model from {custom_dir}")
 
     # Check if this is the first run for this model/batch_size combination
     batch_size = args.batch_size
     if not args.no_optimize and is_first_run(modelname, batch_size):
         # Prompt for optimization on first run
-        optimization_success = prompt_for_optimization(modelname, batch_size)
+        optimization_success = prompt_for_optimization(modelname, batch_size, 
+                                                      custom_config, custom_weights)
         if optimization_success:
             print(f"brainchop :: Model optimized successfully. Continuing with processing...")
         print()  # Add blank line for clarity
@@ -584,7 +627,11 @@ def run_cli():
         print(f"brainchop :: Using cached optimization BEAM={best_beam} for batch size {batch_size}")
     
     # Load model (will use the BEAM environment variable if set)
-    model = get_model(modelname)
+    if custom_config and custom_weights:
+        model = get_model_from_custom_path(custom_config, custom_weights)
+    else:
+        model = get_model(modelname)
+    
     print(f"brainchop :: Loaded model {modelname}")
 
     # Process input files in batches
@@ -625,6 +672,7 @@ def run_cli():
             current_args = argparse.Namespace(**vars(args))
             current_args.input = input_file
             current_args.output = output_file
+            current_args.model = args.model  # Preserve the original model name for mindgrab check
             
             # Handle class export before writing main output
             if args.export_classes:

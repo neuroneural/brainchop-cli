@@ -203,6 +203,8 @@ def build_model(spec_path: str, weights_path: str):
             state_dict = {k: f.get_tensor(k) for k in f.keys()}
     else:
         state_dict = torch_load(weights_path)
+        for _ in state_dict:
+            print(_, state_dict[_].shape)
     
     # Build preprocessing
     preprocess_fn = _build_preprocess(spec.preprocessing)
@@ -291,6 +293,7 @@ def _build_weighted_layer(layer: Layer, weight_index: int, state_dict: dict):
         return nn.Conv2d(**layer.params)
     elif layer.op == Op.CONV3D:
         # Tinygrad uses Conv2d for 3D
+        layer.params['kernel_size'] = [layer.params['kernel_size']] * 3
         return nn.Conv2d(**layer.params)
     elif layer.op == Op.LINEAR:
         return nn.Linear(**layer.params)

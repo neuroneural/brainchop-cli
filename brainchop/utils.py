@@ -1,3 +1,4 @@
+# tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
 import requests
 import os
 import subprocess
@@ -10,6 +11,7 @@ from .niimath import _write_nifti
 
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
+from .types import build_model  # Import the new model builder
 
 # ! : is of type termination (meaning runtime is interrupted)
 
@@ -51,6 +53,7 @@ MODELS_JSON_URL = (
 )
 AVAILABLE_MODELS = load_models()
 NEW_BACKEND = {"mindgrab", "."}
+NEW_ARCHITECTURE_MODELS = set()  # Models using the new architecture format
 
 
 def list_models() -> None:
@@ -77,6 +80,33 @@ def unwrap_path(path):  # -> String | !
 def unwrap_model_name(s: str):  # -> String | !
     assert s in AVAILABLE_MODELS.keys(), f"Error: {s} is not an available model"
     return s
+
+
+def detect_architecture_version(json_path: Path) -> str:
+    """
+    Detect whether a model JSON uses the new or old architecture format.
+    
+    Args:
+        json_path: Path to the model JSON file
+        
+    Returns:
+        str: "new" for new architecture format, "old" for deprecated format
+    """
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        
+        # Check for new architecture format indicators
+        if "version" in data and "forward_pass" in data:
+            return "new"
+        # Check for old format indicators
+        elif "layers" in data and isinstance(data.get("layers"), list):
+            return "old"
+        else:
+            # Default to old if unclear
+            return "old"
+    except:
+        return "old"
 
 
 def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
@@ -120,15 +150,57 @@ def get_model(model_name):  # -> tinygrad model
         config_fn, model_fn = find_pth_files(model_name)
         config_fn = unwrap_path(config_fn)
         model_fn = unwrap_path(model_fn)
-        return load_meshnet(
-            config_fn, model_fn
-        )  # TODO: other configs should be loaded from json
+        
+        # Detect architecture version
+        arch_version = detect_architecture_version(Path(config_fn))
+        
+        if arch_version == "new":
+            print(f"brainchop :: Loading model with new architecture format")
+            return build_model(config_fn, model_fn)
+        else:
+            print(f"brainchop :: Loading model with legacy architecture format")
+            return load_meshnet(config_fn, model_fn)
     else:  # oldbackend
         config_fn, binary_fn = find_tfjs_files(model_name)
         config_fn = unwrap_path(config_fn)
         binary_fn = unwrap_path(binary_fn)
         return load_tfjs_meshnet(config_fn, binary_fn)
     # even elser: load multiaxial and other models (this should be a standalone file)
+
+
+def get_model_from_custom_path(config_path: str, weights_path: str):
+    """
+    Load a model from custom paths, auto-detecting the architecture format.
+    
+    Args:
+        config_path: Path to the model JSON configuration
+        weights_path: Path to the model weights (.pth or .bin)
+        
+    Returns:
+        Loaded model callable
+    """
+    config_path = Path(config_path)
+    weights_path = Path(weights_path)
+    
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    if not weights_path.exists():
+        raise FileNotFoundError(f"Weights file not found: {weights_path}")
+    
+    # Detect architecture version
+    arch_version = detect_architecture_version(config_path)
+    
+    if arch_version == "new":
+        print(f"brainchop :: Loading custom model with new architecture format")
+        if weights_path.suffix == ".bin":
+            raise ValueError("New architecture format requires .pth weights file, got .bin")
+        return build_model(str(config_path), str(weights_path))
+    else:
+        print(f"brainchop :: Loading custom model with legacy architecture format")
+        if weights_path.suffix == ".bin":
+            return load_tfjs_meshnet(str(config_path), str(weights_path))
+        else:
+            return load_meshnet(str(config_path), str(weights_path))
 
 
 def cleanup() -> None:
@@ -138,15 +210,15 @@ def cleanup() -> None:
 
 def export_classes(output_channels, header: bytes, output_path: str):
     """
-    Split the model’s output channels and write each as a separate NIfTI
-    using a pre‐built 352 B header (with vox_offset reset, ext_flag zeroed).
+    Split the model's output channels and write each as a separate NIfTI
+    using a pre‐built 352 B header (with vox_offset reset, ext_flag zeroed).
 
     Args:
         output_channels: tinygrad Tensor of shape (1, C, Z, Y, X)
         header:          352‐byte NIfTI header (bytes), no extensions
         output_path:     filename for first channel (e.g. "out.nii.gz")
     """
-    # strip extensions so we can append “_c{i}.nii.gz”
+    # strip extensions so we can append "_c{i}.nii.gz"
     base, _ = os.path.splitext(output_path)
     if base.endswith(".nii"):
         base, _ = os.path.splitext(base)
