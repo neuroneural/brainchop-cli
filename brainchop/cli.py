@@ -227,6 +227,11 @@ def generate_output_filename(input_path, modelname, index, output_dir=None):
         str: Generated output filename in format {input_name}_{modelname}_output_{index}.nii.gz
     """
     input_file = Path(input_path)
+    import hashlib, base64
+
+    hash_string = lambda s: base64.urlsafe_b64encode(hashlib.sha1(s.encode()).digest()).decode()[:8]
+    if modelname not in AVAILABLE_MODELS:
+        modelname = hash_string(modelname)
     
     # Extract base name without extensions (.nii.gz or .nii)
     base_name = input_file.name
