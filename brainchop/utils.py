@@ -112,8 +112,7 @@ def detect_architecture_version(json_path: Path) -> str:
 def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
     """New native backend for models"""
     if model_name == ".":
-        return Path("model.json"), Path("model.pth")  # local model support
-    model_name = unwrap_model_name(model_name)
+        return Path("model.json"), Path("model.pth")  # local model support model_name = unwrap_model_name(model_name)
     model_dir = AVAILABLE_MODELS[model_name]["folder"]
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
     json_fn = cache_dir / "model.json"

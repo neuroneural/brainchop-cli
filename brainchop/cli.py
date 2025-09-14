@@ -208,7 +208,7 @@ def prompt_for_optimization(model_name, batch_size, custom_config=None, custom_w
                               custom_config=custom_config, custom_weights=custom_weights)
         elif response == 'n':
             print("brainchop :: Skipping optimization. Proceeding with unoptimized model...")
-            return False
+            return False 
         else:
             print("brainchop :: Please enter 'y' for yes or 'n' for no")
 
