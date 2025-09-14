@@ -219,7 +219,8 @@ def build_model(spec_path: str, weights_path: str):
             # Non-weighted layers
             layer = _build_layer(layer_spec)
         
-        layers.append((layer, layer_spec.training_only))
+        if layer:
+            layers.append((layer, layer_spec.training_only))
     
     # Build postprocessing
     postprocess_fn = _build_postprocess(spec.postprocessing)
@@ -298,7 +299,7 @@ def _build_weighted_layer(layer: Layer, weight_index: int, state_dict: dict):
         raise ValueError(f"Unknown weighted layer type: {layer.op}")
 
 
-def _build_layer(layer: Layer) -> Callable:
+def _build_layer(layer: Layer) -> Optional[Callable]:
     """Build non-weighted layer (activation, norm, etc)"""
     from tinygrad import nn
     
@@ -315,7 +316,8 @@ def _build_layer(layer: Layer) -> Callable:
         )
     
     elif layer.op == Op.BATCH_NORM3D:
-        return nn.BatchNorm(layer.params.get("num_features"))
+        return None # no batch norm at inference time
+        #return nn.BatchNorm(layer.params.get("num_features"), affine=False)
     
     elif layer.op == Op.LAYER_NORM:
         return nn.LayerNorm(layer.params.get("normalized_shape"))
