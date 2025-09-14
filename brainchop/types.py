@@ -190,6 +190,7 @@ def build_model(spec_path: str, weights_path: str):
         Callable model with loaded weights
     """
     from tinygrad.nn.state import torch_load, load_state_dict, get_state_dict
+    from tinygrad import nn
     
     spec = load_spec(spec_path)
     
@@ -200,25 +201,26 @@ def build_model(spec_path: str, weights_path: str):
             state_dict = {k: f.get_tensor(k) for k in f.keys()}
     else:
         state_dict = torch_load(weights_path)
+        print("Loaded weights:")
+        for k in state_dict:
+            print(f"  {k}: {state_dict[k].shape}")
     
     # Build preprocessing
     preprocess_fn = _build_preprocess(spec.preprocessing)
     
-    # Build layers
-    layers = []
-    weight_index = 0
+    # Build model with proper weight tracking
+    model_layers = []
+    
+    # Track layer indices for weight mapping
+    layer_idx = 0
     
     for layer_spec in spec.forward_pass:
-        if layer_spec.op in [Op.CONV1D, Op.CONV2D, Op.CONV3D, Op.LINEAR]:
-            # These ops consume weights
-            layer = _build_weighted_layer(layer_spec, weight_index, state_dict)
-            weight_index += 1
-        else:
-            # Non-weighted layers
-            layer = _build_layer(layer_spec)
-        
-        if layer:
-            layers.append((layer, layer_spec.training_only))
+        layer_info = _build_layer_with_weights(layer_spec, layer_idx, state_dict)
+        if layer_info:
+            model_layers.append(layer_info)
+            # Only increment for layers that consume weights
+            if layer_info['consumes_weights']:
+                layer_idx += 1
     
     # Build postprocessing
     postprocess_fn = _build_postprocess(spec.postprocessing)
@@ -226,27 +228,292 @@ def build_model(spec_path: str, weights_path: str):
     # Create model class
     class Model:
         def __init__(self):
-            self.layers = [layer for layer, _ in layers]
+            self.layers = []
+            for layer_info in model_layers:
+                if layer_info['layer'] is not None:
+                    self.layers.append((layer_info['layer'], layer_info['training_only']))
             
         def __call__(self, x, training=False):
             x = preprocess_fn(x)
             
-            for (layer, training_only) in layers:
+            for layer, training_only in self.layers:
                 if not training_only or training:
                     x = layer(x)
             
             x = postprocess_fn(x)
             return x
     
-    # Instantiate and load weights
+    # Instantiate model
     model = Model()
     
-    # Map weights to model
-    model_state = get_state_dict(model)
-    mapped_weights = _map_weights(state_dict, model_state)
-    load_state_dict(model, mapped_weights, strict=True)
+    # Load weights with proper mapping
+    _load_weights_into_model(model, model_layers, state_dict)
     
     return model
+
+
+def _build_layer_with_weights(layer_spec: Layer, layer_idx: int, state_dict: dict):
+    """Build layer and track weight consumption"""
+    from tinygrad import nn
+    
+    layer_info = {
+        'layer': None,
+        'training_only': layer_spec.training_only,
+        'consumes_weights': False,
+        'layer_idx': layer_idx,
+        'op': layer_spec.op
+    }
+    
+    # Weighted layers
+    if layer_spec.op == Op.CONV1D:
+        layer_info['layer'] = nn.Conv1d(**layer_spec.params)
+        layer_info['consumes_weights'] = True
+        
+    elif layer_spec.op == Op.CONV2D:
+        layer_info['layer'] = nn.Conv2d(**layer_spec.params)
+        layer_info['consumes_weights'] = True
+        
+    elif layer_spec.op == Op.CONV3D:
+        # For tinygrad, we need to handle 3D convs specially
+        params = layer_spec.params.copy()
+        layer_info['layer'] = nn.Conv2d(**params)  # Tinygrad handles 3D internally
+        layer_info['consumes_weights'] = True
+        
+    elif layer_spec.op == Op.LINEAR:
+        layer_info['layer'] = nn.Linear(**layer_spec.params)
+        layer_info['consumes_weights'] = True
+        
+    # Batch normalization layers
+    elif layer_spec.op == Op.BATCH_NORM3D:
+        num_features = layer_spec.params.get("num_features")
+        # Create batch norm but mark as inference-only
+        layer_info['layer'] = _create_inference_batchnorm(num_features)
+        layer_info['consumes_weights'] = True  # BatchNorm has weights/bias/running_mean/running_var
+        
+    elif layer_spec.op == Op.BATCH_NORM2D:
+        num_features = layer_spec.params.get("num_features")
+        layer_info['layer'] = _create_inference_batchnorm(num_features)
+        layer_info['consumes_weights'] = True
+        
+    elif layer_spec.op == Op.BATCH_NORM1D:
+        num_features = layer_spec.params.get("num_features")
+        layer_info['layer'] = _create_inference_batchnorm(num_features)
+        layer_info['consumes_weights'] = True
+        
+    # Non-weighted layers
+    else:
+        layer_info['layer'] = _build_functional_layer(layer_spec)
+        layer_info['consumes_weights'] = False
+    
+    return layer_info
+
+
+def _create_inference_batchnorm(num_features):
+    """Create a batch norm layer for inference"""
+    from tinygrad import Tensor
+    
+    class InferenceBatchNorm:
+        def __init__(self, num_features):
+            self.num_features = num_features
+            # These will be loaded from state dict
+            self.weight = None
+            self.bias = None
+            self.running_mean = None
+            self.running_var = None
+            self.eps = 1e-5
+            
+        def __call__(self, x):
+            if self.running_mean is None or self.running_var is None:
+                # Fallback to identity if stats not loaded
+                return x
+                
+            # Apply batch normalization in inference mode
+            # x_norm = (x - running_mean) / sqrt(running_var + eps)
+            # y = weight * x_norm + bias
+            
+            # Reshape for broadcasting
+            shape = [1] * len(x.shape)
+            shape[1] = self.num_features  # Channel dimension
+            
+            mean = self.running_mean.reshape(shape)
+            var = self.running_var.reshape(shape)
+            
+            x_norm = (x - mean) / (var + self.eps).sqrt()
+            
+            if self.weight is not None:
+                weight = self.weight.reshape(shape)
+                x_norm = x_norm * weight
+                
+            if self.bias is not None:
+                bias = self.bias.reshape(shape)
+                x_norm = x_norm + bias
+                
+            return x_norm
+    
+    return InferenceBatchNorm(num_features)
+
+
+def _build_functional_layer(layer_spec: Layer):
+    """Build non-weighted layer (activation, pooling, etc)"""
+    
+    # Activation functions
+    if layer_spec.op == Op.RELU:
+        return lambda x: x.relu()
+    
+    elif layer_spec.op == Op.GELU:
+        return lambda x: x.gelu()
+    
+    elif layer_spec.op == Op.SILU:
+        return lambda x: x.silu()
+    
+    elif layer_spec.op == Op.SIGMOID:
+        return lambda x: x.sigmoid()
+    
+    elif layer_spec.op == Op.TANH:
+        return lambda x: x.tanh()
+    
+    elif layer_spec.op == Op.LEAKY_RELU:
+        alpha = layer_spec.params.get("negative_slope", 0.01)
+        return lambda x: x.leakyrelu(alpha)
+    
+    elif layer_spec.op == Op.ELU:
+        alpha = layer_spec.params.get("alpha", 1.0)
+        return lambda x: x.elu(alpha)
+    
+    elif layer_spec.op == Op.SOFTMAX:
+        dim = layer_spec.params.get("dim", 1)
+        return lambda x: x.softmax(axis=dim)
+    
+    # Dropout
+    elif layer_spec.op == Op.DROPOUT:
+        p = layer_spec.params.get("p", 0.5)
+        return lambda x: x.dropout(p)
+    
+    elif layer_spec.op in [Op.DROPOUT1D, Op.DROPOUT2D, Op.DROPOUT3D]:
+        p = layer_spec.params.get("p", 0.5)
+        return lambda x: x.dropout(p)
+    
+    # Pooling
+    elif layer_spec.op == Op.MAX_POOL3D:
+        kernel_size = layer_spec.params["kernel_size"]
+        stride = layer_spec.params.get("stride", kernel_size)
+        padding = layer_spec.params.get("padding", 0)
+        return lambda x: x.max_pool2d(kernel_size, stride, padding)
+    
+    elif layer_spec.op == Op.AVG_POOL3D:
+        kernel_size = layer_spec.params["kernel_size"]
+        stride = layer_spec.params.get("stride", kernel_size)
+        padding = layer_spec.params.get("padding", 0)
+        return lambda x: x.avg_pool2d(kernel_size, stride, padding)
+    
+    else:
+        print(f"Warning: Operation {layer_spec.op} not implemented, skipping")
+        return None
+
+
+def _load_weights_into_model(model, model_layers, state_dict):
+    """Load weights into model with proper mapping"""
+    from tinygrad import Tensor
+    
+    # Create mapping from torch naming to our model structure
+    torch_keys = sorted(state_dict.keys())
+    
+    # Group torch keys by layer
+    layer_groups = {}
+    for key in torch_keys:
+        # Parse keys like "model.0.0.weight", "model.0.1.running_mean", or "model.9.weight"
+        parts = key.split('.')
+        if len(parts) >= 2 and parts[0] == 'model':
+            layer_idx = int(parts[1])
+            
+            # Check if this is a nested layer (has sublayer index) or direct layer
+            if len(parts) >= 4 and parts[2].isdigit():
+                # Format: model.X.Y.param_name (nested layers)
+                sublayer_idx = int(parts[2])
+                param_name = '.'.join(parts[3:])
+            else:
+                # Format: model.X.param_name (direct layer, like final conv)
+                sublayer_idx = 0  # Use 0 as default sublayer for non-nested
+                param_name = '.'.join(parts[2:])
+            
+            if layer_idx not in layer_groups:
+                layer_groups[layer_idx] = {}
+            if sublayer_idx not in layer_groups[layer_idx]:
+                layer_groups[layer_idx][sublayer_idx] = {}
+                
+            layer_groups[layer_idx][sublayer_idx][param_name] = key
+    
+    print(f"Found {len(layer_groups)} layer groups in state dict")
+    
+    # Map to our model layers - need to handle the interleaved conv+batchnorm pattern
+    weighted_layers = [info for info in model_layers if info['consumes_weights']]
+    
+    # From your weight structure, we can see the pattern:
+    # model.0.0.weight/bias = first conv
+    # model.0.1.weight/bias/running_mean/running_var = first batchnorm
+    # model.1.0.weight/bias = second conv
+    # model.1.1.weight/bias/running_mean/running_var = second batchnorm
+    # ...
+    # model.9.weight/bias = final conv (no batchnorm)
+    
+    block_idx = 0
+    layer_in_block = 0
+    
+    for model_layer_idx, layer_info in enumerate(weighted_layers):
+        layer = layer_info['layer']
+        
+        print(f"Loading weights for model layer {model_layer_idx} (torch block {block_idx}, layer {layer_in_block})")
+        
+        if layer_info['op'] in [Op.CONV1D, Op.CONV2D, Op.CONV3D, Op.LINEAR]:
+            # Load conv/linear weights from block_idx.layer_in_block
+            if block_idx in layer_groups and layer_in_block in layer_groups[block_idx]:
+                sublayer = layer_groups[block_idx][layer_in_block]
+                
+                if 'weight' in sublayer:
+                    weight_key = sublayer['weight']
+                    layer.weight = Tensor(state_dict[weight_key].numpy())
+                    print(f"  Loaded weight: {weight_key} -> {layer.weight.shape}")
+                    
+                if 'bias' in sublayer:
+                    bias_key = sublayer['bias']
+                    layer.bias = Tensor(state_dict[bias_key].numpy())
+                    print(f"  Loaded bias: {bias_key} -> {layer.bias.shape}")
+            else:
+                print(f"  Warning: No weights found for conv layer at block {block_idx}, sublayer {layer_in_block}")
+            
+            # After conv, expect batchnorm next (except for final layer)
+            layer_in_block += 1
+            
+        elif layer_info['op'] in [Op.BATCH_NORM1D, Op.BATCH_NORM2D, Op.BATCH_NORM3D]:
+            # Load batch norm parameters from block_idx.layer_in_block
+            if block_idx in layer_groups and layer_in_block in layer_groups[block_idx]:
+                sublayer = layer_groups[block_idx][layer_in_block]
+                
+                if 'weight' in sublayer:
+                    weight_key = sublayer['weight']
+                    layer.weight = Tensor(state_dict[weight_key].numpy())
+                    print(f"  Loaded BN weight: {weight_key} -> {layer.weight.shape}")
+                    
+                if 'bias' in sublayer:
+                    bias_key = sublayer['bias']
+                    layer.bias = Tensor(state_dict[bias_key].numpy())
+                    print(f"  Loaded BN bias: {bias_key} -> {layer.bias.shape}")
+                    
+                if 'running_mean' in sublayer:
+                    mean_key = sublayer['running_mean']
+                    layer.running_mean = Tensor(state_dict[mean_key].numpy())
+                    print(f"  Loaded BN running_mean: {mean_key} -> {layer.running_mean.shape}")
+                    
+                if 'running_var' in sublayer:
+                    var_key = sublayer['running_var']
+                    layer.running_var = Tensor(state_dict[var_key].numpy())
+                    print(f"  Loaded BN running_var: {var_key} -> {layer.running_var.shape}")
+            else:
+                print(f"  Warning: No weights found for batchnorm layer at block {block_idx}, sublayer {layer_in_block}")
+            
+            # After batchnorm, move to next block
+            block_idx += 1
+            layer_in_block = 0
 
 
 def _build_preprocess(preprocess: Preprocess) -> Callable:
@@ -278,102 +545,6 @@ def _build_preprocess(preprocess: Preprocess) -> Callable:
         return lambda x: x
 
 
-def _build_weighted_layer(layer: Layer, weight_index: int, state_dict: dict):
-    """Build layer that has weights (conv, linear)"""
-    from tinygrad import nn
-    
-    # Map to tinygrad classes
-    if layer.op == Op.CONV1D:
-        return nn.Conv1d(**layer.params)
-    elif layer.op == Op.CONV2D:
-        return nn.Conv2d(**layer.params)
-    elif layer.op == Op.CONV3D:
-        # Tinygrad uses Conv2d for 3D
-        layer.params['kernel_size'] = [layer.params['kernel_size']] * 3
-        return nn.Conv2d(**layer.params)
-    elif layer.op == Op.LINEAR:
-        return nn.Linear(**layer.params)
-    else:
-        raise ValueError(f"Unknown weighted layer type: {layer.op}")
-
-
-def _build_layer(layer: Layer) -> Optional[Callable]:
-    """Build non-weighted layer (activation, norm, etc)"""
-    from tinygrad import nn
-    
-    # Normalization layers
-    if layer.op == Op.GROUP_NORM:
-        num_groups = layer.params.get("num_groups")
-        if num_groups == "auto":
-            # Will be inferred from actual weight dimensions
-            num_groups = layer.params.get("num_channels", 1)
-        return nn.GroupNorm(
-            num_groups=num_groups,
-            num_channels=layer.params.get("num_channels", num_groups),
-            affine=layer.params.get("affine", False)
-        )
-    
-    elif layer.op == Op.BATCH_NORM3D:
-        return None # no batch norm at inference time
-        #return nn.BatchNorm(layer.params.get("num_features"), affine=False)
-    
-    elif layer.op == Op.LAYER_NORM:
-        return nn.LayerNorm(layer.params.get("normalized_shape"))
-    
-    # Activation functions
-    elif layer.op == Op.RELU:
-        return lambda x: x.relu()
-    
-    elif layer.op == Op.GELU:
-        return lambda x: x.gelu()
-    
-    elif layer.op == Op.SILU:
-        return lambda x: x.silu()
-    
-    elif layer.op == Op.SIGMOID:
-        return lambda x: x.sigmoid()
-    
-    elif layer.op == Op.TANH:
-        return lambda x: x.tanh()
-    
-    elif layer.op == Op.LEAKY_RELU:
-        alpha = layer.params.get("negative_slope", 0.01)
-        return lambda x: x.leakyrelu(alpha)
-    
-    elif layer.op == Op.ELU:
-        alpha = layer.params.get("alpha", 1.0)
-        return lambda x: x.elu(alpha)
-    
-    elif layer.op == Op.SOFTMAX:
-        dim = layer.params.get("dim", 1)
-        return lambda x: x.softmax(axis=dim)
-    
-    # Dropout
-    elif layer.op == Op.DROPOUT:
-        p = layer.params.get("p", 0.5)
-        return lambda x: x.dropout(p)
-    
-    elif layer.op in [Op.DROPOUT1D, Op.DROPOUT2D, Op.DROPOUT3D]:
-        p = layer.params.get("p", 0.5)
-        return lambda x: x.dropout(p)
-    
-    # Pooling
-    elif layer.op == Op.MAX_POOL3D:
-        kernel_size = layer.params["kernel_size"]
-        stride = layer.params.get("stride", kernel_size)
-        padding = layer.params.get("padding", 0)
-        return lambda x: x.max_pool2d(kernel_size, stride, padding)
-    
-    elif layer.op == Op.AVG_POOL3D:
-        kernel_size = layer.params["kernel_size"]
-        stride = layer.params.get("stride", kernel_size)
-        padding = layer.params.get("padding", 0)
-        return lambda x: x.avg_pool2d(kernel_size, stride, padding)
-    
-    else:
-        raise NotImplementedError(f"Operation {layer.op} not yet implemented")
-
-
 def _build_postprocess(postprocess: Postprocess) -> Callable:
     """Build postprocessing function"""
     if postprocess.op == PostprocessOp.SOFTMAX:
@@ -391,23 +562,6 @@ def _build_postprocess(postprocess: Postprocess) -> Callable:
         return lambda x: x
 
 
-def _map_weights(torch_dict: dict, tinygrad_dict: dict) -> dict:
-    """Map torch weights to tinygrad model"""
-    torch_keys = list(torch_dict.keys())
-    tiny_keys = list(tinygrad_dict.keys())
-    
-    if set(torch_keys) == set(tiny_keys):
-        # Direct mapping
-        return torch_dict
-    
-    # Order-based mapping
-    mapped = {}
-    for torch_key, tiny_key in zip(torch_keys, tiny_keys):
-        mapped[tiny_key] = torch_dict[torch_key]
-    
-    return mapped
-
-
 # ============================================================================
 # Example JSON spec for your MeshNet
 # ============================================================================
@@ -416,41 +570,53 @@ EXAMPLE_MESHNET_SPEC = """
 {
   "version": "2.0",
   "metadata": {
-    "description": "MeshNet with 5 decoders, dilations 16->8->4->2->1",
+    "description": "MeshNet 3D CNN with dilations 1→2→4→8→16→8→4→2→1 for binary output",
     "framework": "tinygrad",
-    "input_shape": [1, 256, 256, 256],
+    "input_shape": [1, 1, 256, 256, 256],
     "output_classes": 2
   },
   "preprocessing": {
-    "op": "qnormalize",
-    "params": {
-      "qmin": 0.02,
-      "qmax": 0.98,
-      "eps": 1e-3
-    }
+    "op": "none",
+    "params": {}
   },
   "forward_pass": [
-    {"op": "conv3d", "params": {"kernel_size": 3, "padding": 16, "dilation": 16, "bias": false}},
-    {"op": "group_norm", "params": {"num_groups": "auto", "affine": false}},
-    {"op": "gelu", "params": {}},
-    
-    {"op": "conv3d", "params": {"kernel_size": 3, "padding": 8, "dilation": 8, "bias": false}},
-    {"op": "group_norm", "params": {"num_groups": "auto", "affine": false}},
-    {"op": "gelu", "params": {}},
-    
-    {"op": "conv3d", "params": {"kernel_size": 3, "padding": 4, "dilation": 4, "bias": false}},
-    {"op": "group_norm", "params": {"num_groups": "auto", "affine": false}},
-    {"op": "gelu", "params": {}},
-    
-    {"op": "conv3d", "params": {"kernel_size": 3, "padding": 2, "dilation": 2, "bias": false}},
-    {"op": "group_norm", "params": {"num_groups": "auto", "affine": false}},
-    {"op": "gelu", "params": {}},
-    
-    {"op": "conv3d", "params": {"kernel_size": 3, "padding": 1, "dilation": 1, "bias": false}},
-    {"op": "group_norm", "params": {"num_groups": "auto", "affine": false}},
-    {"op": "gelu", "params": {}},
-    
-    {"op": "conv3d", "params": {"kernel_size": 1, "padding": 0, "dilation": 1, "bias": false}}
+    {"op": "conv3d", "params": {"in_channels": 1, "out_channels": 26, "kernel_size": 3, "padding": 1, "stride": 1, "dilation": 1, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 2, "stride": 1, "dilation": 2, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 4, "stride": 1, "dilation": 4, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 8, "stride": 1, "dilation": 8, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 16, "stride": 1, "dilation": 16, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 8, "stride": 1, "dilation": 8, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 4, "stride": 1, "dilation": 4, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 2, "stride": 1, "dilation": 2, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 26, "kernel_size": 3, "padding": 1, "stride": 1, "dilation": 1, "bias": true}},
+    {"op": "batch_norm3d", "params": {"num_features": 26}},
+    {"op": "elu", "params": {"alpha": 1.0}},
+
+    {"op": "conv3d", "params": {"in_channels": 26, "out_channels": 2, "kernel_size": 1, "padding": 0, "stride": 1, "dilation": 1, "bias": true}}
   ],
   "postprocessing": {
     "op": "none",
