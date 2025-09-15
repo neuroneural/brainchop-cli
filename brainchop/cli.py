@@ -614,7 +614,8 @@ def run_cli():
 
     # Check if this is the first run for this model/batch_size combination
     batch_size = args.batch_size
-    if not args.no_optimize and is_first_run(modelname, batch_size):
+    original_beam = os.environ.get("BEAM")
+    if not args.no_optimize and is_first_run(modelname, batch_size) and not original_beam:
         # Prompt for optimization on first run
         optimization_success = prompt_for_optimization(modelname, batch_size, 
                                                       custom_config, custom_weights)
@@ -624,9 +625,8 @@ def run_cli():
 
     # Check for cached optimization and set BEAM environment variable
     best_beam = get_best_beam_for_batch_size(modelname, batch_size)
-    original_beam = os.environ.get("BEAM")
     
-    if best_beam is not None:
+    if best_beam is not None and best_beam > original_beam:
         os.environ["BEAM"] = str(best_beam)
         print(f"brainchop :: Using cached optimization BEAM={best_beam} for batch size {batch_size}")
     
