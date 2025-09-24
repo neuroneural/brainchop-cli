@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 import numpy as np
 from tinygrad import Tensor
+from typing import Tuple
 
 
 def _get_executable():
@@ -50,31 +51,46 @@ def _get_temp_dir():
     return Path(temp_dir)
 
 
-def _run_niimath(args):
+def header_data_split(nifti_bytes: bytes) -> Tuple[bytes, bytes]:
     """
-    Executes the niimath command with specified arguments.
+    Splits a NIfTI file's byte content into header and image data.
 
-    Parameters:
-        args (list): List of command-line arguments to pass to niimath.
+    This function correctly finds the start of the image data by reading
+    the 'vox_offset' field from the header, providing a robust alternative
+    to assuming a fixed header size.
+
+    Args:
+        nifti_bytes: The full content of a NIfTI file as a bytes object.
 
     Returns:
-        int: Return code from niimath.
+        A tuple containing two bytes objects: (header, image_data).
+        The 'header' includes the standard 348-byte header plus any extensions.
 
     Raises:
-        subprocess.CalledProcessError: If the niimath command fails.
+        ValueError: If the input is too short to contain the vox_offset field
+                    or if the offset points beyond the data's boundaries.
     """
-    exe = _get_executable()
-    cmd = [exe] + args
-
-    try:
-        result = subprocess.run(
-            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    # The vox_offset field is a 4-byte float at byte offset 108.
+    # We must have at least 108 + 4 = 112 bytes to read it.
+    if len(nifti_bytes) < 112:
+        raise ValueError(
+            f"Input is too short ({len(nifti_bytes)} bytes) to be a valid NIfTI file."
         )
-        # print(result.stdout)
-        return result.returncode
-    except subprocess.CalledProcessError as e:
-        print(f"niimath failed with error:\n{e.stderr}", file=sys.stderr)
-        raise RuntimeError(f"niimath failed with error:\n{e.stderr}") from e
+
+    # Unpack the little-endian float ('<f') from bytes 108 to 112.
+    vox_offset = int(struct.unpack("<f", nifti_bytes[108:112])[0])
+
+    # Sanity check: the offset cannot be larger than the total size of the input.
+    if vox_offset > len(nifti_bytes):
+        raise ValueError(
+            f"Invalid vox_offset: {vox_offset}. It points beyond the end of the input data."
+        )
+
+    # Split the byte string at the dynamically found offset.
+    out_header = nifti_bytes[:vox_offset]
+    out_data = nifti_bytes[vox_offset:]
+
+    return out_header, out_data
 
 
 def read_header_bytes(path, size=352):
@@ -107,50 +123,125 @@ def niimath_dtype(path: str):
     return dtype_map.get(datatype, f"unknown({datatype})")
 
 
-def _read_nifti(filename, voxel_size=1):
-    EXPECTED_DIM = (256, 256, 256)
-    VOXEL_COUNT = np.prod(EXPECTED_DIM)
-    HEADER_SIZE = 352
-    VOXEL_SIZE = voxel_size  # 1 for uint8
-    EXPECTED_SIZE = HEADER_SIZE + VOXEL_COUNT * VOXEL_SIZE
+def _read_nifti(filename):
 
-    dtypes = {1: np.uint8, 2: np.uint16, 4: np.uint32}
+    INITIAL_HEADER_READ_SIZE = 352
+
+    # NIfTI datatype codes to numpy dtypes mapping
+    nifti_dtypes = {
+        1: np.uint8,  # DT_UNSIGNED_CHAR
+        2: np.int16,  # DT_SIGNED_SHORT
+        4: np.int32,  # DT_SIGNED_INT
+        8: np.float32,  # DT_FLOAT
+        16: np.complex64,  # DT_COMPLEX
+        32: np.float64,  # DT_DOUBLE
+        64: np.int8,  # DT_INT8 (NIfTI-1 extension)
+        128: np.uint16,  # DT_UINT16 (NIfTI-1 extension)
+        256: np.uint32,  # DT_UINT32 (NIfTI-1 extension)
+        512: np.int64,  # DT_INT64 (NIfTI-1 extension)
+        768: np.uint64,  # DT_UINT64 (NIfTI-1 extension)
+        1024: np.float128,  # DT_FLOAT128 (NIfTI-1 extension)
+        1792: np.complex128,  # DT_COMPLEX128 (NIfTI-1 extension)
+    }
 
     file_size = os.path.getsize(filename)
     with open(filename, "rb") as f:
-        header = bytearray(f.read(HEADER_SIZE))  # skip header
+        # Read the initial header block. This block contains all necessary info
+        # including vox_offset, dim, datatype, bitpix.
+        header = bytearray(f.read(INITIAL_HEADER_READ_SIZE))
+        if len(header) < INITIAL_HEADER_READ_SIZE:
+            raise ValueError(
+                f"File is too small to contain a {INITIAL_HEADER_READ_SIZE}-byte NIfTI header."
+            )
 
-        # —————— skip NIfTI‐1 extensions if present ——————
-        ext_flag = struct.unpack("<i", header[348:352])[0]
-        if ext_flag:
-            ext_size = struct.unpack("<i", f.read(4))[0]
-            f.seek(ext_size - 4, os.SEEK_CUR)
+        # --- Parse critical fields from the header ---
 
-        # unpack datatype code (unused here) and bits per voxel
-        _, bitpix = struct.unpack("<hh", header[70:74])
-        VOXEL_SIZE = bitpix // 8  # bytes per voxel
+        # 1. Image Dimensions (dim[0] is number of dimensions, dim[1..7] are sizes)
+        # NIfTI dim array is at byte offset 40, consists of 8 short integers (16 bytes total)
+        all_dims_raw = struct.unpack("<hhhhhhhh", header[40:56])
 
-        # now at start of voxel data
-        data_start = f.tell()
-        remaining = file_size - data_start
-        expected = VOXEL_COUNT * VOXEL_SIZE
-        if remaining != expected:
-            raise ValueError(f"Data block is {remaining} bytes, expected {expected}")
+        ndim = all_dims_raw[0]  # Number of dimensions actually used (e.g., 3 for 3D)
+        if not (1 <= ndim <= 7):
+            raise ValueError(
+                f"Invalid number of dimensions: {ndim}. NIfTI files usually have 3 or 4 dimensions."
+            )
 
-        # ————————————————————————————————————————————————
+        # Extract actual image dimensions (e.g., dim[1], dim[2], dim[3] for a 3D image)
+        # We take positive dimensions as NIfTI can pad with zeros.
+        # NIfTI's dim[1]=x, dim[2]=y, dim[3]=z.
+        img_dims_nifti_order = tuple(d for d in all_dims_raw[1 : ndim + 1] if d > 0)
+        if not img_dims_nifti_order:
+            raise ValueError(
+                "Could not determine valid image dimensions from NIfTI header."
+            )
 
-        data = np.frombuffer(f.read(), dtype=dtypes[voxel_size])
+        # Calculate total voxel count
+        VOXEL_COUNT = np.prod(img_dims_nifti_order)
 
-    # Zero out the history offset and location
+        # 2. Datatype and Bits per voxel
+        # datatype_code at byte offset 70 (short), bitpix at byte offset 72 (short)
+        datatype_code, bitpix = struct.unpack("<hh", header[70:74])
+
+        image_dtype = nifti_dtypes.get(datatype_code)
+        if image_dtype is None:
+            raise ValueError(f"Unsupported NIfTI datatype code: {datatype_code}")
+
+        VOXEL_SIZE_BYTES = bitpix // 8  # Bytes per voxel
+        if VOXEL_SIZE_BYTES == 0:
+            raise ValueError("Bitpix is 0, cannot determine voxel size.")
+
+        # 3. Image Data Offset (vox_offset)
+        # vox_offset is at byte offset 108, a float value representing byte offset.
+        # It accounts for header, extensions, etc.
+        vox_offset_float = struct.unpack("<f", header[108:112])[0]
+        image_data_start_offset = int(vox_offset_float)
+
+        # --- Now, seek to the actual image data start using vox_offset ---
+        f.seek(
+            image_data_start_offset, os.SEEK_SET
+        )  # os.SEEK_SET means from the beginning of the file
+
+        # --- Validate remaining file size and read data ---
+        current_pos = f.tell()
+        if current_pos != image_data_start_offset:
+            raise IOError(
+                f"Failed to seek to {image_data_start_offset} bytes. Current position is {current_pos}."
+            )
+
+        remaining_file_bytes = file_size - current_pos
+        expected_data_bytes = VOXEL_COUNT * VOXEL_SIZE_BYTES
+
+        if remaining_file_bytes < expected_data_bytes:
+            raise ValueError(
+                f"Data block is {remaining_file_bytes} bytes, "
+                f"expected at least {expected_data_bytes} for {VOXEL_COUNT} voxels of {VOXEL_SIZE_BYTES} bytes each. "
+                "File might be truncated or header dimensions/datatype incorrect."
+            )
+
+        # Read exactly the expected amount of image data
+        data_bytes = f.read(expected_data_bytes)
+        data = np.frombuffer(data_bytes, dtype=image_dtype)
+
+    # --- Header modifications (preserving original user logic) ---
+    # Zero out the extension field 'extension' at byte 348.
     header[348:352] = b"\x00\x00\x00\x00"
+
+    # Modify vox_offset field at byte 108.
     header[108:112] = b"\x00\x00\xb0\x43"
 
-    header = bytes(header)
+    header_bytes = bytes(header)
 
     if data.size != VOXEL_COUNT:
         raise ValueError(f"Read {data.size} voxels, expected {VOXEL_COUNT}")
 
-    return data.reshape(EXPECTED_DIM), header
+    # --- Reshape the data ---
+    # NIfTI stores data in 'x-fastest' order (dim[1] changes fastest, then dim[2], then dim[3]).
+    # For a typical NumPy array where indexing is (z, y, x) (e.g., slice, row, column),
+    # we need to reverse the dimensions from the NIfTI header.
+    # If img_dims_nifti_order is (dx, dy, dz), we reshape to (dz, dy, dx).
+    reshaped_dims = img_dims_nifti_order[::-1]
+
+    return data.reshape(reshaped_dims), header_bytes
 
 
 def _write_nifti(path, data, header):
@@ -183,78 +274,11 @@ def conform(input_image_path, comply=False, ct=False):
     out = res.stdout
 
     # split off header and data
-    header = out[:352]
-    data = out[352:]
+    header, data = header_data_split(out)
 
     # reshape into (256,256,256) uint8 volume
     volume = np.frombuffer(data, dtype=np.uint8).reshape((256, 256, 256))
     return volume, header
-
-
-def _conform(
-    input_image_path, output_image_path="conformed.nii", comply=False, ct=False
-):
-    """
-    Conform a NIfTI image to the specified shape using niimath.
-
-    Parameters:
-        input_image_path (str): Path to the input NIfTI file.
-        output_image_path (str): Path to save the conformated NIfTI file.
-
-    Returns:
-        data, header: The conform numpy image, and binary header of 352 bytes.
-
-    Raises:
-        FileNotFoundError: If the input file does not exist.
-        RuntimeError: If the conform operation fails.
-    """
-    input_path = Path(input_image_path).absolute()
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input NIfTI file not found: {input_path}")
-
-    # Convert output path to absolute path
-    output_path = Path(output_image_path).absolute()
-
-    comply_args = [
-        "-comply",
-        "256",
-        "256",
-        "256",
-        "1",
-        "1",
-        "1",
-        "1",
-        "1",
-    ]
-    # Construct niimath arguments
-    args = [
-        str(input_path),
-        "-conform",
-        "-gz",
-        "0",
-        str(output_path),
-        "-odt",
-        "char",
-    ]
-    if ct:
-        args[1:1] = ["-h2c"]
-    if comply:
-        args[1:1] = comply_args
-
-    # Run niimath
-    _run_niimath(args)
-
-    # Load and return the conformated image
-    conform_img, header = _read_nifti(
-        output_path, voxel_size=1
-    )  # todo: do this all in mem
-
-    try:
-        output_path.unlink()  # Use pathlib's unlink instead of subprocess rm
-    except OSError:
-        pass  # Handle case where file doesn't exist or can't be removed
-
-    return conform_img, header
 
 
 def header2dimensions(header_bytes):
@@ -369,7 +393,7 @@ def niimath_pipe_process(cmd: list, full_input: bytes):
     res = subprocess.run(cmd, input=full_input, capture_output=True, check=True)
     out = res.stdout
     # split off the 352‑byte header
-    out_header, out_data = out[:352], out[352:]
+    out_header, out_data = header_data_split(out)
     shape = header2dimensions(out_header)
     # reinterpret and reshape into (Z,Y,X)
     numpyarray = np.frombuffer(out_data, dtype=header2dtype(out_header)).reshape(shape)
@@ -400,7 +424,25 @@ def largest_cluster(data):
     return largest_label
 
 
+def truncate_header_bytes(header: bytes):
+    # Make a mutable copy of the header to modify it safely.
+    new_header = bytearray(header)
+
+    # 1. Set vox_offset (at byte 108) to 352.0
+    # '<f' specifies a little-endian float.
+    new_header[108:112] = struct.pack("<f", 352.0)
+
+    # 2. Zero out the extension flag (at byte 348)
+    # to declare that no extensions exist in this new in-memory file.
+    new_header[348:352] = b"\x00\x00\x00\x00"
+
+    # 3. Truncate the header to exactly 352 bytes, in case the original
+    #    header was longer (due to extensions).
+    return bytes(new_header[:352])
+
+
 def bwlabel(header: bytes, vol_data: np.ndarray, neighbors=26):
+    header = truncate_header_bytes(header)
     # fire niimath, pipe in header+data, capture its stdout
     res = subprocess.run(
         ["niimath", "-", "-bwlabel", str(neighbors), "-gz", "0", "-", "-odt", "char"],
@@ -410,44 +452,9 @@ def bwlabel(header: bytes, vol_data: np.ndarray, neighbors=26):
     )
     out = res.stdout
     # split off the 352‑byte header
-    out_header, out_data = out[:352], out[352:]
+    out_header, out_data = header_data_split(out)
     # reinterpret and reshape into (Z,Y,X)
     clusters = np.frombuffer(out_data, dtype=np.uint8).reshape(vol_data.shape)
     cluster_label = largest_cluster(clusters)
     vol_data[clusters != cluster_label] = 0
     return vol_data, out_header
-
-
-def _bwlabel(image_path, neighbors=26, image=None):
-    """
-    Performs in place connected component labelling for non-zero voxels
-    (conn sets neighbors: 6, 18, 26)
-    """
-    temp_dir = _get_temp_dir()
-    mask_path = temp_dir / "bwlabel_mask.nii"
-    image_path = Path(image_path).absolute()
-
-    args = [
-        str(image_path),
-        "-bwlabel",
-        str(neighbors),
-        "-gz",
-        "0",
-        str(mask_path),
-        "-odt",
-        "char",
-    ]
-    _run_niimath(args)
-
-    if image is None:
-        image = _read_nifti(image_path)[0].astype(np.uint8)
-
-    clusters, header = _read_nifti(mask_path)
-    cluster_label = largest_cluster(clusters)
-    image[clusters != cluster_label] = 0
-    _write_nifti(image_path, image, header)
-
-    try:
-        mask_path.unlink()  # Use pathlib's unlink instead of subprocess rm
-    except OSError:
-        pass  # Handle case where file doesn't exist or can't be removed
