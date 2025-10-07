@@ -1,0 +1,907 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Index &mdash; brainchop 0.1.23 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=20522496"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            brainchop
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-methods">Installation Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#using-pip-recommended">Using pip (Recommended)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#from-source">From Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#using-docker">Using Docker</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#verification">Verification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#gpu-support">GPU Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#basic-usage">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#selecting-models">Selecting Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#list-available-models">List Available Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#using-a-specific-model">Using a Specific Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#skull-stripping">Skull Stripping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#advanced-options">Advanced Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#image-preprocessing">Image Preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#export-options">Export Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#custom-models">Custom Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#local-model-development">Local Model Development</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#file-uri-loading">File URI Loading</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#updating-models">Updating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#common-workflows">Common Workflows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#quick-tissue-segmentation">Quick Tissue Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#clinical-scan-processing">Clinical Scan Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#atlas-based-parcellation">Atlas-based Parcellation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#brain-extraction-pipeline">Brain Extraction Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#batch-processing-workflow">Batch Processing Workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#environment-variables">Environment Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#out-of-memory">Out of Memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#slow-first-run">Slow First Run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#model-download-issues">Model Download Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Available Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-overview">Model Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#detailed-model-information">Detailed Model Information</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#tissue-fast">tissue_fast</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#subcortical">subcortical</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#dkatlas">DKatlas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#mindgrab">mindgrab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-sources">Model Sources</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#updating-models">Updating Models</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#model-architecture-formats">Model Architecture Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-brainchop.cli">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.load_optimization_cache"><code class="docutils literal notranslate"><span class="pre">load_optimization_cache()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.save_optimization_cache"><code class="docutils literal notranslate"><span class="pre">save_optimization_cache()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.get_best_beam_for_batch_size"><code class="docutils literal notranslate"><span class="pre">get_best_beam_for_batch_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.is_first_run"><code class="docutils literal notranslate"><span class="pre">is_first_run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.preoptimize"><code class="docutils literal notranslate"><span class="pre">preoptimize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.prompt_for_optimization"><code class="docutils literal notranslate"><span class="pre">prompt_for_optimization()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.generate_output_filename"><code class="docutils literal notranslate"><span class="pre">generate_output_filename()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.get_parser"><code class="docutils literal notranslate"><span class="pre">get_parser()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.preprocess_input"><code class="docutils literal notranslate"><span class="pre">preprocess_input()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.preprocess_batch"><code class="docutils literal notranslate"><span class="pre">preprocess_batch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.run_inference"><code class="docutils literal notranslate"><span class="pre">run_inference()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.run_batch_inference"><code class="docutils literal notranslate"><span class="pre">run_batch_inference()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.postprocess_output"><code class="docutils literal notranslate"><span class="pre">postprocess_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.postprocess_batch_output"><code class="docutils literal notranslate"><span class="pre">postprocess_batch_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.write_output"><code class="docutils literal notranslate"><span class="pre">write_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.cli.run_cli"><code class="docutils literal notranslate"><span class="pre">run_cli()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#main-functions">Main Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#id0"><code class="docutils literal notranslate"><span class="pre">run_cli()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#preprocessing">Preprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id1"><code class="docutils literal notranslate"><span class="pre">preprocess_input()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id2"><code class="docutils literal notranslate"><span class="pre">preprocess_batch()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#inference">Inference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id3"><code class="docutils literal notranslate"><span class="pre">run_inference()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id4"><code class="docutils literal notranslate"><span class="pre">run_batch_inference()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#postprocessing">Postprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id5"><code class="docutils literal notranslate"><span class="pre">postprocess_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id6"><code class="docutils literal notranslate"><span class="pre">postprocess_batch_output()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#output">Output</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id7"><code class="docutils literal notranslate"><span class="pre">write_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id8"><code class="docutils literal notranslate"><span class="pre">generate_output_filename()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#optimization">Optimization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id9"><code class="docutils literal notranslate"><span class="pre">preoptimize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id10"><code class="docutils literal notranslate"><span class="pre">load_optimization_cache()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id11"><code class="docutils literal notranslate"><span class="pre">save_optimization_cache()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id12"><code class="docutils literal notranslate"><span class="pre">get_best_beam_for_batch_size()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-brainchop.utils">Utilities Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.download_model_listing"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.load_models"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.update_models"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.list_models"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.download"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.unwrap_path"><code class="docutils literal notranslate"><span class="pre">unwrap_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.unwrap_model_name"><code class="docutils literal notranslate"><span class="pre">unwrap_model_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.detect_architecture_version"><code class="docutils literal notranslate"><span class="pre">detect_architecture_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.find_pth_files"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.find_tfjs_files"><code class="docutils literal notranslate"><span class="pre">find_tfjs_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.get_model"><code class="docutils literal notranslate"><span class="pre">get_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.get_model_from_custom_path"><code class="docutils literal notranslate"><span class="pre">get_model_from_custom_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.cleanup"><code class="docutils literal notranslate"><span class="pre">cleanup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.export_classes"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.crop_to_cutoff"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.utils.pad_to_original_size"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#model-management">Model Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id13"><code class="docutils literal notranslate"><span class="pre">get_model()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id14"><code class="docutils literal notranslate"><span class="pre">get_model_from_custom_path()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id15"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id16"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#download-and-cache">Download and Cache</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id17"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id18"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id19"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#model-detection">Model Detection</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id20"><code class="docutils literal notranslate"><span class="pre">detect_architecture_version()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id21"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id22"><code class="docutils literal notranslate"><span class="pre">find_tfjs_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#image-processing">Image Processing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id23"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id24"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id25"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#model-loaders">Model Loaders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-brainchop.tiny_meshnet">TinyGrad MeshNet Loader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tiny_meshnet.convert_keys"><code class="docutils literal notranslate"><span class="pre">convert_keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tiny_meshnet.qnormalize"><code class="docutils literal notranslate"><span class="pre">qnormalize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tiny_meshnet.set_channel_num"><code class="docutils literal notranslate"><span class="pre">set_channel_num()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tiny_meshnet.construct_layer"><code class="docutils literal notranslate"><span class="pre">construct_layer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tiny_meshnet.MeshNet"><code class="docutils literal notranslate"><span class="pre">MeshNet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tiny_meshnet.load_meshnet"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id26"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-brainchop.tfjs_meshnet">TensorFlow.js MeshNet Loader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tfjs_meshnet.MeshNetModel"><code class="docutils literal notranslate"><span class="pre">MeshNetModel</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.tfjs_meshnet.load_tfjs_meshnet"><code class="docutils literal notranslate"><span class="pre">load_tfjs_meshnet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id27"><code class="docutils literal notranslate"><span class="pre">load_tfjs_meshnet()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#module-brainchop.types">Model Types</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.PreprocessOp"><code class="docutils literal notranslate"><span class="pre">PreprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.Op"><code class="docutils literal notranslate"><span class="pre">Op</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.PostprocessOp"><code class="docutils literal notranslate"><span class="pre">PostprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.Preprocess"><code class="docutils literal notranslate"><span class="pre">Preprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.Layer"><code class="docutils literal notranslate"><span class="pre">Layer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.Postprocess"><code class="docutils literal notranslate"><span class="pre">Postprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.Metadata"><code class="docutils literal notranslate"><span class="pre">Metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.ModelSpec"><code class="docutils literal notranslate"><span class="pre">ModelSpec</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.load_spec"><code class="docutils literal notranslate"><span class="pre">load_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.types.build_model"><code class="docutils literal notranslate"><span class="pre">build_model()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-brainchop.niimath">NIfTI Math Operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.header_data_split"><code class="docutils literal notranslate"><span class="pre">header_data_split()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.read_header_bytes"><code class="docutils literal notranslate"><span class="pre">read_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.niimath_dtype"><code class="docutils literal notranslate"><span class="pre">niimath_dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.conform"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.header2dimensions"><code class="docutils literal notranslate"><span class="pre">header2dimensions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.header2endian"><code class="docutils literal notranslate"><span class="pre">header2endian()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.set_header_intent"><code class="docutils literal notranslate"><span class="pre">set_header_intent()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.set_header_intent_label"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.header2datatype"><code class="docutils literal notranslate"><span class="pre">header2datatype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.header2dtype"><code class="docutils literal notranslate"><span class="pre">header2dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.niimath_pipe_process"><code class="docutils literal notranslate"><span class="pre">niimath_pipe_process()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.grow_border"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.largest_cluster"><code class="docutils literal notranslate"><span class="pre">largest_cluster()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.truncate_header_bytes"><code class="docutils literal notranslate"><span class="pre">truncate_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#brainchop.niimath.bwlabel"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#conformation-and-preprocessing">Conformation and Preprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id28"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#labeling-operations">Labeling Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id29"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id30"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#mask-operations">Mask Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#id31"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#constants-and-configuration">Constants and Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#available-models">Available Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.utils.AVAILABLE_MODELS"><code class="docutils literal notranslate"><span class="pre">AVAILABLE_MODELS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#model-urls">Model URLs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.utils.BASE_URL"><code class="docutils literal notranslate"><span class="pre">BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.utils.MESHNET_BASE_URL"><code class="docutils literal notranslate"><span class="pre">MESHNET_BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api.html#brainchop.utils.MODELS_JSON_URL"><code class="docutils literal notranslate"><span class="pre">MODELS_JSON_URL</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#usage-examples">Usage Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#loading-a-model-programmatically">Loading a Model Programmatically</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#using-custom-models">Using Custom Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#image-cropping">Image Cropping</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">brainchop</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Index</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#_"><strong>_</strong></a>
+ | <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="_">_</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.__init__">__init__() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+
+      <ul>
+        <li><a href="api.html#brainchop.tiny_meshnet.MeshNet.__init__">(brainchop.tiny_meshnet.MeshNet method)</a>
+</li>
+        <li><a href="api.html#brainchop.types.Layer.__init__">(brainchop.types.Layer method)</a>
+</li>
+        <li><a href="api.html#brainchop.types.Metadata.__init__">(brainchop.types.Metadata method)</a>
+</li>
+        <li><a href="api.html#brainchop.types.ModelSpec.__init__">(brainchop.types.ModelSpec method)</a>
+</li>
+        <li><a href="api.html#brainchop.types.Postprocess.__init__">(brainchop.types.Postprocess method)</a>
+</li>
+        <li><a href="api.html#brainchop.types.Preprocess.__init__">(brainchop.types.Preprocess method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.ADAPTIVE_AVG_POOL1D">ADAPTIVE_AVG_POOL1D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.ADAPTIVE_AVG_POOL2D">ADAPTIVE_AVG_POOL2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.ADAPTIVE_AVG_POOL3D">ADAPTIVE_AVG_POOL3D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.PostprocessOp.ARGMAX">ARGMAX (brainchop.types.PostprocessOp attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.AVAILABLE_MODELS">AVAILABLE_MODELS (in module brainchop.utils)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.AVG_POOL1D">AVG_POOL1D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.AVG_POOL2D">AVG_POOL2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.AVG_POOL3D">AVG_POOL3D (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.BASE_URL">BASE_URL (in module brainchop.utils)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.BATCH_NORM">BATCH_NORM (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.BATCH_NORM1D">BATCH_NORM1D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.BATCH_NORM2D">BATCH_NORM2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.BATCH_NORM3D">BATCH_NORM3D (brainchop.types.Op attribute)</a>
+</li>
+      <li>
+    brainchop.cli
+
+      <ul>
+        <li><a href="api.html#module-brainchop.cli">module</a>
+</li>
+      </ul></li>
+      <li>
+    brainchop.niimath
+
+      <ul>
+        <li><a href="api.html#module-brainchop.niimath">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    brainchop.tfjs_meshnet
+
+      <ul>
+        <li><a href="api.html#module-brainchop.tfjs_meshnet">module</a>
+</li>
+      </ul></li>
+      <li>
+    brainchop.tiny_meshnet
+
+      <ul>
+        <li><a href="api.html#module-brainchop.tiny_meshnet">module</a>
+</li>
+      </ul></li>
+      <li>
+    brainchop.types
+
+      <ul>
+        <li><a href="api.html#module-brainchop.types">module</a>
+</li>
+      </ul></li>
+      <li>
+    brainchop.utils
+
+      <ul>
+        <li><a href="api.html#module-brainchop.utils">module</a>
+</li>
+      </ul></li>
+      <li><a href="api.html#brainchop.types.build_model">build_model() (in module brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.bwlabel">bwlabel() (in module brainchop.niimath)</a>, <a href="api.html#id29">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.calculate_padding">calculate_padding() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.cleanup">cleanup() (in module brainchop.utils)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.conform">conform() (in module brainchop.niimath)</a>, <a href="api.html#id28">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.tiny_meshnet.construct_layer">construct_layer() (in module brainchop.tiny_meshnet)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.CONV1D">CONV1D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.CONV2D">CONV2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.CONV3D">CONV3D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.tiny_meshnet.convert_keys">convert_keys() (in module brainchop.tiny_meshnet)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.crop_to_cutoff">crop_to_cutoff() (in module brainchop.utils)</a>, <a href="api.html#id23">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Metadata.description">description (brainchop.types.Metadata attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.detect_architecture_version">detect_architecture_version() (in module brainchop.utils)</a>, <a href="api.html#id20">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.utils.download">download() (in module brainchop.utils)</a>, <a href="api.html#id17">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.utils.download_model_listing">download_model_listing() (in module brainchop.utils)</a>, <a href="api.html#id18">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.DROPOUT">DROPOUT (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.DROPOUT1D">DROPOUT1D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.DROPOUT2D">DROPOUT2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.DROPOUT3D">DROPOUT3D (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.ELU">ELU (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.export_classes">export_classes() (in module brainchop.utils)</a>, <a href="api.html#id25">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.find_pth_files">find_pth_files() (in module brainchop.utils)</a>, <a href="api.html#id21">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.utils.find_tfjs_files">find_tfjs_files() (in module brainchop.utils)</a>, <a href="api.html#id22">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.ModelSpec.forward_pass">forward_pass (brainchop.types.ModelSpec attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Metadata.framework">framework (brainchop.types.Metadata attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.GELU">GELU (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.cli.generate_output_filename">generate_output_filename() (in module brainchop.cli)</a>, <a href="api.html#id8">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.get_best_beam_for_batch_size">get_best_beam_for_batch_size() (in module brainchop.cli)</a>, <a href="api.html#id12">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.utils.get_model">get_model() (in module brainchop.utils)</a>, <a href="api.html#id13">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.get_model_from_custom_path">get_model_from_custom_path() (in module brainchop.utils)</a>, <a href="api.html#id14">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.get_parser">get_parser() (in module brainchop.cli)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.GROUP_NORM">GROUP_NORM (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.grow_border">grow_border() (in module brainchop.niimath)</a>, <a href="api.html#id31">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.niimath.header2datatype">header2datatype() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.header2dimensions">header2dimensions() (in module brainchop.niimath)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.niimath.header2dtype">header2dtype() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.header2endian">header2endian() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.header_data_split">header_data_split() (in module brainchop.niimath)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Metadata.input_shape">input_shape (brainchop.types.Metadata attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.INSTANCE_NORM">INSTANCE_NORM (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.INSTANCE_NORM1D">INSTANCE_NORM1D (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.INSTANCE_NORM2D">INSTANCE_NORM2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.INSTANCE_NORM3D">INSTANCE_NORM3D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.INTERPOLATE">INTERPOLATE (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.cli.is_first_run">is_first_run() (in module brainchop.cli)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.niimath.largest_cluster">largest_cluster() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Layer">Layer (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.LAYER_NORM">LAYER_NORM (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.LEAKY_RELU">LEAKY_RELU (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.LINEAR">LINEAR (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.list_models">list_models() (in module brainchop.utils)</a>, <a href="api.html#id15">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.tiny_meshnet.load_meshnet">load_meshnet() (in module brainchop.tiny_meshnet)</a>, <a href="api.html#id26">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.load_model_spec">load_model_spec() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.load_models">load_models() (in module brainchop.utils)</a>, <a href="api.html#id19">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.load_optimization_cache">load_optimization_cache() (in module brainchop.cli)</a>, <a href="api.html#id10">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.types.load_spec">load_spec() (in module brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.load_tfjs_meshnet">load_tfjs_meshnet() (in module brainchop.tfjs_meshnet)</a>, <a href="api.html#id27">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.MAX_POOL1D">MAX_POOL1D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.MAX_POOL2D">MAX_POOL2D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.MAX_POOL3D">MAX_POOL3D (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.tiny_meshnet.MeshNet">MeshNet (class in brainchop.tiny_meshnet)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.MESHNET_BASE_URL">MESHNET_BASE_URL (in module brainchop.utils)</a>
+</li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel">MeshNetModel (class in brainchop.tfjs_meshnet)</a>
+</li>
+      <li><a href="api.html#brainchop.types.ModelSpec.metadata">metadata (brainchop.types.ModelSpec attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Metadata">Metadata (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.min_max_normalize">min_max_normalize() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.PreprocessOp.MINMAX">MINMAX (brainchop.types.PreprocessOp attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.MODELS_JSON_URL">MODELS_JSON_URL (in module brainchop.utils)</a>
+</li>
+      <li><a href="api.html#brainchop.types.ModelSpec">ModelSpec (class in brainchop.types)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="api.html#module-brainchop.cli">brainchop.cli</a>
+</li>
+        <li><a href="api.html#module-brainchop.niimath">brainchop.niimath</a>
+</li>
+        <li><a href="api.html#module-brainchop.tfjs_meshnet">brainchop.tfjs_meshnet</a>
+</li>
+        <li><a href="api.html#module-brainchop.tiny_meshnet">brainchop.tiny_meshnet</a>
+</li>
+        <li><a href="api.html#module-brainchop.types">brainchop.types</a>
+</li>
+        <li><a href="api.html#module-brainchop.utils">brainchop.utils</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.niimath.niimath_dtype">niimath_dtype() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.niimath_pipe_process">niimath_pipe_process() (in module brainchop.niimath)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.PostprocessOp.NONE">NONE (brainchop.types.PostprocessOp attribute)</a>
+
+      <ul>
+        <li><a href="api.html#brainchop.types.PreprocessOp.NONE">(brainchop.types.PreprocessOp attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.normalize">normalize() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Layer.op">op (brainchop.types.Layer attribute)</a>
+
+      <ul>
+        <li><a href="api.html#brainchop.types.Postprocess.op">(brainchop.types.Postprocess attribute)</a>
+</li>
+        <li><a href="api.html#brainchop.types.Preprocess.op">(brainchop.types.Preprocess attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op">Op (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Metadata.output_classes">output_classes (brainchop.types.Metadata attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.pad_to_original_size">pad_to_original_size() (in module brainchop.utils)</a>, <a href="api.html#id24">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.types.Layer.params">params (brainchop.types.Layer attribute)</a>
+
+      <ul>
+        <li><a href="api.html#brainchop.types.Postprocess.params">(brainchop.types.Postprocess attribute)</a>
+</li>
+        <li><a href="api.html#brainchop.types.Preprocess.params">(brainchop.types.Preprocess attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api.html#brainchop.types.Postprocess">Postprocess (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.cli.postprocess_batch_output">postprocess_batch_output() (in module brainchop.cli)</a>, <a href="api.html#id6">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.postprocess_output">postprocess_output() (in module brainchop.cli)</a>, <a href="api.html#id5">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.types.ModelSpec.postprocessing">postprocessing (brainchop.types.ModelSpec attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.PostprocessOp">PostprocessOp (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.cli.preoptimize">preoptimize() (in module brainchop.cli)</a>, <a href="api.html#id9">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.types.Preprocess">Preprocess (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.cli.preprocess_batch">preprocess_batch() (in module brainchop.cli)</a>, <a href="api.html#id2">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.preprocess_input">preprocess_input() (in module brainchop.cli)</a>, <a href="api.html#id1">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.types.ModelSpec.preprocessing">preprocessing (brainchop.types.ModelSpec attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.PreprocessOp">PreprocessOp (class in brainchop.types)</a>
+</li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.process_conv_layer">process_conv_layer() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+</li>
+      <li><a href="api.html#brainchop.cli.prompt_for_optimization">prompt_for_optimization() (in module brainchop.cli)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.PreprocessOp.QNORMALIZE">QNORMALIZE (brainchop.types.PreprocessOp attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.tiny_meshnet.qnormalize">qnormalize() (in module brainchop.tiny_meshnet)</a>
+</li>
+      <li><a href="api.html#brainchop.tfjs_meshnet.MeshNetModel.quantile_normalize">quantile_normalize() (brainchop.tfjs_meshnet.MeshNetModel method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.niimath.read_header_bytes">read_header_bytes() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.RELU">RELU (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.cli.run_batch_inference">run_batch_inference() (in module brainchop.cli)</a>, <a href="api.html#id4">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.run_cli">run_cli() (in module brainchop.cli)</a>, <a href="api.html#id0">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.cli.run_inference">run_inference() (in module brainchop.cli)</a>, <a href="api.html#id3">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.cli.save_optimization_cache">save_optimization_cache() (in module brainchop.cli)</a>, <a href="api.html#id11">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.tiny_meshnet.set_channel_num">set_channel_num() (in module brainchop.tiny_meshnet)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.set_header_intent">set_header_intent() (in module brainchop.niimath)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.set_header_intent_label">set_header_intent_label() (in module brainchop.niimath)</a>, <a href="api.html#id30">[1]</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.SIGMOID">SIGMOID (brainchop.types.Op attribute)</a>
+
+      <ul>
+        <li><a href="api.html#brainchop.types.PostprocessOp.SIGMOID">(brainchop.types.PostprocessOp attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api.html#brainchop.types.Op.SILU">SILU (brainchop.types.Op attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.SOFTMAX">SOFTMAX (brainchop.types.Op attribute)</a>
+
+      <ul>
+        <li><a href="api.html#brainchop.types.PostprocessOp.SOFTMAX">(brainchop.types.PostprocessOp attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Op.TANH">TANH (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.Layer.training_only">training_only (brainchop.types.Layer attribute)</a>
+</li>
+      <li><a href="api.html#brainchop.niimath.truncate_header_bytes">truncate_header_bytes() (in module brainchop.niimath)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.unwrap_model_name">unwrap_model_name() (in module brainchop.utils)</a>
+</li>
+      <li><a href="api.html#brainchop.utils.unwrap_path">unwrap_path() (in module brainchop.utils)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.utils.update_models">update_models() (in module brainchop.utils)</a>, <a href="api.html#id16">[1]</a>
+</li>
+      <li><a href="api.html#brainchop.types.Op.UPSAMPLE">UPSAMPLE (brainchop.types.Op attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.ModelSpec.version">version (brainchop.types.ModelSpec attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.cli.write_output">write_output() (in module brainchop.cli)</a>, <a href="api.html#id7">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#brainchop.types.PreprocessOp.ZSCORE">ZSCORE (brainchop.types.PreprocessOp attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mike Doan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

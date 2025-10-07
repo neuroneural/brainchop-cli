@@ -1,0 +1,1166 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brainchop.cli &mdash; brainchop 0.1.23 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=20522496"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            brainchop
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#installation-methods">Installation Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#using-pip-recommended">Using pip (Recommended)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#from-source">From Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#using-docker">Using Docker</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#verification">Verification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#gpu-support">GPU Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#basic-usage">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#selecting-models">Selecting Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#list-available-models">List Available Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#using-a-specific-model">Using a Specific Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#skull-stripping">Skull Stripping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#advanced-options">Advanced Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#image-preprocessing">Image Preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#export-options">Export Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#custom-models">Custom Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#local-model-development">Local Model Development</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#file-uri-loading">File URI Loading</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#updating-models">Updating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#common-workflows">Common Workflows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#quick-tissue-segmentation">Quick Tissue Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#clinical-scan-processing">Clinical Scan Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#atlas-based-parcellation">Atlas-based Parcellation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#brain-extraction-pipeline">Brain Extraction Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#batch-processing-workflow">Batch Processing Workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#environment-variables">Environment Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#out-of-memory">Out of Memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#slow-first-run">Slow First Run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#model-download-issues">Model Download Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Available Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-overview">Model Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#detailed-model-information">Detailed Model Information</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#tissue-fast">tissue_fast</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#subcortical">subcortical</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#dkatlas">DKatlas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#mindgrab">mindgrab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-sources">Model Sources</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#updating-models">Updating Models</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-architecture-formats">Model Architecture Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.cli">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.load_optimization_cache"><code class="docutils literal notranslate"><span class="pre">load_optimization_cache()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.save_optimization_cache"><code class="docutils literal notranslate"><span class="pre">save_optimization_cache()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.get_best_beam_for_batch_size"><code class="docutils literal notranslate"><span class="pre">get_best_beam_for_batch_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.is_first_run"><code class="docutils literal notranslate"><span class="pre">is_first_run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.preoptimize"><code class="docutils literal notranslate"><span class="pre">preoptimize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.prompt_for_optimization"><code class="docutils literal notranslate"><span class="pre">prompt_for_optimization()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.generate_output_filename"><code class="docutils literal notranslate"><span class="pre">generate_output_filename()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.get_parser"><code class="docutils literal notranslate"><span class="pre">get_parser()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.preprocess_input"><code class="docutils literal notranslate"><span class="pre">preprocess_input()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.preprocess_batch"><code class="docutils literal notranslate"><span class="pre">preprocess_batch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.run_inference"><code class="docutils literal notranslate"><span class="pre">run_inference()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.run_batch_inference"><code class="docutils literal notranslate"><span class="pre">run_batch_inference()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.postprocess_output"><code class="docutils literal notranslate"><span class="pre">postprocess_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.postprocess_batch_output"><code class="docutils literal notranslate"><span class="pre">postprocess_batch_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.write_output"><code class="docutils literal notranslate"><span class="pre">write_output()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.run_cli"><code class="docutils literal notranslate"><span class="pre">run_cli()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#main-functions">Main Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#id0"><code class="docutils literal notranslate"><span class="pre">run_cli()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#preprocessing">Preprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id1"><code class="docutils literal notranslate"><span class="pre">preprocess_input()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id2"><code class="docutils literal notranslate"><span class="pre">preprocess_batch()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#inference">Inference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id3"><code class="docutils literal notranslate"><span class="pre">run_inference()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id4"><code class="docutils literal notranslate"><span class="pre">run_batch_inference()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#postprocessing">Postprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id5"><code class="docutils literal notranslate"><span class="pre">postprocess_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id6"><code class="docutils literal notranslate"><span class="pre">postprocess_batch_output()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#output">Output</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id7"><code class="docutils literal notranslate"><span class="pre">write_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id8"><code class="docutils literal notranslate"><span class="pre">generate_output_filename()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#optimization">Optimization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id9"><code class="docutils literal notranslate"><span class="pre">preoptimize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id10"><code class="docutils literal notranslate"><span class="pre">load_optimization_cache()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id11"><code class="docutils literal notranslate"><span class="pre">save_optimization_cache()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id12"><code class="docutils literal notranslate"><span class="pre">get_best_beam_for_batch_size()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.utils">Utilities Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.download_model_listing"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.load_models"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.update_models"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.list_models"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.download"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.unwrap_path"><code class="docutils literal notranslate"><span class="pre">unwrap_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.unwrap_model_name"><code class="docutils literal notranslate"><span class="pre">unwrap_model_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.detect_architecture_version"><code class="docutils literal notranslate"><span class="pre">detect_architecture_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.find_pth_files"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.find_tfjs_files"><code class="docutils literal notranslate"><span class="pre">find_tfjs_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.get_model"><code class="docutils literal notranslate"><span class="pre">get_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.get_model_from_custom_path"><code class="docutils literal notranslate"><span class="pre">get_model_from_custom_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.cleanup"><code class="docutils literal notranslate"><span class="pre">cleanup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.export_classes"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.crop_to_cutoff"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.pad_to_original_size"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-management">Model Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id13"><code class="docutils literal notranslate"><span class="pre">get_model()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id14"><code class="docutils literal notranslate"><span class="pre">get_model_from_custom_path()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id15"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id16"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#download-and-cache">Download and Cache</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id17"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id18"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id19"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-detection">Model Detection</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id20"><code class="docutils literal notranslate"><span class="pre">detect_architecture_version()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id21"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id22"><code class="docutils literal notranslate"><span class="pre">find_tfjs_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#image-processing">Image Processing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id23"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id24"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id25"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#model-loaders">Model Loaders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.tiny_meshnet">TinyGrad MeshNet Loader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.convert_keys"><code class="docutils literal notranslate"><span class="pre">convert_keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.qnormalize"><code class="docutils literal notranslate"><span class="pre">qnormalize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.set_channel_num"><code class="docutils literal notranslate"><span class="pre">set_channel_num()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.construct_layer"><code class="docutils literal notranslate"><span class="pre">construct_layer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.MeshNet"><code class="docutils literal notranslate"><span class="pre">MeshNet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.load_meshnet"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id26"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.tfjs_meshnet">TensorFlow.js MeshNet Loader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tfjs_meshnet.MeshNetModel"><code class="docutils literal notranslate"><span class="pre">MeshNetModel</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tfjs_meshnet.load_tfjs_meshnet"><code class="docutils literal notranslate"><span class="pre">load_tfjs_meshnet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id27"><code class="docutils literal notranslate"><span class="pre">load_tfjs_meshnet()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.types">Model Types</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.PreprocessOp"><code class="docutils literal notranslate"><span class="pre">PreprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Op"><code class="docutils literal notranslate"><span class="pre">Op</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.PostprocessOp"><code class="docutils literal notranslate"><span class="pre">PostprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Preprocess"><code class="docutils literal notranslate"><span class="pre">Preprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Layer"><code class="docutils literal notranslate"><span class="pre">Layer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Postprocess"><code class="docutils literal notranslate"><span class="pre">Postprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Metadata"><code class="docutils literal notranslate"><span class="pre">Metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.ModelSpec"><code class="docutils literal notranslate"><span class="pre">ModelSpec</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.load_spec"><code class="docutils literal notranslate"><span class="pre">load_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.build_model"><code class="docutils literal notranslate"><span class="pre">build_model()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.niimath">NIfTI Math Operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header_data_split"><code class="docutils literal notranslate"><span class="pre">header_data_split()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.read_header_bytes"><code class="docutils literal notranslate"><span class="pre">read_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.niimath_dtype"><code class="docutils literal notranslate"><span class="pre">niimath_dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.conform"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2dimensions"><code class="docutils literal notranslate"><span class="pre">header2dimensions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2endian"><code class="docutils literal notranslate"><span class="pre">header2endian()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.set_header_intent"><code class="docutils literal notranslate"><span class="pre">set_header_intent()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.set_header_intent_label"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2datatype"><code class="docutils literal notranslate"><span class="pre">header2datatype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2dtype"><code class="docutils literal notranslate"><span class="pre">header2dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.niimath_pipe_process"><code class="docutils literal notranslate"><span class="pre">niimath_pipe_process()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.grow_border"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.largest_cluster"><code class="docutils literal notranslate"><span class="pre">largest_cluster()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.truncate_header_bytes"><code class="docutils literal notranslate"><span class="pre">truncate_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.bwlabel"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#conformation-and-preprocessing">Conformation and Preprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id28"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#labeling-operations">Labeling Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id29"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id30"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#mask-operations">Mask Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id31"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#constants-and-configuration">Constants and Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#available-models">Available Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.AVAILABLE_MODELS"><code class="docutils literal notranslate"><span class="pre">AVAILABLE_MODELS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-urls">Model URLs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.BASE_URL"><code class="docutils literal notranslate"><span class="pre">BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.MESHNET_BASE_URL"><code class="docutils literal notranslate"><span class="pre">MESHNET_BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.MODELS_JSON_URL"><code class="docutils literal notranslate"><span class="pre">MODELS_JSON_URL</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#usage-examples">Usage Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#loading-a-model-programmatically">Loading a Model Programmatically</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#using-custom-models">Using Custom Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#image-cropping">Image Cropping</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">brainchop</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">brainchop.cli</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for brainchop.cli</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">brainchop.niimath</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">conform</span><span class="p">,</span>
+    <span class="n">set_header_intent_label</span><span class="p">,</span>
+    <span class="n">bwlabel</span><span class="p">,</span>
+    <span class="n">grow_border</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">brainchop.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">update_models</span><span class="p">,</span>
+    <span class="n">list_models</span><span class="p">,</span>
+    <span class="n">get_model</span><span class="p">,</span>
+    <span class="n">get_model_from_custom_path</span><span class="p">,</span>
+    <span class="n">export_classes</span><span class="p">,</span>
+    <span class="n">AVAILABLE_MODELS</span><span class="p">,</span>
+    <span class="n">cleanup</span><span class="p">,</span>
+    <span class="n">crop_to_cutoff</span><span class="p">,</span>
+    <span class="n">pad_to_original_size</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="load_optimization_cache">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.load_optimization_cache">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_optimization_cache</span><span class="p">(</span><span class="n">model_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load optimization cache for a given model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_name: Name of the model</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Optimization cache data with &#39;beams&#39; list, or empty structure if not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.cache&quot;</span> <span class="o">/</span> <span class="s2">&quot;brainchop&quot;</span> <span class="o">/</span> <span class="s2">&quot;models&quot;</span> <span class="o">/</span> <span class="n">model_name</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="o">/</span> <span class="s2">&quot;optimizations.json&quot;</span>
+
+    <span class="k">if</span> <span class="n">cache_file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">IOError</span><span class="p">):</span>
+            <span class="c1"># If file is corrupted, return empty structure</span>
+            <span class="k">pass</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;beams&quot;</span><span class="p">:</span> <span class="p">[]}</span></div>
+
+
+
+<div class="viewcode-block" id="save_optimization_cache">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.save_optimization_cache">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_optimization_cache</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">beam_value</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Save optimization data to cache.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_name: Name of the model</span>
+<span class="sd">        batch_size: Batch size used</span>
+<span class="sd">        beam_value: BEAM value that was successful</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.cache&quot;</span> <span class="o">/</span> <span class="s2">&quot;brainchop&quot;</span> <span class="o">/</span> <span class="s2">&quot;models&quot;</span> <span class="o">/</span> <span class="n">model_name</span>
+    <span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">cache_file</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="o">/</span> <span class="s2">&quot;optimizations.json&quot;</span>
+
+    <span class="c1"># Load existing cache</span>
+    <span class="n">cache_data</span> <span class="o">=</span> <span class="n">load_optimization_cache</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+
+    <span class="c1"># Check if this BS/BEAM combination already exists</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">cache_data</span><span class="p">[</span><span class="s2">&quot;beams&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;BS&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">batch_size</span> <span class="ow">and</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">beam_value</span><span class="p">:</span>
+            <span class="k">return</span>  <span class="c1"># Already cached</span>
+
+    <span class="c1"># Add new entry</span>
+    <span class="n">cache_data</span><span class="p">[</span><span class="s2">&quot;beams&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;BS&quot;</span><span class="p">:</span> <span class="n">batch_size</span><span class="p">,</span> <span class="s2">&quot;BEAM&quot;</span><span class="p">:</span> <span class="n">beam_value</span><span class="p">})</span>
+
+    <span class="c1"># Sort by batch size for easier reading</span>
+    <span class="n">cache_data</span><span class="p">[</span><span class="s2">&quot;beams&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s2">&quot;BS&quot;</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]))</span>
+
+    <span class="c1"># Save to file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">cache_data</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_best_beam_for_batch_size">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.get_best_beam_for_batch_size">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_best_beam_for_batch_size</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the best (largest) BEAM value for a given batch size.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_name: Name of the model</span>
+<span class="sd">        batch_size: Current batch size</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Best BEAM value for this batch size, or None if not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_data</span> <span class="o">=</span> <span class="n">load_optimization_cache</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+
+    <span class="c1"># Find all BEAM values for this batch size</span>
+    <span class="n">beam_values</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">cache_data</span><span class="p">[</span><span class="s2">&quot;beams&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;BS&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">batch_size</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">beam_values</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">beam_values</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="is_first_run">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.is_first_run">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_first_run</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if this is the first run for a given model and batch size.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_name: Name of the model</span>
+<span class="sd">        batch_size: Batch size to check</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if no optimization exists for this model/batch_size combo</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cache_data</span> <span class="o">=</span> <span class="n">load_optimization_cache</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+
+    <span class="c1"># Check if any optimization exists for this batch size</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">cache_data</span><span class="p">[</span><span class="s2">&quot;beams&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;BS&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">batch_size</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+
+<div class="viewcode-block" id="preoptimize">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.preoptimize">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">preoptimize</span><span class="p">(</span>
+    <span class="n">model_name</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">custom_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_weights</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Pre-optimize a model by running it with a random input tensor and specified BEAM value.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_name: Name of the model to optimize</span>
+<span class="sd">        beam: BEAM optimization value to use</span>
+<span class="sd">        batch_size: Batch size for the input tensor (default: 1)</span>
+<span class="sd">        custom_config: Path to custom model config (optional)</span>
+<span class="sd">        custom_weights: Path to custom model weights (optional)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;brainchop :: Pre-optimizing model &#39;</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">&#39; with BEAM=</span><span class="si">{</span><span class="n">beam</span><span class="si">}</span><span class="s2">, BS=</span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">...&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;brainchop :: This may take a few moments for the initial compilation...&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Store original BEAM value</span>
+    <span class="n">original_beam</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;BEAM&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Set BEAM environment variable for optimization</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">beam</span><span class="p">)</span>
+
+        <span class="c1"># Load the model with the specified BEAM value</span>
+        <span class="k">if</span> <span class="n">custom_config</span> <span class="ow">and</span> <span class="n">custom_weights</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">get_model_from_custom_path</span><span class="p">(</span><span class="n">custom_config</span><span class="p">,</span> <span class="n">custom_weights</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+
+        <span class="c1"># Generate random input tensor with shape (BS, 1, 256, 256, 256)</span>
+        <span class="n">random_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">input_tensor</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">random_input</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;brainchop :: Running optimization pass...&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Run inference to trigger compilation/optimization</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_tensor</span><span class="p">)</span>
+
+        <span class="c1"># Force computation to complete (realize the tensor)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;brainchop :: Pre-optimization complete! Model is now optimized for BS=</span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Save this optimization to cache</span>
+        <span class="n">save_optimization_cache</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">beam</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: Pre-optimization failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="c1"># Restore original BEAM environment variable</span>
+        <span class="k">if</span> <span class="n">original_beam</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">original_beam</span>
+        <span class="k">elif</span> <span class="s2">&quot;BEAM&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="prompt_for_optimization">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.prompt_for_optimization">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">prompt_for_optimization</span><span class="p">(</span>
+    <span class="n">model_name</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">custom_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_weights</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Prompt user to optimize the model on first run.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_name: Name of the model</span>
+<span class="sd">        batch_size: Batch size to optimize for</span>
+<span class="sd">        custom_config: Path to custom model config (optional)</span>
+<span class="sd">        custom_weights: Path to custom model weights (optional)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if optimization was performed successfully, False otherwise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">brainchop :: First run detected for model &#39;</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">&#39; with batch size </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;brainchop :: Would you like to pre-optimize the model for faster subsequent runs?&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;brainchop :: This will compile the model with BEAM=2 optimization (recommended)&quot;</span>
+    <span class="p">)</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;brainchop :: Optimize now? [y/n]: &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">response</span> <span class="o">==</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">preoptimize</span><span class="p">(</span>
+                <span class="n">model_name</span><span class="p">,</span>
+                <span class="n">beam</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                <span class="n">custom_config</span><span class="o">=</span><span class="n">custom_config</span><span class="p">,</span>
+                <span class="n">custom_weights</span><span class="o">=</span><span class="n">custom_weights</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">response</span> <span class="o">==</span> <span class="s2">&quot;n&quot;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;brainchop :: Skipping optimization. Proceeding with unoptimized model...&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;brainchop :: Please enter &#39;y&#39; for yes or &#39;n&#39; for no&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_output_filename">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.generate_output_filename">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_output_filename</span><span class="p">(</span><span class="n">input_path</span><span class="p">,</span> <span class="n">modelname</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate output filename based on input filename, model name, and index.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        input_path: Path to input file</span>
+<span class="sd">        modelname: Name of the segmentation model used</span>
+<span class="sd">        index: Processing index/order</span>
+<span class="sd">        output_dir: Optional output directory (uses current dir if None)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Generated output filename in format {input_name}_{modelname}_output_{index}.nii.gz</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span><span class="o">,</span><span class="w"> </span><span class="nn">base64</span>
+
+    <span class="n">hash_string</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">base64</span><span class="o">.</span><span class="n">urlsafe_b64encode</span><span class="p">(</span>
+        <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">modelname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">AVAILABLE_MODELS</span><span class="p">:</span>
+        <span class="n">modelname</span> <span class="o">=</span> <span class="n">hash_string</span><span class="p">(</span><span class="n">modelname</span><span class="p">)</span>
+
+    <span class="c1"># Extract base name without extensions (.nii.gz or .nii)</span>
+    <span class="n">base_name</span> <span class="o">=</span> <span class="n">input_file</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="n">base_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.nii.gz&quot;</span><span class="p">):</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">base_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">7</span><span class="p">]</span>  <span class="c1"># Remove .nii.gz</span>
+    <span class="k">elif</span> <span class="n">base_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.nii&quot;</span><span class="p">):</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">base_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>  <span class="c1"># Remove .nii</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Remove any extension for non-nii files</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">input_file</span><span class="o">.</span><span class="n">stem</span>
+
+    <span class="c1"># Generate output filename with model name and index</span>
+    <span class="n">output_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">modelname</span><span class="si">}</span><span class="s2">_output_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">.nii.gz&quot;</span>
+
+    <span class="c1"># Use output directory if specified, otherwise use current directory</span>
+    <span class="k">if</span> <span class="n">output_dir</span><span class="p">:</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">output_filename</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_filename</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="o">.</span><span class="n">absolute</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="get_parser">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.get_parser">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_parser</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;BrainChop: portable brain segmentation tool&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Input NIfTI file path(s)&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-l&quot;</span><span class="p">,</span> <span class="s2">&quot;--list&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;List available models&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-i&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--inverse-conform&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Perform inverse conformation into original image space&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-u&quot;</span><span class="p">,</span> <span class="s2">&quot;--update&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Update the model listing&quot;</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-o&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--output&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;output.nii.gz&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Output NIfTI file path (for single input) or output directory (for multiple inputs)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-a&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--mask&quot;</span><span class="p">,</span>
+        <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span>  <span class="c1"># 0 or 1 arguments</span>
+        <span class="n">const</span><span class="o">=</span><span class="s2">&quot;mask.nii.gz&quot;</span><span class="p">,</span>  <span class="c1"># if they just say `--mask` with no value</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># if they don&#39;t mention `--mask` at all</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;If provided and using mindgrab, write out the mask (defaults to mask.nii.gz when used without a value)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--model&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">AVAILABLE_MODELS</span><span class="o">.</span><span class="n">keys</span><span class="p">())),</span>
+        <span class="n">help</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Name of segmentation model, default: </span><span class="si">{</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">AVAILABLE_MODELS</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-c&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--custom&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to custom model directory (containing model.json and model.pth or model.bin)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--comply&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Insert compliance arguments to `niimath` before &#39;-conform&#39;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--ct&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Convert CT scans from &#39;Hounsfield&#39; to &#39;Cormack&#39; units to emphasize soft tissue contrast&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--crop&quot;</span><span class="p">,</span>
+        <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span>  <span class="c1"># 0 or 1 arguments</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">const</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>  <span class="c1"># if they just say `--crop` with no value</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># if they don&#39;t mention `--crop` at all</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Crop the input for faster execution. May reduce accuracy.(defaults to percentile 2 cutoff)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-ss&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--skull-strip&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Return just the brain compartment. An alias for -m mindgrab, that overrides -m parameter&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-ec&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--export-classes&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Export class probability maps&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-b&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--border&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Mask border threshold in mm. Default is 0. Makes a difference only if the model is `mindgrab`&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;-bs&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--batch-size&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Batch size for processing multiple inputs (default: 1)&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--no-optimize&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Skip the optimization prompt on first run&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">parser</span></div>
+
+
+
+<div class="viewcode-block" id="preprocess_input">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.preprocess_input">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">preprocess_input</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle input preprocessing: loading, conforming, and cropping.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (image_tensor, volume, header, crop_coords)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Load and conform input volume</span>
+    <span class="n">volume</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">conform</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">,</span> <span class="n">comply</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">comply</span><span class="p">,</span> <span class="n">ct</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">ct</span><span class="p">)</span>
+
+    <span class="n">crop_coords</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Apply cropping if requested</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">crop</span><span class="p">:</span>
+        <span class="n">volume</span><span class="p">,</span> <span class="n">crop_coords</span> <span class="o">=</span> <span class="n">crop_to_cutoff</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">crop</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: cropped to </span><span class="si">{</span><span class="n">volume</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Convert to tensor format expected by model</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">volume</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span><span class="o">.</span><span class="n">rearrange</span><span class="p">(</span>
+        <span class="s2">&quot;... -&gt; 1 1 ...&quot;</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">image</span><span class="p">,</span> <span class="n">volume</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">crop_coords</span></div>
+
+
+
+<div class="viewcode-block" id="preprocess_batch">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.preprocess_batch">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">preprocess_batch</span><span class="p">(</span><span class="n">input_files</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle batch preprocessing: loading, conforming, and cropping multiple inputs.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        input_files: List of input file paths</span>
+<span class="sd">        args: Command line arguments</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (batched_tensor, list_of_volumes, list_of_headers, list_of_crop_coords)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">batch_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">volumes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">crop_coords_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">input_file</span> <span class="ow">in</span> <span class="n">input_files</span><span class="p">:</span>
+        <span class="c1"># Create temporary args for this input</span>
+        <span class="n">temp_args</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">(</span><span class="o">**</span><span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+        <span class="n">temp_args</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="n">input_file</span>
+
+        <span class="c1"># Preprocess individual file</span>
+        <span class="n">image_tensor</span><span class="p">,</span> <span class="n">volume</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">crop_coords</span> <span class="o">=</span> <span class="n">preprocess_input</span><span class="p">(</span><span class="n">temp_args</span><span class="p">)</span>
+
+        <span class="c1"># Remove the batch dimension (1) from individual tensor to prepare for batching</span>
+        <span class="n">image_tensor</span> <span class="o">=</span> <span class="n">image_tensor</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Shape: (1, H, W, D)</span>
+
+        <span class="n">batch_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image_tensor</span><span class="p">)</span>
+        <span class="n">volumes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">volume</span><span class="p">)</span>
+        <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+        <span class="n">crop_coords_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">crop_coords</span><span class="p">)</span>
+
+    <span class="c1"># Stack tensors along batch dimension</span>
+    <span class="n">batched_tensor</span> <span class="o">=</span> <span class="n">Tensor</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="o">*</span><span class="n">batch_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Shape: (BS, 1, H, W, D)</span>
+
+    <span class="k">return</span> <span class="n">batched_tensor</span><span class="p">,</span> <span class="n">volumes</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">crop_coords_list</span></div>
+
+
+
+<div class="viewcode-block" id="run_inference">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.run_inference">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_inference</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">image</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Execute model inference on the preprocessed image.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model: The loaded segmentation model</span>
+<span class="sd">        image: Preprocessed image tensor (single or batched)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor: Raw model output channels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">model</span><span class="p">(</span><span class="n">image</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_batch_inference">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.run_batch_inference">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_batch_inference</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">batched_image</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Execute model inference on batched preprocessed images.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model: The loaded segmentation model</span>
+<span class="sd">        batched_image: Batched preprocessed image tensor (BS, 1, H, W, D)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor: Raw batched model output channels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">model</span><span class="p">(</span><span class="n">batched_image</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="postprocess_output">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.postprocess_output">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">postprocess_output</span><span class="p">(</span><span class="n">output_channels</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">crop_coords</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle output postprocessing: argmax, padding, and labeling.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        output_channels: Raw model output tensor</span>
+<span class="sd">        header: Original NIfTI header</span>
+<span class="sd">        crop_coords: Coordinates for uncropping (if cropping was applied)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (processed_labels_data, new_header)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert model output to segmentation labels</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">output_channels</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">rearrange</span><span class="p">(</span><span class="s2">&quot;1 x y z -&gt; z y x&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Restore original size if cropping was applied</span>
+    <span class="k">if</span> <span class="n">crop_coords</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">pad_to_original_size</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">crop_coords</span><span class="p">)</span>
+
+    <span class="c1"># Generate labeled output with proper header</span>
+    <span class="n">labels</span><span class="p">,</span> <span class="n">new_header</span> <span class="o">=</span> <span class="n">bwlabel</span><span class="p">(</span><span class="n">header</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+    <span class="n">processed_data</span> <span class="o">=</span> <span class="n">set_header_intent_label</span><span class="p">(</span><span class="n">new_header</span><span class="p">)</span> <span class="o">+</span> <span class="n">labels</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">processed_data</span><span class="p">,</span> <span class="n">new_header</span></div>
+
+
+
+<div class="viewcode-block" id="postprocess_batch_output">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.postprocess_batch_output">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">postprocess_batch_output</span><span class="p">(</span><span class="n">batched_output_channels</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">crop_coords_list</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle batch output postprocessing: argmax, padding, and labeling for multiple outputs.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        batched_output_channels: Raw batched model output tensor (BS, C, H, W, D)</span>
+<span class="sd">        headers: List of original NIfTI headers</span>
+<span class="sd">        crop_coords_list: List of coordinates for uncropping (if cropping was applied)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list: List of (processed_labels_data, new_header) tuples</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="n">batched_output_channels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch_size</span><span class="p">):</span>
+        <span class="c1"># Extract individual output from batch</span>
+        <span class="n">output_channels</span> <span class="o">=</span> <span class="n">batched_output_channels</span><span class="p">[</span>
+            <span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">]</span>  <span class="c1"># Keep batch dimension for consistency</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">headers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">crop_coords</span> <span class="o">=</span> <span class="n">crop_coords_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="c1"># Process individual output</span>
+        <span class="n">processed_data</span><span class="p">,</span> <span class="n">new_header</span> <span class="o">=</span> <span class="n">postprocess_output</span><span class="p">(</span>
+            <span class="n">output_channels</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">crop_coords</span>
+        <span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">processed_data</span><span class="p">,</span> <span class="n">new_header</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+
+<div class="viewcode-block" id="write_output">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.write_output">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_output</span><span class="p">(</span><span class="n">processed_data</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle file output operations including niimath commands and subprocess calls.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        processed_data: Processed segmentation data ready for output</span>
+<span class="sd">        args: Command line arguments containing output settings</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">output_dtype</span> <span class="o">=</span> <span class="s2">&quot;char&quot;</span>
+
+    <span class="c1"># Handle class probability export if requested</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">export_classes</span><span class="p">:</span>
+        <span class="c1"># Note: This requires access to output_channels, will need to be called separately</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: Exported classes to c[channel_number]_</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Determine gzip compression based on file extension</span>
+    <span class="n">gzip_flag</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.nii&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;1&quot;</span>
+
+    <span class="c1"># Build base niimath command</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;niimath&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">inverse_conform</span> <span class="ow">and</span> <span class="n">args</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="s2">&quot;mindgrab&quot;</span><span class="p">:</span>
+        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;-reslice_nn&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">]</span>
+
+    <span class="c1"># Handle mindgrab-specific processing</span>
+    <span class="n">data_to_write</span> <span class="o">=</span> <span class="n">processed_data</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">model</span> <span class="o">==</span> <span class="s2">&quot;mindgrab&quot;</span><span class="p">:</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;niimath&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">)]</span>
+
+        <span class="c1"># Apply border growth if specified</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">border</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">data_to_write</span> <span class="o">=</span> <span class="n">grow_border</span><span class="p">(</span><span class="n">processed_data</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">border</span><span class="p">)</span>
+
+        <span class="c1"># Write mask file if requested</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cmdm</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;niimath&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">]</span>
+            <span class="n">cmdm</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;-reslice_nn&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">]</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="n">cmdm</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;-gz&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="s2">&quot;-odt&quot;</span><span class="p">,</span> <span class="s2">&quot;char&quot;</span><span class="p">],</span>
+                <span class="nb">input</span><span class="o">=</span><span class="n">data_to_write</span><span class="p">,</span>
+                <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;-reslice_mask&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">]</span>
+        <span class="n">output_dtype</span> <span class="o">=</span> <span class="s2">&quot;input_force&quot;</span>
+
+    <span class="c1"># Finalize command and execute</span>
+    <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;-gz&quot;</span><span class="p">,</span> <span class="n">gzip_flag</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">),</span> <span class="s2">&quot;-odt&quot;</span><span class="p">,</span> <span class="n">output_dtype</span><span class="p">]</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">data_to_write</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_cli">
+<a class="viewcode-back" href="../../api.html#brainchop.cli.run_cli">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_cli</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Main CLI function that orchestrates brainchop command-line operations.&quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">get_parser</span><span class="p">()</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1"># Handle simple commands that don&#39;t require processing</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">:</span>
+        <span class="n">update_models</span><span class="p">()</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">list</span><span class="p">:</span>
+        <span class="n">list_models</span><span class="p">()</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">print_help</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Prepare file paths - convert input list to absolute paths</span>
+    <span class="n">input_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span> <span class="k">for</span> <span class="n">input_file</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">]</span>
+
+    <span class="c1"># Store original output value before converting to absolute path</span>
+    <span class="n">original_output</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: Processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">input_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> input file(s)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Determine model name and handle custom models</span>
+    <span class="n">modelname</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">model</span>
+    <span class="n">custom_config</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">custom_weights</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">skull_strip</span><span class="p">:</span>
+        <span class="n">modelname</span> <span class="o">=</span> <span class="s2">&quot;mindgrab&quot;</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">modelname</span>
+
+    <span class="c1"># Handle custom model path</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">custom</span><span class="p">:</span>
+        <span class="n">custom_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">custom</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">custom_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Custom model directory not found: </span><span class="si">{</span><span class="n">custom_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Look for model files in custom directory</span>
+        <span class="n">json_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">custom_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;model.json&quot;</span><span class="p">))</span>
+        <span class="n">pth_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">custom_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;model.pth&quot;</span><span class="p">))</span>
+        <span class="n">bin_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">custom_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;model.bin&quot;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">json_files</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: No model.json found in </span><span class="si">{</span><span class="n">custom_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">custom_config</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">json_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Determine weights file based on what&#39;s available</span>
+        <span class="k">if</span> <span class="n">pth_files</span><span class="p">:</span>
+            <span class="n">custom_weights</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pth_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">bin_files</span><span class="p">:</span>
+            <span class="n">custom_weights</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">bin_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: No model.pth or model.bin found in </span><span class="si">{</span><span class="n">custom_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">modelname</span> <span class="o">=</span> <span class="s2">&quot;custom&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: Using custom model from </span><span class="si">{</span><span class="n">custom_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check if this is the first run for this model/batch_size combination</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">batch_size</span>
+    <span class="n">original_beam</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;BEAM&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">no_optimize</span>
+        <span class="ow">and</span> <span class="n">is_first_run</span><span class="p">(</span><span class="n">modelname</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="ow">not</span> <span class="n">original_beam</span>
+    <span class="p">):</span>
+        <span class="c1"># Prompt for optimization on first run</span>
+        <span class="n">optimization_success</span> <span class="o">=</span> <span class="n">prompt_for_optimization</span><span class="p">(</span>
+            <span class="n">modelname</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">custom_config</span><span class="p">,</span> <span class="n">custom_weights</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">optimization_success</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;brainchop :: Model optimized successfully. Continuing with processing...&quot;</span>
+            <span class="p">)</span>
+        <span class="nb">print</span><span class="p">()</span>  <span class="c1"># Add blank line for clarity</span>
+
+    <span class="c1"># Check for cached optimization and set BEAM environment variable</span>
+    <span class="n">best_beam</span> <span class="o">=</span> <span class="n">get_best_beam_for_batch_size</span><span class="p">(</span><span class="n">modelname</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">best_beam</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">original_beam</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">best_beam</span> <span class="o">&gt;</span> <span class="n">original_beam</span>
+    <span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">best_beam</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;brainchop :: Using cached optimization BEAM=</span><span class="si">{</span><span class="n">best_beam</span><span class="si">}</span><span class="s2"> for batch size </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Load model (will use the BEAM environment variable if set)</span>
+    <span class="k">if</span> <span class="n">custom_config</span> <span class="ow">and</span> <span class="n">custom_weights</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">get_model_from_custom_path</span><span class="p">(</span><span class="n">custom_config</span><span class="p">,</span> <span class="n">custom_weights</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">modelname</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: Loaded model </span><span class="si">{</span><span class="n">modelname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Process input files in batches</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;brainchop :: Using batch size: </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">batch_start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_files</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">):</span>
+        <span class="n">batch_end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">batch_start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_files</span><span class="p">))</span>
+        <span class="n">batch_files</span> <span class="o">=</span> <span class="n">input_files</span><span class="p">[</span><span class="n">batch_start</span><span class="p">:</span><span class="n">batch_end</span><span class="p">]</span>
+
+        <span class="c1"># Process batch using proper batching</span>
+        <span class="n">batched_tensor</span><span class="p">,</span> <span class="n">volumes</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">crop_coords_list</span> <span class="o">=</span> <span class="n">preprocess_batch</span><span class="p">(</span>
+            <span class="n">batch_files</span><span class="p">,</span> <span class="n">args</span>
+        <span class="p">)</span>
+
+        <span class="n">batched_output_channels</span> <span class="o">=</span> <span class="n">run_batch_inference</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">batched_tensor</span><span class="p">)</span>
+
+        <span class="n">batch_results</span> <span class="o">=</span> <span class="n">postprocess_batch_output</span><span class="p">(</span>
+            <span class="n">batched_output_channels</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">crop_coords_list</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Process each file&#39;s results</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">input_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batch_files</span><span class="p">):</span>
+            <span class="n">global_index</span> <span class="o">=</span> <span class="n">batch_start</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">processed_data</span><span class="p">,</span> <span class="n">new_header</span> <span class="o">=</span> <span class="n">batch_results</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="c1"># Generate output filename based on input filename, model, and index</span>
+            <span class="c1"># Always use the new naming format unless user explicitly specified a custom output</span>
+            <span class="k">if</span> <span class="n">original_output</span> <span class="o">==</span> <span class="s2">&quot;output.nii.gz&quot;</span><span class="p">:</span>
+                <span class="c1"># Default output - always use the new dynamic naming format</span>
+                <span class="n">output_file</span> <span class="o">=</span> <span class="n">generate_output_filename</span><span class="p">(</span>
+                    <span class="n">input_file</span><span class="p">,</span> <span class="n">modelname</span><span class="p">,</span> <span class="n">global_index</span><span class="p">,</span> <span class="kc">None</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># Single file with custom output specified - use the custom output</span>
+                <span class="n">output_file</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Multiple files with custom output directory - generate dynamic name in that directory</span>
+                <span class="n">output_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+                <span class="n">output_file</span> <span class="o">=</span> <span class="n">generate_output_filename</span><span class="p">(</span>
+                    <span class="n">input_file</span><span class="p">,</span> <span class="n">modelname</span><span class="p">,</span> <span class="n">global_index</span><span class="p">,</span> <span class="n">output_dir</span>
+                <span class="p">)</span>
+
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Processing file </span><span class="si">{</span><span class="n">global_index</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">input_files</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">input_file</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Create a temporary args object for this specific input</span>
+            <span class="n">current_args</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">(</span><span class="o">**</span><span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+            <span class="n">current_args</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="n">input_file</span>
+            <span class="n">current_args</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">output_file</span>
+            <span class="n">current_args</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">model</span>
+            <span class="p">)</span>  <span class="c1"># Preserve the original model name for mindgrab check</span>
+
+            <span class="c1"># Handle class export before writing main output</span>
+            <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">export_classes</span><span class="p">:</span>
+                <span class="c1"># For batched processing, we need to extract the individual output channels</span>
+                <span class="n">individual_output_channels</span> <span class="o">=</span> <span class="n">batched_output_channels</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">export_classes</span><span class="p">(</span>
+                    <span class="n">individual_output_channels</span><span class="p">,</span> <span class="n">headers</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">current_args</span><span class="o">.</span><span class="n">output</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;brainchop :: Exported classes to c[channel_number]_</span><span class="si">{</span><span class="n">current_args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">write_output</span><span class="p">(</span><span class="n">processed_data</span><span class="p">,</span> <span class="n">current_args</span><span class="p">)</span>
+
+    <span class="c1"># Save optimization data to cache if BEAM was used (and not already saved during pre-optimization)</span>
+    <span class="n">current_beam</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;BEAM&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">current_beam</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_first_run</span><span class="p">(</span><span class="n">modelname</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">beam_value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">current_beam</span><span class="p">)</span>
+            <span class="n">save_optimization_cache</span><span class="p">(</span><span class="n">modelname</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">beam_value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Invalid BEAM value, skip caching</span>
+
+    <span class="c1"># Restore original BEAM environment variable</span>
+    <span class="k">if</span> <span class="n">original_beam</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">original_beam</span>
+    <span class="k">elif</span> <span class="s2">&quot;BEAM&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;BEAM&quot;</span><span class="p">]</span>
+
+    <span class="n">cleanup</span><span class="p">()</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">run_cli</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mike Doan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
