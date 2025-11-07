@@ -440,34 +440,6 @@ def preprocess_batch(input_files, args):
     return batched_tensor, volumes, headers, crop_coords_list
 
 
-def run_inference(model, image):
-    """
-    Execute model inference on the preprocessed image.
-
-    Args:
-        model: The loaded segmentation model
-        image: Preprocessed image tensor (single or batched)
-
-    Returns:
-        Tensor: Raw model output channels
-    """
-    return model(image)
-
-
-def run_batch_inference(model, batched_image):
-    """
-    Execute model inference on batched preprocessed images.
-
-    Args:
-        model: The loaded segmentation model
-        batched_image: Batched preprocessed image tensor (BS, 1, H, W, D)
-
-    Returns:
-        Tensor: Raw batched model output channels
-    """
-    return model(batched_image)
-
-
 def postprocess_output(output_channels, header, crop_coords=None):
     """
     Handle output postprocessing: argmax, padding, and labeling.
@@ -682,6 +654,8 @@ def run_cli():
     else:
         model = get_model(modelname)
 
+    export_webgpu = "EXPORT" in os.environ
+
     print(f"brainchop :: Loaded model {modelname}")
 
     # Process input files in batches
@@ -696,7 +670,7 @@ def run_cli():
             batch_files, args
         )
 
-        batched_output_channels = run_batch_inference(model, batched_tensor)
+        batched_output_channels = model(batched_tensor)
 
         batch_results = postprocess_batch_output(
             batched_output_channels, headers, crop_coords_list
