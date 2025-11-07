@@ -31,7 +31,7 @@ def load_optimization_cache(model_name):
     Load optimization cache for a given model.
 
     Args:
-        model_name: Name of the model
+        model_name: Name of the 
 
     Returns:
         dict: Optimization cache data with 'beams' list, or empty structure if not found
@@ -722,6 +722,15 @@ def run_cli():
                 )
 
             write_output(processed_data, current_args)
+
+    if export_webgpu and 'batched_tensor' in locals():
+        from extra.webgpu.export_model import export_model
+        from tinygrad.nn.state import safe_save
+        prg, _, _, state = export_model(model, "webgpu", batched_tensor, model_name=modelname)
+        dirname = Path(__file__).parent
+        safe_save(state, (dirname / "net.safetensors").as_posix()) #type:ignore
+        with open(dirname / f"net.js", "w") as text_file:
+            text_file.write(prg) #type:ignore
 
     # Save optimization data to cache if BEAM was used (and not already saved during pre-optimization)
     current_beam = os.environ.get("BEAM")
