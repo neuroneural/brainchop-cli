@@ -2,9 +2,9 @@
 import os
 import json
 import numpy as np
-from numpy.random import normal
-from tinygrad import Tensor
+from tinygrad.tensor import Tensor
 from typing import Tuple, Dict, Any
+from functools import reduce
 
 class MeshNetModel:
     def __init__(self):
@@ -21,11 +21,11 @@ class MeshNetModel:
             "quantile": self.quantile_normalize
         }
 
-    def load_model_spec(self, json_path: str, bin_path: str) -> Tuple[Dict[str, Any], np.ndarray]:
+    def load_model_spec(self, json_path: str, bin_path: str) -> Tuple[Dict[str, Any], Tensor]:
         with open(json_path, "r") as f:
             model_spec = json.load(f)
         with open(bin_path, "rb") as f:
-            weights_data = np.frombuffer(f.read(), dtype=np.float32)
+            weights_data = Tensor(np.frombuffer(f.read(), dtype=np.float32))
         return model_spec, weights_data
 
     def normalize(self, img: np.ndarray | Tensor, normalize_config: Dict[str, Any] | None = None) -> np.ndarray:
@@ -34,7 +34,7 @@ class MeshNetModel:
             img = img.numpy()
             
         # Convert to float32 for normalization calculations
-        img = img.astype(np.float32)
+        img = img.astype(np.float32) #type:ignore
             
         if normalize_config is None:
             return self.min_max_normalize(img)
@@ -83,7 +83,7 @@ class MeshNetModel:
         return tuple((k - 1) * d // 2 for k, d in zip(kernel_size, dilation))
 
     def process_conv_layer(self, x: Tensor, layer_config: Dict[str, Any], 
-                         weights_data: np.ndarray, weight_index: int, 
+                         weights_data: Tensor, weight_index: int, 
                          in_channels: int) -> Tuple[Tensor, int, int]:
         padding = self.calculate_padding(
             layer_config["kernel_size"],
@@ -97,12 +97,12 @@ class MeshNetModel:
         weight_shape = [weight_shape[i] for i in (2, 3, 4, 1, 0)]
         bias_shape = [out_channels]
         
-        weight_size = np.prod(weight_shape)
-        bias_size = np.prod(bias_shape)
+        weight_size = reduce(lambda a, b: a*b, weight_shape)
+        bias_size   = reduce(lambda a, b: a*b, bias_shape)
         
         # Extract and reshape weights
         weight = weights_data[weight_index:weight_index + weight_size].reshape(weight_shape)
-        weight = np.transpose(weight, (4, 3, 0, 1, 2))
+        weight = weight.permute(4, 3, 0, 1, 2)
         weight_index += weight_size
         
         # Extract and reshape bias
@@ -110,13 +110,11 @@ class MeshNetModel:
         weight_index += bias_size
         
         # Convert to Tensors
-        weight_tensor = Tensor(weight.copy())
-        bias_tensor = Tensor(bias.copy())
         
         # Perform convolution
         x = x.conv2d(
-            weight=weight_tensor,
-            bias=bias_tensor,
+            weight=weight,
+            bias=bias,
             groups=1,
             stride=layer_config["strides"][0],
             dilation=layer_config["dilation_rate"][0],
