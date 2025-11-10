@@ -1,37 +1,37 @@
 import { Niivue } from '@niivue/niivue'
 // IMPORTANT: we need to import this specific file. 
-import subcortical from "./net_subcortical.js"
-import tissue_fast from "./net_tissue_fast.js"
+//import subcortical from "./net_subcortical.js"
+//import tissue_fast from "./net_tissue_fast.js"
 import mindgrab from "./net_mindgrab.js"
-import t2 from "./net_t2.js"
+//import t2 from "./net_t2.js"
 
 const models = {
-  "subcortical": {
-    "net": subcortical,
-    "weightPath": "./net_subcortical.safetensors",
-    "colormap": "./colormap_tissue_subcortical.json",
-    "volume": "./t1_crop.nii.gz"
-  },
-  "tissue_fast": {
-    "net": tissue_fast,
-    "weightPath":
-    "./net_tissue_fast.safetensors",
-    "colormap": "./colormap_tissue_subcortical.json",
-    "volume": "./t1_crop.nii.gz"
-  },
+//"subcortical": {
+//  "net": subcortical,
+//  "weightPath": "./net_subcortical.safetensors",
+//  "colormap": "./colormap_tissue_subcortical.json",
+//  "volume": "./t1_crop.nii.gz"
+//},
+//"tissue_fast": {
+//  "net": tissue_fast,
+//  "weightPath":
+//  "./net_tissue_fast.safetensors",
+//  "colormap": "./colormap_tissue_subcortical.json",
+//  "volume": "./t1_crop.nii.gz"
+//},
   "mindgrab": {
     "net": mindgrab,
     "weightPath": "./net_mindgrab.safetensors",
     "colormap": "./colormap_tissue_subcortical.json",
     "volume": "./t1_crop.nii.gz"
   },
-  "t2": {
-    "net": t2,
-    "weightPath":
-    "./net_t2.safetensors",
-    "colormap": "./colormap_t2.json",
-    "volume": "./M2265_T2w.nii.gz"
-  }
+//"t2": {
+//  "net": t2,
+//  "weightPath":
+//  "./net_t2.safetensors",
+//  "colormap": "./colormap_t2.json",
+//  "volume": "./M2265_T2w.nii.gz"
+//}
 }
 
 let selectedModel = models[document.getElementById("segmentationDropdown").value]

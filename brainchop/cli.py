@@ -441,9 +441,10 @@ def postprocess_output(output_channels, header, crop_coords=None):
         tuple: (processed_labels_data, new_header)
     """
     # Convert model output to segmentation labels
+    if "PREARGMAX" not in os.environ:
+        output_channels = output_channels.argmax(axis=1)
     output = (
-        output_channels.argmax(axis=1)
-        .rearrange("1 x y z -> z y x")
+        output_channels.rearrange("1 x y z -> z y x")
         .numpy()
         .astype(np.uint8)
     )
@@ -658,7 +659,8 @@ def run_cli():
         batched_tensor, volumes, headers, crop_coords_list = preprocess_batch(
             batch_files, args
         )
-
+        if 'normalize' in dir(model):
+            batched_tensor = model.normalize(batched_tensor) #type:ignore
         batched_output_channels = model(batched_tensor)
 
         batch_results = postprocess_batch_output(
