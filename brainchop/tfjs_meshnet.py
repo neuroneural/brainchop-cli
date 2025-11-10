@@ -1,6 +1,8 @@
 # DEPRECATED: please start using the native tiny_meshnet backend instead
+import os
 import json
 import numpy as np
+from numpy.random import normal
 from tinygrad import Tensor
 from typing import Tuple, Dict, Any
 
@@ -123,6 +125,18 @@ class MeshNetModel:
         
         return x, weight_index, out_channels
 
+class ModelContainer():
+    def __init__(self, model, normalization_fn):
+        self.model = model
+        self.normalization_fn = normalization_fn
+
+    def normalize(self, x):
+        return self.normalization_fn(x)
+
+    def __call__(self, x):
+        return self.model(x)
+
+
 def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
     model = MeshNetModel()
     model_spec, weights_data = model.load_model_spec(config_fn, binary_fn)
@@ -130,7 +144,7 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
     # Get normalization config from model spec if available
     normalize_config = model_spec.get("_normalize")
     
-    def forward(x: Tensor) -> Tensor:
+    def normalization_fn(x: Tensor, normalize_config=normalize_config) -> Tensor:
         # Convert to numpy for normalization if needed
         x_np = x.numpy() if isinstance(x, Tensor) else x
         x_norm = model.normalize(x_np, normalize_config)
@@ -140,7 +154,9 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
             x = Tensor(x_norm.astype(np.float32))
         else:
             x = x_norm
-        
+        return x
+
+    def forward(x: Tensor, model=model, weights_data=weights_data) -> Tensor:
         weight_index = 0
         in_channels = 1
         
@@ -154,7 +170,8 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
                 activation = model.activation_map[layer["config"]["activation"]]
                 x = activation(x)
         
-        # Return the raw tensor output
+        if 'PREARGMAX' in os.environ: x = x.argmax(axis=1)
         return x
-    
-    return forward
+
+    model_container = ModelContainer(forward, normalization_fn)
+    return model_container
