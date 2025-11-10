@@ -107,23 +107,11 @@ def get_best_beam_for_batch_size(model_name, batch_size):
 
 
 def is_first_run(model_name, batch_size):
-    """
-    Check if this is the first run for a given model and batch size.
-
-    Args:
-        model_name: Name of the model
-        batch_size: Batch size to check
-
-    Returns:
-        bool: True if no optimization exists for this model/batch_size combo
-    """
     cache_data = load_optimization_cache(model_name)
-
     # Check if any optimization exists for this batch size
     for entry in cache_data["beams"]:
         if entry["BS"] == batch_size:
             return False
-
     return True
 
 
@@ -661,6 +649,7 @@ def run_cli():
     # Process input files in batches
     print(f"brainchop :: Using batch size: {batch_size}")
 
+    batched_tensor = None
     for batch_start in range(0, len(input_files), batch_size):
         batch_end = min(batch_start + batch_size, len(input_files))
         batch_files = input_files[batch_start:batch_end]
@@ -723,7 +712,7 @@ def run_cli():
 
             write_output(processed_data, current_args)
 
-    if export_webgpu and 'batched_tensor' in locals():
+    if export_webgpu and batched_tensor is not None:
         from extra.webgpu.export_model import export_model
         from tinygrad.nn.state import safe_save
         prg, _, _, state = export_model(model, "webgpu", batched_tensor, model_name=modelname)

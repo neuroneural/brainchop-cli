@@ -52,6 +52,11 @@ Where:
 - numpy : basic tensor operations
 - requests : to download models
 
+sometimes it may be necessary to install tinygrad from master branch. in that case:
+```
+uv pip install git+ssh://git@github.com/tinygrad/tinygrad.git
+```
+
 ## License
 
 This project is licensed under the MIT License.
