@@ -11,6 +11,12 @@
     "considerations": "min/max normalization",
     "parameter_name": "subcortical"
   },
+  "subcortical-mini": {
+    "folder": "model18cls",
+    "description": "🪓 a smaller version of subcortical that has only 21 channels instead of 30",
+    "considerations": "min/max normalization",
+    "parameter_name": "subcortical"
+  },
   "DKatlas": {
     "folder": "model21_104class",
     "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
