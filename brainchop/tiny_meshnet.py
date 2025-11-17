@@ -132,3 +132,8 @@ def load_meshnet(
     state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
     return model
+
+
+if __name__ == "__main__":
+    # TODO @spikedoanz: load default meshnet in this snippet
+    pass
