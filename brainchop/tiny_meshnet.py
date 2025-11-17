@@ -1,3 +1,4 @@
+import os
 from tinygrad import Tensor, nn
 from tinygrad.nn.state import torch_load, load_state_dict
 import json
@@ -102,12 +103,15 @@ class MeshNet:
             )
         )
 
+
+    def normalize(self, x):
+        return qnormalize(x) # TODO: interpret normalization from config file
+
     def __call__(self, x):
-        x = qnormalize(x)  # TODO: interpret normalization from config file
         for layer in self.model:
             x = layer(x)
+        if 'PREARGMAX' in os.environ: x = x.argmax(axis=1)
         return x
-
 
 def load_meshnet(
     config_fn: str,

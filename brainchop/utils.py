@@ -205,7 +205,8 @@ def get_model(model_name):  # -> tinygrad model
         config_fn, binary_fn = find_tfjs_files(model_name)
         config_fn = unwrap_path(config_fn)
         binary_fn = unwrap_path(binary_fn)
-        return load_tfjs_meshnet(config_fn, binary_fn)
+        model = load_tfjs_meshnet(config_fn, binary_fn)
+        return model
 
 
 def get_model_from_custom_path(config_path: str, weights_path: str):

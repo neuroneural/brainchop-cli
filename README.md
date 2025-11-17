@@ -21,6 +21,9 @@ To use BrainChop, run the following command:
 brainchop input.nii.gz -o output.nii.gz
 ```
 
+
+
+
 ## Docker
 
 You can also install BrainChop using docker
@@ -51,6 +54,19 @@ Where:
 - tinygrad : our tiny and portable (but powerful) ML inference engine
 - numpy : basic tensor operations
 - requests : to download models
+
+sometimes it may be necessary to install tinygrad from master branch. in that case:
+```
+uv pip install git+ssh://git@github.com/tinygrad/tinygrad.git
+```
+
+## (Experimental) Webgpu Model export
+
+prepend these flags to the brainchop call (only works off of github install)
+```
+PREARGMAX=1 WEBGPU=1 PYTHONPATH=. EXPORT=1
+```
+
 
 ## License
 
