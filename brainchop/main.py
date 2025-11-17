@@ -1,8 +1,8 @@
 import os
 import argparse
-import subprocess
 import json
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from tinygrad.tensor import Tensor
@@ -10,7 +10,6 @@ from brainchop.niimath import (
     conform,
     set_header_intent_label,
     bwlabel,
-    grow_border,
 )
 
 from brainchop.utils import (
@@ -23,86 +22,45 @@ from brainchop.utils import (
     cleanup,
     crop_to_cutoff,
     pad_to_original_size,
+    write_output,
 )
 
 
-def load_optimization_cache(model_name):
-    """
-    Load optimization cache for a given model.
-
-    Args:
-        model_name: Name of the 
-
-    Returns:
-        dict: Optimization cache data with 'beams' list, or empty structure if not found
-    """
+def load_optimization_cache(model_name) -> dict:
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_name
     cache_file = cache_dir / "optimizations.json"
-
     if cache_file.exists():
         try:
             with open(cache_file, "r") as f:
                 return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            # If file is corrupted, return empty structure
+        except (json.JSONDecodeError, IOError): # If file is corrupted, return empty structure
             pass
-
     return {"beams": []}
 
 
-def save_optimization_cache(model_name, batch_size, beam_value):
-    """
-    Save optimization data to cache.
-
-    Args:
-        model_name: Name of the model
-        batch_size: Batch size used
-        beam_value: BEAM value that was successful
-    """
+def save_optimization_cache(model_name:str, batch_size:int, beam_value:int):
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_name
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / "optimizations.json"
-
-    # Load existing cache
     cache_data = load_optimization_cache(model_name)
-
-    # Check if this BS/BEAM combination already exists
     for entry in cache_data["beams"]:
         if entry["BS"] == batch_size and entry["BEAM"] == beam_value:
             return  # Already cached
-
     # Add new entry
     cache_data["beams"].append({"BS": batch_size, "BEAM": beam_value})
-
     # Sort by batch size for easier reading
     cache_data["beams"].sort(key=lambda x: (x["BS"], x["BEAM"]))
-
     # Save to file
     with open(cache_file, "w") as f:
         json.dump(cache_data, f, indent=2)
 
 
-def get_best_beam_for_batch_size(model_name, batch_size):
-    """
-    Get the best (largest) BEAM value for a given batch size.
-
-    Args:
-        model_name: Name of the model
-        batch_size: Current batch size
-
-    Returns:
-        int: Best BEAM value for this batch size, or None if not found
-    """
+def get_best_beam_for_batch_size(model_name:str, batch_size:int) -> Optional[int]:
     cache_data = load_optimization_cache(model_name)
-
     # Find all BEAM values for this batch size
-    beam_values = [
-        entry["BEAM"] for entry in cache_data["beams"] if entry["BS"] == batch_size
-    ]
-
+    beam_values = [entry["BEAM"] for entry in cache_data["beams"] if entry["BS"] == batch_size]
     if beam_values:
         return max(beam_values)
-
     return None
 
 
@@ -115,9 +73,8 @@ def is_first_run(model_name, batch_size):
     return True
 
 
-def preoptimize(
-    model_name, beam, batch_size=1, custom_config=None, custom_weights=None
-):
+def preoptimize(model_name:str, beam:int, batch_size:int=1, custom_config=None,
+                custom_weights=None) -> bool:
     """
     Pre-optimize a model by running it with a random input tensor and specified BEAM value.
 
@@ -133,38 +90,19 @@ def preoptimize(
     )
     print("brainchop :: This may take a few moments for the initial compilation...")
 
-    # Store original BEAM value
-    original_beam = os.environ.get("BEAM")
-
+    original_beam = os.environ.get("BEAM") # Store original BEAM value
     try:
-        # Set BEAM environment variable for optimization
-        os.environ["BEAM"] = str(beam)
-
-        # Load the model with the specified BEAM value
+        os.environ["BEAM"] = str(beam) # Set BEAM environment variable for optimization
         if custom_config and custom_weights:
             model = get_model_from_custom_path(custom_config, custom_weights)
         else:
             model = get_model(model_name)
-
-        # Generate random input tensor with shape (BS, 1, 256, 256, 256)
         random_input = np.random.randn(batch_size, 1, 256, 256, 256).astype(np.float32)
         input_tensor = Tensor(random_input)
-
         print("brainchop :: Running optimization pass...")
-
-        # Run inference to trigger compilation/optimization
-        output = model(input_tensor)
-
-        # Force computation to complete (realize the tensor)
-        output.realize()
-
-        print(
-            f"brainchop :: Pre-optimization complete! Model is now optimized for BS={batch_size}"
-        )
-
-        # Save this optimization to cache
+        _ = model(input_tensor).realize()
+        print(f"brainchop :: Pre-optimization complete! Model is now optimized for BS={batch_size}")
         save_optimization_cache(model_name, batch_size, beam)
-
         return True
 
     except Exception as e:
@@ -179,42 +117,16 @@ def preoptimize(
             del os.environ["BEAM"]
 
 
-def prompt_for_optimization(
-    model_name, batch_size, custom_config=None, custom_weights=None
-):
-    """
-    Prompt user to optimize the model on first run.
-
-    Args:
-        model_name: Name of the model
-        batch_size: Batch size to optimize for
-        custom_config: Path to custom model config (optional)
-        custom_weights: Path to custom model weights (optional)
-
-    Returns:
-        bool: True if optimization was performed successfully, False otherwise
-    """
-    print(
-        f"\nbrainchop :: First run detected for model '{model_name}' with batch size {batch_size}"
-    )
-    print(
-        "brainchop :: Would you like to pre-optimize the model for faster subsequent runs?"
-    )
-    print(
-        "brainchop :: This will compile the model with BEAM=2 optimization (recommended)"
-    )
-
+def prompt_for_optimization(model_name, batch_size, custom_config=None, custom_weights=None):
+    print(f"\nbrainchop :: First run detected for model '{model_name}' with batch size {batch_size}")
+    print("brainchop :: Would you like to pre-optimize the model for faster subsequent runs?")
+    print("brainchop :: This will compile the model with BEAM=2 optimization (recommended)")
     while True:
         response = input("brainchop :: Optimize now? [y/n]: ").strip().lower()
-
         if response == "y":
-            return preoptimize(
-                model_name,
-                beam=2,
-                batch_size=batch_size,
-                custom_config=custom_config,
-                custom_weights=custom_weights,
-            )
+            return preoptimize( model_name, beam=2, batch_size=batch_size,
+                               custom_config=custom_config,
+                               custom_weights=custom_weights,)
         elif response == "n":
             print(
                 "brainchop :: Skipping optimization. Proceeding with unoptimized model..."
@@ -268,103 +180,6 @@ def generate_output_filename(input_path, model_name, index, output_dir=None):
     return str(output_path.absolute())
 
 
-def get_parser():
-    parser = argparse.ArgumentParser(
-        description="BrainChop: portable brain segmentation tool"
-    )
-    parser.add_argument("input", nargs="*", help="Input NIfTI file path(s)")
-    parser.add_argument(
-        "-l", "--list", action="store_true", help="List available models"
-    )
-    parser.add_argument(
-        "-i",
-        "--inverse-conform",
-        action="store_true",
-        help="Perform inverse conformation into original image space",
-    )
-    parser.add_argument(
-        "-u", "--update", action="store_true", help="Update the model listing"
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        default="output.nii.gz",
-        help="Output NIfTI file path (for single input) or output directory (for multiple inputs)",
-    )
-    parser.add_argument(
-        "-a",
-        "--mask",
-        nargs="?",  # 0 or 1 arguments
-        const="mask.nii.gz",  # if they just say `--mask` with no value
-        default=None,  # if they don't mention `--mask` at all
-        help="If provided and using mindgrab, write out the mask (defaults to mask.nii.gz when used without a value)",
-    )
-    parser.add_argument(
-        "-m",
-        "--model",
-        default=next(iter(AVAILABLE_MODELS.keys())),
-        help=f"Name of segmentation model, default: {next(iter(AVAILABLE_MODELS.keys()))}",
-    )
-    parser.add_argument(
-        "-c",
-        "--custom",
-        type=str,
-        help="Path to custom model directory (containing model.json and model.pth or model.bin)",
-    )
-    parser.add_argument(
-        "--comply",
-        action="store_true",
-        default=False,
-        help="Insert compliance arguments to `niimath` before '-conform'",
-    )
-    parser.add_argument(
-        "--ct",
-        action="store_true",
-        default=False,
-        help="Convert CT scans from 'Hounsfield' to 'Cormack' units to emphasize soft tissue contrast",
-    )
-    parser.add_argument(
-        "--crop",
-        nargs="?",  # 0 or 1 arguments
-        type=float,
-        const=2,  # if they just say `--crop` with no value
-        default=False,  # if they don't mention `--crop` at all
-        help="Crop the input for faster execution. May reduce accuracy.(defaults to percentile 2 cutoff)",
-    )
-    parser.add_argument(
-        "-ss",
-        "--skull-strip",
-        action="store_true",
-        help="Return just the brain compartment. An alias for -m mindgrab, that overrides -m parameter",
-    )
-    parser.add_argument(
-        "-ec",
-        "--export-classes",
-        action="store_true",
-        help="Export class probability maps",
-    )
-    parser.add_argument(
-        "-b",
-        "--border",
-        type=int,
-        default=0,
-        help="Mask border threshold in mm. Default is 0. Makes a difference only if the model is `mindgrab`",
-    )
-    parser.add_argument(
-        "-bs",
-        "--batch-size",
-        type=int,
-        default=1,
-        help="Batch size for processing multiple inputs (default: 1)",
-    )
-    parser.add_argument(
-        "--no-optimize",
-        action="store_true",
-        help="Skip the optimization prompt on first run",
-    )
-    return parser
-
-
 def preprocess_input(args):
     """
     Handle input preprocessing: loading, conforming, and cropping.
@@ -374,19 +189,15 @@ def preprocess_input(args):
     """
     # Load and conform input volume
     volume, header = conform(args.input, comply=args.comply, ct=args.ct)
-
     crop_coords = None
-
     # Apply cropping if requested
     if args.crop:
         volume, crop_coords = crop_to_cutoff(volume, args.crop)
         print(f"brainchop :: cropped to {volume.shape}")
-
     # Convert to tensor format expected by model
     image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
         "... -> 1 1 ..."
     )
-
     return image, volume, header, crop_coords
 
 
@@ -428,27 +239,26 @@ def preprocess_batch(input_files, args):
     return batched_tensor, volumes, headers, crop_coords_list
 
 
-def postprocess_output(output_channels, header, crop_coords=None):
+def postprocess_output(output_channels:Tensor, header:bytes,
+                       crop_coords=None)-> tuple[bytes,bytes]:
     """
     Handle output postprocessing: argmax, padding, and labeling.
-
     Args:
         output_channels: Raw model output tensor
         header: Original NIfTI header
         crop_coords: Coordinates for uncropping (if cropping was applied)
-
     Returns:
         tuple: (processed_labels_data, new_header)
     """
-    # Convert model output to segmentation labels
+    # preargmax is needed for model export
     if "PREARGMAX" not in os.environ:
         output_channels = output_channels.argmax(axis=1)
+    # Convert model output to segmentation labels
     output = (
         output_channels.rearrange("1 x y z -> z y x")
         .numpy()
         .astype(np.uint8)
     )
-
     # Restore original size if cropping was applied
     if crop_coords is not None:
         output = pad_to_original_size(output, crop_coords)
@@ -456,7 +266,6 @@ def postprocess_output(output_channels, header, crop_coords=None):
     # Generate labeled output with proper header
     labels, new_header = bwlabel(header, output)
     processed_data = set_header_intent_label(new_header) + labels.tobytes()
-
     return processed_data, new_header
 
 
@@ -474,72 +283,54 @@ def postprocess_batch_output(batched_output_channels, headers, crop_coords_list)
     """
     results = []
     batch_size = batched_output_channels.shape[0]
-
     for i in range(batch_size):
         # Extract individual output from batch
-        output_channels = batched_output_channels[
-            i : i + 1
-        ]  # Keep batch dimension for consistency
+        output_channels = batched_output_channels[i:i + 1]  # Keep batch dimension for consistency
         header = headers[i]
         crop_coords = crop_coords_list[i]
-
         # Process individual output
-        processed_data, new_header = postprocess_output(
-            output_channels, header, crop_coords
-        )
+        processed_data, new_header = postprocess_output(output_channels, header, crop_coords)
         results.append((processed_data, new_header))
-
     return results
 
 
-def write_output(processed_data, args):
-    """
-    Handle file output operations including niimath commands and subprocess calls.
-
-    Args:
-        processed_data: Processed segmentation data ready for output
-        args: Command line arguments containing output settings
-    """
-    output_dtype = "char"
-
-    # Handle class probability export if requested
-    if args.export_classes:
-        # Note: This requires access to output_channels, will need to be called separately
-        print(f"brainchop :: Exported classes to c[channel_number]_{args.output}")
-
-    # Determine gzip compression based on file extension
-    gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
-
-    # Build base niimath command
-    cmd = ["niimath", "-"]
-    if args.inverse_conform and args.model != "mindgrab":
-        cmd += ["-reslice_nn", args.input]
-
-    # Handle mindgrab-specific processing
-    data_to_write = processed_data
-    if args.model == "mindgrab":
-        cmd = ["niimath", str(args.input)]
-
-        # Apply border growth if specified
-        if args.border > 0:
-            data_to_write = grow_border(processed_data, args.border)
-
-        # Write mask file if requested
-        if args.mask is not None:
-            cmdm = ["niimath", "-"]
-            cmdm += ["-reslice_nn", args.input]
-            subprocess.run(
-                cmdm + ["-gz", "1", args.mask, "-odt", "char"],
-                input=data_to_write,
-                check=True,
-            )
-
-        cmd += ["-reslice_mask", "-"]
-        output_dtype = "input_force"
-
-    # Finalize command and execute
-    cmd += ["-gz", gzip_flag, str(args.output), "-odt", output_dtype]
-    subprocess.run(cmd, input=data_to_write, check=True)
+def get_parser():
+    parser = argparse.ArgumentParser( description="BrainChop: portable brain segmentation tool")
+    parser.add_argument("input", nargs="*", help="Input NIfTI file path(s)")
+    parser.add_argument( "-l", "--list", action="store_true", help="List available models")
+    parser.add_argument( "-i", "--inverse-conform", action="store_true",
+        help="Perform inverse conformation into original image space",)
+    parser.add_argument( "-u", "--update", action="store_true", help="Update the model listing")
+    parser.add_argument( "-o", "--output", default="output.nii.gz",
+        help="Output NIfTI file path (for single input) or output directory (for multiple inputs)",)
+    parser.add_argument( "-a", "--mask",
+        nargs="?",  # 0 or 1 arguments
+        const="mask.nii.gz",  # if they just say `--mask` with no value
+        default=None,  # if they don't mention `--mask` at all
+        help="If provided and using mindgrab, write out the mask (defaults to mask.nii.gz when used without a value)",)
+    parser.add_argument( "-m", "--model", default=next(iter(AVAILABLE_MODELS.keys())),
+        help=f"Name of segmentation model, default: {next(iter(AVAILABLE_MODELS.keys()))}",)
+    parser.add_argument( "-c", "--custom", type=str,
+        help="Path to custom model directory (containing model.json and model.pth or model.bin)",)
+    parser.add_argument( "--comply", action="store_true", default=False,
+        help="Insert compliance arguments to `niimath` before '-conform'",)
+    parser.add_argument( "--ct", action="store_true", default=False,
+        help="Convert CT scans from 'Hounsfield' to 'Cormack' units to emphasize soft tissue contrast",)
+    parser.add_argument( "--crop", nargs="?",  # 0 or 1 arguments type=float,
+        const=2,  # if they just say `--crop` with no value
+        default=False,  # if they don't mention `--crop` at all
+        help="Crop the input for faster execution. May reduce accuracy.(defaults to percentile 2 cutoff)",)
+    parser.add_argument( "-ss", "--skull-strip", action="store_true",
+        help="Return just the brain compartment. An alias for -m mindgrab, that overrides -m parameter",)
+    parser.add_argument( "-ec", "--export-classes", action="store_true",
+        help="Export class probability maps",)
+    parser.add_argument( "-b", "--border", type=int, default=0,
+        help="Mask border threshold in mm. Default is 0. Makes a difference only if the model is `mindgrab`",)
+    parser.add_argument( "-bs", "--batch-size", type=int, default=1,
+        help="Batch size for processing multiple inputs (default: 1)",)
+    parser.add_argument( "--no-optimize", action="store_true",
+        help="Skip the optimization prompt on first run",)
+    return parser
 
 
 def main():
@@ -630,20 +421,16 @@ def main():
     if (
         best_beam is not None
         and original_beam is not None
-        and best_beam > original_beam
+        and best_beam > int(original_beam)
     ):
         os.environ["BEAM"] = str(best_beam)
-        print(
-            f"brainchop :: Using cached optimization BEAM={best_beam} for batch size {batch_size}"
-        )
+        print(f"brainchop :: Using cached optimization BEAM={best_beam} for batch size {batch_size}")
 
     # Load model (will use the BEAM environment variable if set)
     if custom_config and custom_weights:
         model = get_model_from_custom_path(custom_config, custom_weights)
     else:
         model = get_model(model_name)
-
-    export_webgpu = "EXPORT" in os.environ
 
     print(f"brainchop :: Loaded model {model_name}")
 
@@ -714,7 +501,7 @@ def main():
 
             write_output(processed_data, current_args)
 
-    if export_webgpu and batched_tensor is not None:
+    if "EXPORT" in os.environ and batched_tensor is not None:
         from brainchop.export_model import export_model
         from tinygrad.nn.state import safe_save
         prg, _, _, state = export_model(model, "webgpu", batched_tensor, model_name=model_name)
@@ -731,13 +518,6 @@ def main():
             save_optimization_cache(model_name, batch_size, beam_value)
         except ValueError:
             pass  # Invalid BEAM value, skip caching
-
-    # Restore original BEAM environment variable
-    if original_beam is not None:
-        os.environ["BEAM"] = original_beam
-    elif "BEAM" in os.environ:
-        del os.environ["BEAM"]
-
     cleanup()
 
 
