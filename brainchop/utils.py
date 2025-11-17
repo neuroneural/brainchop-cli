@@ -272,8 +272,9 @@ def export_classes(output_channels, header: bytes, output_path: str):
     # pull into NumPy and drop the batch dim
     ch_np = output_channels.numpy().squeeze(0)  # shape (C, Z, Y, X)
 
-    header = bytearray(header)
-    header[70:74] = b"\x10\x00\x20\x00"
+    # TODO @sergeyplis: this function seems like it could fail on us at some point
+    header = bytearray(header) #type:ignore
+    header[70:74] = b"\x10\x00\x20\x00" #type:ignore
     header = bytes(header)
 
     # write each channel with our _write_nifti
