@@ -224,18 +224,18 @@ def prompt_for_optimization(
             print("brainchop :: Please enter 'y' for yes or 'n' for no")
 
 
-def generate_output_filename(input_path, modelname, index, output_dir=None):
+def generate_output_filename(input_path, model_name, index, output_dir=None):
     """
     Generate output filename based on input filename, model name, and index.
 
     Args:
         input_path: Path to input file
-        modelname: Name of the segmentation model used
+        model_name: Name of the segmentation model used
         index: Processing index/order
         output_dir: Optional output directory (uses current dir if None)
 
     Returns:
-        str: Generated output filename in format {input_name}_{modelname}_output_{index}.nii.gz
+        str: Generated output filename in format {input_name}_{model_name}_output_{index}.nii.gz
     """
     input_file = Path(input_path)
     import hashlib, base64
@@ -243,8 +243,8 @@ def generate_output_filename(input_path, modelname, index, output_dir=None):
     hash_string = lambda s: base64.urlsafe_b64encode(
         hashlib.sha1(s.encode()).digest()
     ).decode()[:8]
-    if modelname not in AVAILABLE_MODELS:
-        modelname = hash_string(modelname)
+    if model_name not in AVAILABLE_MODELS:
+        model_name = hash_string(model_name)
 
     # Extract base name without extensions (.nii.gz or .nii)
     base_name = input_file.name
@@ -257,7 +257,7 @@ def generate_output_filename(input_path, modelname, index, output_dir=None):
         base_name = input_file.stem
 
     # Generate output filename with model name and index
-    output_filename = f"{base_name}_{modelname}_output_{index}.nii.gz"
+    output_filename = f"{base_name}_{model_name}_output_{index}.nii.gz"
 
     # Use output directory if specified, otherwise use current directory
     if output_dir:
@@ -568,13 +568,13 @@ def run_cli():
     print(f"brainchop :: Processing {len(input_files)} input file(s)")
 
     # Determine model name and handle custom models
-    modelname = args.model
+    model_name = args.model
     custom_config = None
     custom_weights = None
 
     if args.skull_strip:
-        modelname = "mindgrab"
-        args.model = modelname
+        model_name = "mindgrab"
+        args.model = model_name
 
     # Handle custom model path
     if args.custom:
@@ -603,7 +603,7 @@ def run_cli():
             print(f"Error: No model.pth or model.bin found in {custom_dir}")
             return
 
-        modelname = "custom"
+        model_name = "custom"
         print(f"brainchop :: Using custom model from {custom_dir}")
 
     # Check if this is the first run for this model/batch_size combination
@@ -611,12 +611,12 @@ def run_cli():
     original_beam = os.environ.get("BEAM")
     if (
         not args.no_optimize
-        and is_first_run(modelname, batch_size)
+        and is_first_run(model_name, batch_size)
         and not original_beam
     ):
         # Prompt for optimization on first run
         optimization_success = prompt_for_optimization(
-            modelname, batch_size, custom_config, custom_weights
+            model_name, batch_size, custom_config, custom_weights
         )
         if optimization_success:
             print(
@@ -625,7 +625,7 @@ def run_cli():
         print()  # Add blank line for clarity
 
     # Check for cached optimization and set BEAM environment variable
-    best_beam = get_best_beam_for_batch_size(modelname, batch_size)
+    best_beam = get_best_beam_for_batch_size(model_name, batch_size)
 
     if (
         best_beam is not None
@@ -641,11 +641,11 @@ def run_cli():
     if custom_config and custom_weights:
         model = get_model_from_custom_path(custom_config, custom_weights)
     else:
-        model = get_model(modelname)
+        model = get_model(model_name)
 
     export_webgpu = "EXPORT" in os.environ
 
-    print(f"brainchop :: Loaded model {modelname}")
+    print(f"brainchop :: Loaded model {model_name}")
 
     # Process input files in batches
     print(f"brainchop :: Using batch size: {batch_size}")
@@ -677,7 +677,7 @@ def run_cli():
             if original_output == "output.nii.gz":
                 # Default output - always use the new dynamic naming format
                 output_file = generate_output_filename(
-                    input_file, modelname, global_index, None
+                    input_file, model_name, global_index, None
                 )
             elif len(input_files) == 1:
                 # Single file with custom output specified - use the custom output
@@ -686,7 +686,7 @@ def run_cli():
                 # Multiple files with custom output directory - generate dynamic name in that directory
                 output_dir = str(Path(args.output).parent)
                 output_file = generate_output_filename(
-                    input_file, modelname, global_index, output_dir
+                    input_file, model_name, global_index, output_dir
                 )
 
             print(
@@ -715,20 +715,20 @@ def run_cli():
             write_output(processed_data, current_args)
 
     if export_webgpu and batched_tensor is not None:
-        from extra.webgpu.export_model import export_model
+        from brainchop.export_model import export_model
         from tinygrad.nn.state import safe_save
-        prg, _, _, state = export_model(model, "webgpu", batched_tensor, model_name=modelname)
-        dirname = Path(__file__).parent
-        safe_save(state, (dirname / "net.safetensors").as_posix()) #type:ignore
-        with open(dirname / f"net.js", "w") as text_file:
+        prg, _, _, state = export_model(model, "webgpu", batched_tensor, model_name=model_name)
+        dirname = Path.cwd()
+        safe_save(state, (dirname / f"{model_name}.safetensors").as_posix()) #type:ignore
+        with open(dirname / f"{model_name}.js", "w") as text_file:
             text_file.write(prg) #type:ignore
 
     # Save optimization data to cache if BEAM was used (and not already saved during pre-optimization)
     current_beam = os.environ.get("BEAM")
-    if current_beam is not None and not is_first_run(modelname, batch_size):
+    if current_beam is not None and not is_first_run(model_name, batch_size):
         try:
             beam_value = int(current_beam)
-            save_optimization_cache(modelname, batch_size, beam_value)
+            save_optimization_cache(model_name, batch_size, beam_value)
         except ValueError:
             pass  # Invalid BEAM value, skip caching
 
