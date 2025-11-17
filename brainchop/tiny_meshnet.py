@@ -95,7 +95,7 @@ class MeshNet:
             nn.Conv2d(
                 last_config["in_channels"],
                 last_config["out_channels"],
-                kernel_size=[last_config["kernel_size"]] * 3,
+                kernel_size=tuple([last_config["kernel_size"]] * 3),
                 padding=last_config["padding"],
                 stride=last_config["stride"],
                 dilation=last_config["dilation"],

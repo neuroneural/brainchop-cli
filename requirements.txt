@@ -3,3 +3,4 @@ tinygrad
 niimath>=1.0.20250804
 requests
 clang
+safetensors
