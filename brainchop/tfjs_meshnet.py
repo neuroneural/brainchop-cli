@@ -173,3 +173,7 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
 
     model_container = ModelContainer(forward, normalization_fn)
     return model_container
+
+if __name__ == "__main__":
+    # TODO @spikedoanz: load default meshnet in this snippet
+    pass

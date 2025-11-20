@@ -1,5 +1,6 @@
 import os
-from tinygrad import Tensor, nn
+from tinygrad.tensor import Tensor
+from tinygrad import nn
 from tinygrad.nn.state import torch_load, load_state_dict
 import json
 import numpy as np
@@ -17,10 +18,10 @@ def convert_keys(torch_state_dict, tiny_state_dict):
 def qnormalize(img: Tensor, qmin=0.02, qmax=0.98, eps=1e-3) -> Tensor:
     """Unit interval preprocessing with clipping and safe division for bf16"""
     img = img.numpy()
-    qlow = np.quantile(img, qmin)
-    qhigh = np.quantile(img, qmax)
+    qlow = np.quantile(img, qmin) #type:ignore . numpy api bad
+    qhigh = np.quantile(img, qmax) #type:ignore
     img = (img - qlow) / (qhigh - qlow + eps)
-    img = np.clip(img, 0, 1)
+    img = np.clip(img, 0, 1) #type:ignore
     return Tensor(img)
 
 
@@ -95,7 +96,7 @@ class MeshNet:
             nn.Conv2d(
                 last_config["in_channels"],
                 last_config["out_channels"],
-                kernel_size=[last_config["kernel_size"]] * 3,
+                kernel_size=tuple([last_config["kernel_size"]] * 3),
                 padding=last_config["padding"],
                 stride=last_config["stride"],
                 dilation=last_config["dilation"],
@@ -131,3 +132,8 @@ def load_meshnet(
     state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
     return model
+
+
+if __name__ == "__main__":
+    # TODO @spikedoanz: load default meshnet in this snippet
+    pass

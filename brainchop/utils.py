@@ -6,12 +6,10 @@ import numpy as np
 from pathlib import Path
 from typing import Any, Tuple
 from urllib.parse import urlparse
-from .niimath import _write_nifti
-
-
+from .niimath import _write_nifti, grow_border
 from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
-from .types import build_model  # Import the new model builder
+from .types import build_model  # local model backend
 
 # ! : is of type termination (meaning runtime is interrupted)
 
@@ -272,8 +270,9 @@ def export_classes(output_channels, header: bytes, output_path: str):
     # pull into NumPy and drop the batch dim
     ch_np = output_channels.numpy().squeeze(0)  # shape (C, Z, Y, X)
 
-    header = bytearray(header)
-    header[70:74] = b"\x10\x00\x20\x00"
+    # TODO @sergeyplis: this function seems like it could fail on us at some point
+    header = bytearray(header) #type:ignore
+    header[70:74] = b"\x10\x00\x20\x00" #type:ignore
     header = bytes(header)
 
     # write each channel with our _write_nifti
@@ -334,3 +333,44 @@ def pad_to_original_size(
         )
 
     return padded_arr
+
+def write_output(processed_data, args):
+    """
+    Handle file output operations including niimath commands and subprocess calls.
+
+    Args:
+        processed_data: Processed segmentation data ready for output
+        args: Command line arguments containing output settings
+    """
+    output_dtype = "char"
+    # Handle class probability export if requested
+    if args.export_classes:
+        # Note: This requires access to output_channels, will need to be called separately
+        print(f"brainchop :: Exported classes to c[channel_number]_{args.output}")
+    # Determine gzip compression based on file extension
+    gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
+    # Build base niimath command
+    cmd = ["niimath", "-"]
+    if args.inverse_conform and args.model != "mindgrab":
+        cmd += ["-reslice_nn", args.input]
+    # Handle mindgrab-specific processing
+    data_to_write = processed_data
+    if args.model == "mindgrab":
+        cmd = ["niimath", str(args.input)]
+        # Apply border growth if specified
+        if args.border > 0:
+            data_to_write = grow_border(processed_data, args.border)
+        # Write mask file if requested
+        if args.mask is not None:
+            cmdm = ["niimath", "-"]
+            cmdm += ["-reslice_nn", args.input]
+            subprocess.run(
+                cmdm + ["-gz", "1", args.mask, "-odt", "char"],
+                input=data_to_write,
+                check=True,
+            )
+        cmd += ["-reslice_mask", "-"]
+        output_dtype = "input_force"
+    # Finalize command and execute
+    cmd += ["-gz", gzip_flag, str(args.output), "-odt", output_dtype]
+    subprocess.run(cmd, input=data_to_write, check=True)

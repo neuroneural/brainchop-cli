@@ -630,15 +630,14 @@ EXAMPLE_MESHNET_SPEC = """
 # ============================================================================
 
 if __name__ == "__main__":
-    # Example usage
+    # TODO @spikedoanz: add this in examples
     model = build_model(
         spec_path="meshnet.json",
         weights_path="meshnet.pth"
     )
     
-    # Run inference
     import numpy as np
-    from tinygrad import Tensor
+    from tinygrad.tensor import Tensor
     
     dummy_input = Tensor(np.random.randn(1, 1, 256, 256, 256).astype(np.float32))
     output = model(dummy_input, training=False)
