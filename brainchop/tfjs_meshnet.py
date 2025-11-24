@@ -25,7 +25,10 @@ class MeshNetModel:
         with open(json_path, "r") as f:
             model_spec = json.load(f)
         with open(bin_path, "rb") as f:
-            weights_data = Tensor(np.frombuffer(f.read(), dtype=np.float32))
+            # .copy() is required because np.frombuffer returns a read-only array
+            # (backed by the immutable bytes object), which causes issues when
+            # tinygrad's CPU backend tries to copy data using ctypes.from_buffer()
+            weights_data = Tensor(np.frombuffer(f.read(), dtype=np.float32).copy())
         return model_spec, weights_data
 
     def normalize(self, img: np.ndarray | Tensor, normalize_config: Dict[str, Any] | None = None) -> np.ndarray:
