@@ -171,7 +171,9 @@ const createInfinityUniformBuf = (device) => {{
 }};
 
 const createWeightBuf = (device, size, data) => {{
-  const buf = device.createBuffer({{ size, usage: GPUBufferUsage.STORAGE{" | GPUBufferUsage.COPY_DST" if stream_weights else ", mappedAtCreation: true"} }});
+  // WebGPU requires buffer size to be multiple of 4 when mappedAtCreation is true
+  const paddedSize = Math.ceil(size / 4) * 4;
+  const buf = device.createBuffer({{ size: paddedSize, usage: GPUBufferUsage.STORAGE{" | GPUBufferUsage.COPY_DST" if stream_weights else ", mappedAtCreation: true"} }});
   {"data.bytes = buf;" if stream_weights else "new Uint8Array(buf.getMappedRange()).set(data); buf.unmap();"}
   return buf;
 }};

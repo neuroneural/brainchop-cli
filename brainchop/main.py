@@ -198,6 +198,9 @@ def preprocess_input(args):
     image = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange(
         "... -> 1 1 ..."
     )
+    # Convert to half precision if FP16 env var is set
+    if os.environ.get("FP16"):
+        image = image.half()
     return image, volume, header, crop_coords
 
 
@@ -253,6 +256,9 @@ def postprocess_output(output_channels:Tensor, header:bytes,
     # preargmax is needed for model export
     if "PREARGMAX" not in os.environ:
         output_channels = output_channels.argmax(axis=1)
+    else:
+        # Sequential argmax outputs (batch, 1, d, h, w), squeeze the channel dim
+        output_channels = output_channels.squeeze(1)
     # Convert model output to segmentation labels
     output = (
         output_channels.rearrange("1 x y z -> z y x")

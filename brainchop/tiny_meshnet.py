@@ -1,7 +1,7 @@
 import os
 from tinygrad.tensor import Tensor
 from tinygrad import nn
-from tinygrad.nn.state import torch_load, load_state_dict
+from tinygrad.nn.state import torch_load, safe_load, load_state_dict
 import json
 import numpy as np
 
@@ -80,13 +80,16 @@ class MeshNet:
                 config["layers"][4]["in_channels"] = chn
 
         self.model = []
+        # Check if config specifies bias (default False for backward compat)
+        use_bias = config.get("bias", False)
+
         for block_kwargs in config["layers"][:-1]:  # All but the last layer
             self.model.extend(
                 construct_layer(
                     dropout_p=config["dropout_p"],
                     bnorm=config["bnorm"],
-                    gelu=config["gelu"],
-                    **{**block_kwargs, "bias": False},  # middle layers have no bias
+                    gelu=config.get("gelu", False),
+                    **{**block_kwargs, "bias": use_bias},
                 )
             )
 
@@ -100,7 +103,7 @@ class MeshNet:
                 padding=last_config["padding"],
                 stride=last_config["stride"],
                 dilation=last_config["dilation"],
-                bias=False,  # Enable bias in the conv layer
+                bias=use_bias,
             )
         )
 
@@ -114,6 +117,20 @@ class MeshNet:
         if 'PREARGMAX' in os.environ: x = x.argmax(axis=1)
         return x
 
+    def half(self):
+        """Convert all weights to float16/half precision"""
+        for layer in self.model:
+            if isinstance(layer, nn.Conv2d):
+                layer.weight = layer.weight.half().realize()
+                if layer.bias is not None:
+                    layer.bias = layer.bias.half().realize()
+            elif isinstance(layer, nn.GroupNorm):
+                if layer.weight is not None:
+                    layer.weight = layer.weight.half().realize()
+                if layer.bias is not None:
+                    layer.bias = layer.bias.half().realize()
+        return self
+
 def load_meshnet(
     config_fn: str,
     model_fn: str,
@@ -121,16 +138,40 @@ def load_meshnet(
     channels: int = 15,
     out_channels: int = 2,
 ):
-    # TODO: Interpret channel info from config
+    # Read config to check if it has explicit channel values
+    with open(config_fn, "r") as f:
+        config = json.load(f)
+
+    # Check if config uses -1 placeholders (old style) or explicit values (new style)
+    # Old style: in_channels=-1, out_channels=-1 for first/last, values get overridden
+    # New style: all values are explicit, no -1 placeholders
+    uses_placeholders = (
+        config["layers"][0]["in_channels"] == -1 or
+        config["layers"][-1]["out_channels"] == -1
+    )
+
+    if not uses_placeholders:
+        # New style config with explicit values - read from config
+        in_channels = config["layers"][0]["in_channels"]
+        channels = config["layers"][0]["out_channels"]
+        out_channels = config["layers"][-1]["out_channels"]
+
     model = MeshNet(
         in_channels=in_channels,
         n_classes=out_channels,
         channels=channels,
         config_file=config_fn,
     )
-    state_dict = torch_load(model_fn)
-    state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
+    # Try safetensors first, fall back to torch format
+    try:
+        state_dict = safe_load(model_fn)
+    except Exception:
+        state_dict = torch_load(model_fn)
+        state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
+    # Convert to half precision if FP16 env var is set
+    if os.environ.get("FP16"):
+        model = model.half()
     return model
 
 
