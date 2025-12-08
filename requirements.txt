@@ -1,5 +1,5 @@
 numpy
-tinygrad @ git+https://github.com/tinygrad/tinygrad.git@18cfb547363b74f904583e24cb7c7d0f8a1638e9
+tinygrad
 niimath>=1.0.20250804
 requests
 clang
