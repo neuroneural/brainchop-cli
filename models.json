@@ -28,5 +28,11 @@
     "description": "tissue extraction",
     "considerations": "quantile normalization",
     "parameter_name": "mindgrab"
+  },
+  "aparc50": {
+    "folder": "model30chan50cls",
+    "description": "🧠 cortical parcellation model with 50 anatomical regions",
+    "considerations": "quantile normalization (5%-95%)",
+    "parameter_name": "aparc50"
   }
 }

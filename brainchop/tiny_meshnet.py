@@ -38,7 +38,7 @@ def set_channel_num(config, in_channels, n_classes, channels):
     return config
 
 
-def construct_layer(dropout_p=0, bnorm=True, gelu=False, *args, **kwargs):
+def construct_layer(dropout_p=0, bnorm=True, gelu=False, elu=False, *args, **kwargs):
     layers = []
     kwargs["kernel_size"] = [kwargs["kernel_size"]] * 3
     layers.append(nn.Conv2d(*args, **kwargs))
@@ -51,12 +51,20 @@ def construct_layer(dropout_p=0, bnorm=True, gelu=False, *args, **kwargs):
             )
         )
 
-    relu = lambda x: x.relu()
-    gelu = lambda x: x.gelu()
-    dropout = lambda x: x.dropout(dropout_p)
-    layers.append(gelu if gelu else relu)
+    relu_fn = lambda x: x.relu()
+    gelu_fn = lambda x: x.gelu()
+    elu_fn = lambda x: x.elu()
+    dropout_fn = lambda x: x.dropout(dropout_p)
+
+    if elu:
+        layers.append(elu_fn)
+    elif gelu:
+        layers.append(gelu_fn)
+    else:
+        layers.append(relu_fn)
+
     if dropout_p > 0:
-        layers.append(dropout)
+        layers.append(dropout_fn)
     return layers
 
 
@@ -89,6 +97,7 @@ class MeshNet:
                     dropout_p=config["dropout_p"],
                     bnorm=config["bnorm"],
                     gelu=config.get("gelu", False),
+                    elu=config.get("elu", False),
                     **{**block_kwargs, "bias": use_bias},
                 )
             )
