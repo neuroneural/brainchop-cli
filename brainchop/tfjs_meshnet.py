@@ -3,50 +3,8 @@ import os
 import json
 import numpy as np
 from tinygrad.tensor import Tensor
-from typing import Tuple, Dict, Any, Callable
+from typing import Tuple, Dict, Any
 from functools import reduce
-
-
-class SequentialArgmax:
-    """
-    Sequential argmax implementation for eager evaluation.
-
-    Instead of stacking all channel outputs and doing a single argmax,
-    this iterates through channels one at a time, tracking the max value
-    and its index at each step. Forces eager evaluation with .realize().
-    """
-
-    def __init__(self, out_channels: int):
-        self.out_channels = out_channels
-
-    def __call__(self, x: Tensor, get_channel_fn: Callable[[Tensor, int], Tensor]) -> Tensor:
-        """
-        Args:
-            x: Input tensor (batch, in_channels, depth, height, width)
-            get_channel_fn: Function that takes (x, channel_idx) and returns
-                           the output for that channel (batch, 1, d, h, w)
-        """
-        batch_size = x.shape[0]
-        depth, height, width = x.shape[2], x.shape[3], x.shape[4]
-
-        # Initialize: track max values and their indices
-        outB = Tensor.full((batch_size, 1, depth, height, width), -10000.0).realize()
-        outC = Tensor.zeros(batch_size, 1, depth, height, width).realize()
-
-        for i in range(self.out_channels):
-            # Get output for channel i
-            outA = get_channel_fn(x, i).realize()
-
-            # Find where new channel gives greater response
-            greater = (outA > outB).float().realize()
-
-            # Update max values
-            outB = ((1 - greater) * outB + greater * outA).realize()
-
-            # Update indices
-            outC = ((1 - greater) * outC + greater * i).realize()
-
-        return outC
 
 class MeshNetModel:
     def __init__(self):
@@ -127,52 +85,35 @@ class MeshNetModel:
             dilation = (dilation,) * 3
         return tuple((k - 1) * d // 2 for k, d in zip(kernel_size, dilation))
 
-    def process_conv_layer(self, x: Tensor, layer_config: Dict[str, Any],
-                         weights_data: Tensor, weight_index: int,
-                         in_channels: int,
-                         out_channel_idx: int | None = None) -> Tuple[Tensor, int, int]:
-        """
-        Process a Conv3D layer.
-
-        Args:
-            x: Input tensor
-            layer_config: Layer configuration dict
-            weights_data: All model weights
-            weight_index: Current position in weights_data
-            in_channels: Number of input channels
-            out_channel_idx: If specified, only compute this single output channel
-                            (used for sequential argmax). If None, compute all channels.
-        """
+    def process_conv_layer(self, x: Tensor, layer_config: Dict[str, Any], 
+                         weights_data: Tensor, weight_index: int, 
+                         in_channels: int) -> Tuple[Tensor, int, int]:
         padding = self.calculate_padding(
             layer_config["kernel_size"],
             layer_config["dilation_rate"]
         )
-
+        
         out_channels = layer_config["filters"]
         k = layer_config["kernel_size"][0]
-
+        
         weight_shape = [out_channels, in_channels, k, k, k]
         weight_shape = [weight_shape[i] for i in (2, 3, 4, 1, 0)]
         bias_shape = [out_channels]
-
+        
         weight_size = reduce(lambda a, b: a*b, weight_shape)
         bias_size   = reduce(lambda a, b: a*b, bias_shape)
-
+        
         # Extract and reshape weights
         weight = weights_data[weight_index:weight_index + weight_size].reshape(weight_shape)
         weight = weight.permute(4, 3, 0, 1, 2)
         weight_index += weight_size
-
+        
         # Extract and reshape bias
         bias = weights_data[weight_index:weight_index + bias_size].reshape(bias_shape)
         weight_index += bias_size
-
-        # If requesting a single output channel, slice weights/bias
-        if out_channel_idx is not None:
-            weight = weight[out_channel_idx:out_channel_idx+1]  # (1, in_channels, k, k, k)
-            bias = bias[out_channel_idx:out_channel_idx+1]      # (1,)
-            out_channels = 1
-
+        
+        # Convert to Tensors
+        
         # Perform convolution
         x = x.conv2d(
             weight=weight,
@@ -182,7 +123,7 @@ class MeshNetModel:
             dilation=layer_config["dilation_rate"][0],
             padding=padding[0]
         )
-
+        
         return x, weight_index, out_channels
 
 class ModelContainer():
@@ -219,59 +160,18 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
     def forward(x: Tensor, model=model, weights_data=weights_data) -> Tensor:
         weight_index = 0
         in_channels = 1
-
+        
         spec = model_spec["modelTopology"]["model_config"]["config"]["layers"][1:]
-
-        # Check if we should use sequential argmax (eager evaluation)
-        use_sequential_argmax = 'PREARGMAX' in os.environ
-
-        # Find the last Conv3D layer to handle specially if using sequential argmax
-        last_conv_idx = None
-        for i, layer in enumerate(spec):
+        for layer in spec:
             if layer["class_name"] == "Conv3D":
-                last_conv_idx = i
-
-        for i, layer in enumerate(spec):
-            is_last_conv = (i == last_conv_idx)
-
-            if layer["class_name"] == "Conv3D":
-                if is_last_conv and use_sequential_argmax:
-                    # For last conv with sequential argmax:
-                    # Don't process the full conv, instead use SequentialArgmax
-                    out_channels = layer["config"]["filters"]
-                    last_layer_config = layer["config"]
-                    last_weight_index = weight_index
-                    last_in_channels = in_channels
-
-                    # Create a function that computes a single output channel
-                    def get_channel_fn(
-                        input_tensor: Tensor,
-                        channel_idx: int,
-                        layer_config=last_layer_config,
-                        w_idx=last_weight_index,
-                        in_ch=last_in_channels
-                    ) -> Tensor:
-                        out, _, _ = model.process_conv_layer(
-                            input_tensor, layer_config, weights_data,
-                            w_idx, in_ch, out_channel_idx=channel_idx
-                        )
-                        return out
-
-                    # Run sequential argmax
-                    seq_argmax = SequentialArgmax(out_channels)
-                    x = seq_argmax(x, get_channel_fn)
-
-                    # Skip weight_index update since we're done
-                    break
-                else:
-                    x, weight_index, in_channels = model.process_conv_layer(
-                        x, layer["config"], weights_data, weight_index, in_channels
-                    )
-                    x = x.realize()
+                x, weight_index, in_channels = model.process_conv_layer(
+                    x, layer["config"], weights_data, weight_index, in_channels
+                )
             elif layer["class_name"] == "Activation":
                 activation = model.activation_map[layer["config"]["activation"]]
-                x = activation(x).realize()
-
+                x = activation(x)
+        
+        if 'PREARGMAX' in os.environ: x = x.argmax(axis=1)
         return x
 
     model_container = ModelContainer(forward, normalization_fn)
