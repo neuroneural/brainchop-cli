@@ -189,6 +189,16 @@ class MeshNet:
             )
         )
 
+        self.n_classes = last_config["out_channels"]
+        self.seq_conv_argmax = None
+
+    def init_seq_conv_argmax(self):
+        """Initialize SequentialConvArgmax with identity weights for PREARGMAX path."""
+        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes, self.n_classes)
+        for i, conv in enumerate(self.seq_conv_argmax.convs):
+            w = np.zeros((1, self.n_classes, 1, 1, 1), dtype=np.float32)
+            w[0, i, 0, 0, 0] = 1.0
+            conv.weight = Tensor(w)
 
     def normalize(self, x):
         return qnormalize(x) # TODO: interpret normalization from config file
@@ -252,6 +262,9 @@ def load_meshnet(
         state_dict = torch_load(model_fn)
         state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
+    # Initialize SequentialConvArgmax for PREARGMAX path (after loading weights)
+    if 'PREARGMAX' in os.environ:
+        model.init_seq_conv_argmax()
     # Convert to half precision if FP16 env var is set
     if os.environ.get("FP16"):
         model = model.half()
