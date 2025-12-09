@@ -15,6 +15,7 @@ def sequential_argmax(x: Tensor) -> Tensor:
     forcing realization after each step to ensure eager evaluation
     and bounded memory usage for large channel counts (e.g., 104 classes).
     """
+    print('using sequential argmax on old backend')
     batch_size = x.shape[0]
     num_channels = x.shape[1]
     depth, height, width = x.shape[2], x.shape[3], x.shape[4]

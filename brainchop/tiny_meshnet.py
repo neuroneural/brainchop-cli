@@ -14,6 +14,79 @@ def convert_keys(torch_state_dict, tiny_state_dict):
         new_dict[t] = torch_state_dict[f]
     return new_dict
 
+def sequential_argmax(x: Tensor) -> Tensor:
+    """
+    Sequential argmax over channel dimension with eager evaluation.
+
+    NOTE: This function receives an already-materialized tensor, so it does NOT
+    save memory. For true memory savings, use SequentialConvArgmax which integrates
+    the final conv layer with argmax to avoid materializing all channels at once.
+    """
+    print('using sequential argmax on new backend')
+    batch_size = x.shape[0]
+    num_channels = x.shape[1]
+    depth, height, width = x.shape[2], x.shape[3], x.shape[4]
+
+    # outB tracks max values seen so far
+    # outC tracks indices of the max channel
+    outB = Tensor.full((batch_size, 1, depth, height, width), -1e9)
+    outC = Tensor.zeros(batch_size, 1, depth, height, width)
+    for i in range(int(num_channels)):
+        # Extract i-th channel
+        outA = x[:, i:i+1, :, :, :].realize()
+        # Find where current channel > max so far
+        greater = (outA > outB).float().realize()
+        # Update max values
+        outB = ((1 - greater) * outB + greater * outA).realize()
+        # Update argmax indices
+        outC = ((1 - greater) * outC + greater * float(i)).realize()
+    return outC.squeeze(1)
+
+
+class SequentialConvArgmax:
+    """
+    Replaces final conv + argmax with sequential per-channel convs.
+
+    Instead of: Conv3d(in, 104, 1x1x1) -> argmax
+    This does:  104 x Conv3d(in, 1, 1x1x1) with streaming argmax
+
+    This avoids materializing the full (batch, 104, D, H, W) tensor,
+    only keeping (batch, 1, D, H, W) for max values and indices.
+    """
+
+    def __init__(self, in_channels: int, out_channels: int):
+        self.out_channels = out_channels
+        self.convs = [
+            nn.Conv2d(in_channels, 1, kernel_size=(1, 1, 1), bias=False)
+            for _ in range(out_channels)
+        ]
+
+    def __call__(self, x: Tensor) -> Tensor:
+        batch_size = x.shape[0]
+        depth, height, width = x.shape[2], x.shape[3], x.shape[4]
+
+        outB = Tensor.full((batch_size, 1, depth, height, width), -1e9)
+        outC = Tensor.zeros(batch_size, 1, depth, height, width)
+
+        for i, conv in enumerate(self.convs):
+            outA = conv(x).realize()
+            greater = (outA > outB).float().realize()
+            outB = ((1 - greater) * outB + greater * outA).realize()
+            outC = ((1 - greater) * outC + greater * float(i)).realize()
+
+        return outC.squeeze(1)
+
+    def load_from_conv(self, conv: nn.Conv2d):
+        """Load weights from a standard Conv3d layer, splitting across per-channel convs."""
+        # conv.weight shape: (out_channels, in_channels, 1, 1, 1)
+        for i, c in enumerate(self.convs):
+            c.weight = conv.weight[i:i+1].realize()
+
+    def half(self):
+        for conv in self.convs:
+            conv.weight = conv.weight.half().realize()
+        return self
+
 
 def qnormalize(img: Tensor, qmin=0.02, qmax=0.98, eps=1e-3) -> Tensor:
     """Unit interval preprocessing with clipping and safe division for bf16"""
@@ -123,7 +196,8 @@ class MeshNet:
     def __call__(self, x):
         for layer in self.model:
             x = layer(x)
-        if 'PREARGMAX' in os.environ: x = x.argmax(axis=1)
+        if 'PREARGMAX' in os.environ:
+            x = self.seq_conv_argmax(x)
         return x
 
     def half(self):
