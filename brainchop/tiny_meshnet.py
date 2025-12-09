@@ -40,52 +40,68 @@ def sequential_argmax(x: Tensor) -> Tensor:
         outB = ((1 - greater) * outB + greater * outA).realize()
         # Update argmax indices
         outC = ((1 - greater) * outC + greater * float(i)).realize()
-    return outC.squeeze(1)
+    return outC.squeeze(0)
 
 
 class SequentialConvArgmax:
     """
-    Replaces final conv + argmax with sequential per-channel convs.
-
-    Instead of: Conv3d(in, 104, 1x1x1) -> argmax
-    This does:  104 x Conv3d(in, 1, 1x1x1) with streaming argmax
-
-    This avoids materializing the full (batch, 104, D, H, W) tensor,
-    only keeping (batch, 1, D, H, W) for max values and indices.
+    Sequential argmax - trades speed for memory by processing channels iteratively.
+    ~10-15x slower than native argmax but bounds peak memory.
     """
 
-    def __init__(self, in_channels: int, out_channels: int):
+    def __init__(self, out_channels: int, chunk_size: int = 16):
         self.out_channels = out_channels
-        self.convs = [
-            nn.Conv2d(in_channels, 1, kernel_size=(1, 1, 1), bias=False)
-            for _ in range(out_channels)
-        ]
+        self.chunk_size = chunk_size
 
     def __call__(self, x: Tensor) -> Tensor:
-        batch_size = x.shape[0]
-        depth, height, width = x.shape[2], x.shape[3], x.shape[4]
+        print('using sequential argmax in new backend')
+        outB = x[:, 0:1].realize()
+        outC = Tensor.zeros_like(outB)
 
-        outB = Tensor.full((batch_size, 1, depth, height, width), -1e9)
-        outC = Tensor.zeros(batch_size, 1, depth, height, width)
-
-        for i, conv in enumerate(self.convs):
-            outA = conv(x).realize()
-            greater = (outA > outB).float().realize()
-            outB = ((1 - greater) * outB + greater * outA).realize()
-            outC = ((1 - greater) * outC + greater * float(i)).realize()
+        for i in range(1, self.out_channels):
+            mask = x[:, i:i+1] > outB
+            outB = mask.where(x[:, i:i+1], outB)
+            outC = mask.where(float(i), outC)
+            if i % self.chunk_size == 0:
+                outB = outB.realize()
+                outC = outC.realize()
 
         return outC.squeeze(1)
 
-    def load_from_conv(self, conv: nn.Conv2d):
-        """Load weights from a standard Conv3d layer, splitting across per-channel convs."""
-        # conv.weight shape: (out_channels, in_channels, 1, 1, 1)
-        for i, c in enumerate(self.convs):
-            c.weight = conv.weight[i:i+1].realize()
 
-    def half(self):
-        for conv in self.convs:
-            conv.weight = conv.weight.half().realize()
-        return self
+def chunked_conv(x: Tensor, conv_layer: nn.Conv2d, chunk_limit: int = 2**30) -> Tensor:
+    """
+    Workaround for WebGPU matmul bug: when output exceeds 2^30 elements,
+    process output channels in chunks to avoid 32-bit integer overflow.
+    """
+    from functools import reduce
+    spatial = int(reduce(lambda a, b: int(a) * int(b), x.shape[2:], 1))
+    out_channels = int(conv_layer.weight.shape[0])
+    output_elements = out_channels * spatial
+
+    if output_elements <= chunk_limit:
+        return conv_layer(x)
+
+    # Chunked processing
+    max_channels = max(1, chunk_limit // spatial)
+    chunks = []
+
+    for start in range(0, out_channels, max_channels):
+        end = min(start + max_channels, out_channels)
+        chunk_weight = conv_layer.weight[start:end]
+        chunk_bias = conv_layer.bias[start:end] if conv_layer.bias is not None else None
+
+        chunk_out = x.conv2d(
+            weight=chunk_weight,
+            bias=chunk_bias,
+            groups=conv_layer.groups,
+            stride=conv_layer.stride,
+            dilation=conv_layer.dilation,
+            padding=conv_layer.padding,
+        ).realize()
+        chunks.append(chunk_out)
+
+    return Tensor.cat(*chunks, dim=1)
 
 
 def qnormalize(img: Tensor, qmin=0.02, qmax=0.98, eps=1e-3) -> Tensor:
@@ -193,19 +209,18 @@ class MeshNet:
         self.seq_conv_argmax = None
 
     def init_seq_conv_argmax(self):
-        """Initialize SequentialConvArgmax with identity weights for PREARGMAX path."""
-        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes, self.n_classes)
-        for i, conv in enumerate(self.seq_conv_argmax.convs):
-            w = np.zeros((1, self.n_classes, 1, 1, 1), dtype=np.float32)
-            w[0, i, 0, 0, 0] = 1.0
-            conv.weight = Tensor(w)
+        """Initialize SequentialConvArgmax for PREARGMAX path."""
+        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes)
 
     def normalize(self, x):
         return qnormalize(x) # TODO: interpret normalization from config file
 
     def __call__(self, x):
         for layer in self.model:
-            x = layer(x)
+            if isinstance(layer, nn.Conv2d):
+                x = chunked_conv(x, layer)
+            else:
+                x = layer(x)
         if 'PREARGMAX' in os.environ:
             x = self.seq_conv_argmax(x)
         return x
