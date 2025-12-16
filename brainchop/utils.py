@@ -50,7 +50,7 @@ MODELS_JSON_URL = (
     "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
 )
 AVAILABLE_MODELS = load_models()
-NEW_BACKEND = {"mindgrab", ".", "DKatlas", "aparc50"}
+NEW_BACKEND = {"mindgrab", ".", "DKatlas", "aparc50", "subcortical"}
 NEW_ARCHITECTURE_MODELS = set()  # Models using the new architecture format
 
 

@@ -7,35 +7,6 @@ from typing import Tuple, Dict, Any
 from functools import reduce
 
 
-def sequential_argmax(x: Tensor) -> Tensor:
-    """
-    Sequential argmax over channel dimension with eager evaluation.
-
-    This computes argmax by iterating through channels one at a time,
-    forcing realization after each step to ensure eager evaluation
-    and bounded memory usage for large channel counts (e.g., 104 classes).
-    """
-    print('using sequential argmax on old backend')
-    batch_size = x.shape[0]
-    num_channels = x.shape[1]
-    depth, height, width = x.shape[2], x.shape[3], x.shape[4]
-
-    # outB tracks max values seen so far
-    # outC tracks indices of the max channel
-    outB = Tensor.full((batch_size, 1, depth, height, width), -1e9)
-    outC = Tensor.zeros(batch_size, 1, depth, height, width)
-    for i in range(int(num_channels)):
-        # Extract i-th channel
-        outA = x[:, i:i+1, :, :, :]
-        # Find where current channel > max so far
-        greater = (outA > outB).float()
-        # Update max values
-        outB = ((1 - greater) * outB + greater * outA)
-        # Update argmax indices
-        outC = ((1 - greater) * outC + greater * float(i)).realize()
-    print(outC.shape)
-    return outC
-
 
 class MeshNetModel:
     def __init__(self):
@@ -116,45 +87,72 @@ class MeshNetModel:
             dilation = (dilation,) * 3
         return tuple((k - 1) * d // 2 for k, d in zip(kernel_size, dilation))
 
-    def process_conv_layer(self, x: Tensor, layer_config: Dict[str, Any], 
-                         weights_data: Tensor, weight_index: int, 
+    def process_conv_layer(self, x: Tensor, layer_config: Dict[str, Any],
+                         weights_data: Tensor, weight_index: int,
                          in_channels: int) -> Tuple[Tensor, int, int]:
         padding = self.calculate_padding(
             layer_config["kernel_size"],
             layer_config["dilation_rate"]
         )
-        
+
         out_channels = layer_config["filters"]
         k = layer_config["kernel_size"][0]
-        
+
         weight_shape = [out_channels, in_channels, k, k, k]
         weight_shape = [weight_shape[i] for i in (2, 3, 4, 1, 0)]
         bias_shape = [out_channels]
-        
+
         weight_size = reduce(lambda a, b: a*b, weight_shape)
         bias_size   = reduce(lambda a, b: a*b, bias_shape)
-        
+
         # Extract and reshape weights
         weight = weights_data[weight_index:weight_index + weight_size].reshape(weight_shape)
         weight = weight.permute(4, 3, 0, 1, 2)
         weight_index += weight_size
-        
+
         # Extract and reshape bias
         bias = weights_data[weight_index:weight_index + bias_size].reshape(bias_shape)
         weight_index += bias_size
-        
-        # Convert to Tensors
-        
-        # Perform convolution
-        x = x.conv2d(
-            weight=weight,
-            bias=bias,
-            groups=1,
-            stride=layer_config["strides"][0],
-            dilation=layer_config["dilation_rate"][0],
-            padding=padding[0]
-        )
-        
+
+        # Check if output would exceed WebGPU's 2^30 element limit
+        # spatial = product of spatial dimensions (e.g., 256^3 for 3D)
+        spatial = reduce(lambda a, b: a * b, x.shape[2:], 1)
+        output_elements = out_channels * spatial
+        WEBGPU_LIMIT = 2**30  # ~1 billion elements
+
+        if output_elements > WEBGPU_LIMIT:
+            # Chunked convolution to avoid WebGPU matmul overflow bug
+            # Calculate max channels per chunk to stay under limit
+            max_channels_per_chunk = max(1, WEBGPU_LIMIT // spatial)
+            chunks = []
+
+            for start in range(0, out_channels, max_channels_per_chunk):
+                end = min(start + max_channels_per_chunk, out_channels)
+                chunk_weight = weight[start:end]
+                chunk_bias = bias[start:end]
+
+                chunk_out = x.conv2d(
+                    weight=chunk_weight,
+                    bias=chunk_bias,
+                    groups=1,
+                    stride=layer_config["strides"][0],
+                    dilation=layer_config["dilation_rate"][0],
+                    padding=padding[0]
+                ).realize()
+                chunks.append(chunk_out)
+
+            x = Tensor.cat(*chunks, dim=1)
+        else:
+            # Standard convolution
+            x = x.conv2d(
+                weight=weight,
+                bias=bias,
+                groups=1,
+                stride=layer_config["strides"][0],
+                dilation=layer_config["dilation_rate"][0],
+                padding=padding[0]
+            )
+
         return x, weight_index, out_channels
 
 class ModelContainer():
@@ -203,7 +201,7 @@ def load_tfjs_meshnet(config_fn: str, binary_fn: str): # -> tinygrad "model"
                 x = activation(x)
         
         if 'PREARGMAX' in os.environ:
-            x = sequential_argmax(x)
+            x = x.argmax(axis=1)
         return x
 
     model_container = ModelContainer(forward, normalization_fn)
