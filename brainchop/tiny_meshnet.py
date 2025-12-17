@@ -22,7 +22,6 @@ def sequential_argmax(x: Tensor) -> Tensor:
     save memory. For true memory savings, use SequentialConvArgmax which integrates
     the final conv layer with argmax to avoid materializing all channels at once.
     """
-    print('using sequential argmax on new backend')
     batch_size = x.shape[0]
     num_channels = x.shape[1]
     depth, height, width = x.shape[2], x.shape[3], x.shape[4]

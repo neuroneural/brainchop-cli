@@ -75,16 +75,15 @@ segmentation.save("output.nii.gz")
 # -----------------------------------------------------------------------------
 # Export model to WebGPU JavaScript
 # NOTE: Must run script with WEBGPU=1 env var: WEBGPU=1 python examples/scripting.py
-# model.export(output_dir="/tmp")
+model.export(output_dir="/tmp")
 # Creates: /tmp/subcortical.js + /tmp/subcortical.safetensors
 
 # -----------------------------------------------------------------------------
 # 7. Advanced: Direct tinygrad access
 # -----------------------------------------------------------------------------
-# Access the raw tinygrad model for custom pipelines
 raw_model = model.tinygrad_model
+print(raw_model)
 
-# Convert NIfTI to tensor manually
 tensor_input = nifti.to_tensor()  # returns Tensor (1, 1, 256, 256, 256)
 
 raw_output = raw_model(tensor_input) # Run inference directly
