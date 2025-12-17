@@ -7,16 +7,8 @@ nav:
   - API Reference: api.md
 
 theme:
-  name: material
-  palette:
-    scheme: slate
-    primary: indigo
-    accent: indigo
+  name: mkdocs
 
 plugins:
   - search
   - mkdocstrings
-
-markdown_extensions:
-  - pymdownx.highlight
-  - pymdownx.superfences

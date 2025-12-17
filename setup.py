@@ -17,6 +17,14 @@ setup(
         "pybind11>=2.5.0",
     ],
     install_requires=reqs,
+    extras_require={
+        "all": [
+            "mkdocs",
+            "mkdocstrings[python]",
+            "pytest",
+            "ruff",
+        ],
+    },
     entry_points={
         "console_scripts": [
             "brainchop=brainchop.cli:main",
