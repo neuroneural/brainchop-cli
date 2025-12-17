@@ -1,106 +1,76 @@
 API Reference
 =============
 
-brainchop provides a minimal Python API with 4 functions and 1 dataclass.
-
-Quick Start
------------
-
 .. code-block:: python
 
-   from brainchop import load, segment, save, list_models
-
-   # List models
-   print(list_models())
-
-   # Load, segment, save
-   vol = load("input.nii.gz")
-   result = segment(vol, "subcortical")
-   save(result, "output.nii.gz")
-
-Types
------
+   from brainchop import Volume, load, segment, save, list_models
 
 Volume
-~~~~~~
+------
 
 .. code-block:: python
 
    @dataclass
    class Volume:
-       data: Tensor    # (256, 256, 256) uint8
-       header: bytes   # 352-byte NIfTI header
-
-A brain volume with its NIfTI header. Returned by ``load()`` and ``segment()``.
-
-Functions
----------
-
-list_models
-~~~~~~~~~~~
-
-.. code-block:: python
-
-   list_models() -> dict[str, str]
-
-Returns available models as ``{name: description}``.
+       data: Tensor    # (256, 256, 256)
+       header: bytes   # NIfTI header
 
 load
-~~~~
+----
 
 .. code-block:: python
 
    load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume
 
-Load NIfTI file, conform to 256x256x256.
-
-- ``path``: Path to NIfTI file
-- ``crop``: Percentile cutoff for cropping (faster inference)
-- ``ct``: Convert CT scans from Hounsfield to Cormack units
-
-Returns a ``Volume`` with data Tensor ``(256,256,256)`` and header bytes.
+Load and conform NIfTI to 256³. Options: ``crop`` percentile, ``ct`` for Hounsfield conversion.
 
 segment
-~~~~~~~
+-------
 
 .. code-block:: python
 
-   segment(
-       volume: Volume | list[Volume],
-       model: str,
-       shard_size: int = 1,
-   ) -> Volume | list[Volume]
+   segment(volume: Volume | list[Volume], model: str, shard_size: int = 1) -> Volume | list[Volume]
 
-Segment brain volume(s).
+Segment volume(s). Pass a list for batch processing with ``shard_size`` controlling memory.
 
-- ``volume``: Single ``Volume`` or list of ``Volume``s
-- ``model``: Model name (e.g., ``"subcortical"``) or path to custom model directory
-- ``shard_size``: Batch size for processing multiple volumes
-
-Returns segmented ``Volume``(s) - single if input was single, list if input was list.
-
-Custom models can be loaded by path:
-
-.. code-block:: python
-
-   # By name (from registry)
-   result = segment(vol, "subcortical")
-
-   # By path (custom model directory with model.json + model.pth)
-   result = segment(vol, "/path/to/my_model")
-   result = segment(vol, ".")  # current directory
-
-   # By file:// URI
-   result = segment(vol, "file://~/models/custom")
+``model`` can be a name (``"subcortical"``) or path to custom model directory.
 
 save
-~~~~
+----
 
 .. code-block:: python
 
    save(volume: Volume, path: str) -> None
 
-Save volume to NIfTI file.
+Save to ``.nii`` or ``.nii.gz``.
 
-- ``volume``: ``Volume`` to save
-- ``path``: Output path (``.nii`` or ``.nii.gz``)
+list_models
+-----------
+
+.. code-block:: python
+
+   list_models() -> dict[str, str]
+
+Returns ``{name: description}`` of available models.
+
+Example
+-------
+
+.. code-block:: python
+
+   from brainchop import load, segment, save
+
+   # Single volume
+   vol = load("input.nii.gz")
+   result = segment(vol, "subcortical")
+   save(result, "output.nii.gz")
+
+   # Batch
+   vols = [load(f"scan{i}.nii.gz") for i in range(4)]
+   results = segment(vols, "tissue_fast", shard_size=2)
+   for i, r in enumerate(results):
+       save(r, f"out_{i}.nii.gz")
+
+   # Custom model
+   result = segment(vol, "/path/to/model")
+   result = segment(vol, ".")  # current directory

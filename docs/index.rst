@@ -1,44 +1,28 @@
-BrainChop Documentation
-=======================
+BrainChop
+=========
 
-BrainChop is a lightweight, portable brain segmentation tool that runs on pretty much everything.
-It leverages tinygrad for efficient ML inference and supports multiple segmentation models.
+Portable brain segmentation powered by tinygrad.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   installation
-   usage
-   models
-   api
-
-Features
---------
-
-* **Lightweight**: Minimal dependencies, runs on CPU and GPU
-* **Portable**: Works on Linux, macOS, and Windows
-* **Multiple Models**: Support for various segmentation tasks (tissue, subcortical, atlas-based)
-* **Fast**: Optimized inference with BEAM compilation
-* **Flexible**: Batch processing, custom models, and extensive CLI options
-* **API-First**: Clean Python API for scripting, CLI is a thin wrapper
-
-Quick Start
------------
-
-Install brainchop:
+Install
+-------
 
 .. code-block:: bash
 
    pip install brainchop
 
-**Command Line:**
+Usage
+-----
+
+**CLI:**
 
 .. code-block:: bash
 
    brainchop input.nii.gz -o output.nii.gz
+   brainchop input.nii.gz -m subcortical -o output.nii.gz
+   brainchop input.nii.gz --skull-strip -o brain.nii.gz
+   brainchop --list  # show available models
 
-**Python API:**
+**Python:**
 
 .. code-block:: python
 
@@ -48,9 +32,26 @@ Install brainchop:
    result = segment(vol, "subcortical")
    save(result, "output.nii.gz")
 
-Indices and Tables
-==================
+Models
+------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. list-table::
+   :widths: 20 80
+
+   * - ``tissue_fast``
+     - Fast gray/white matter segmentation (default)
+   * - ``subcortical``
+     - Cortical + 15 subcortical regions, robust to clinical scans
+   * - ``DKatlas``
+     - Desikan-Killiany atlas (104 labels)
+   * - ``mindgrab``
+     - Skull stripping / brain extraction
+   * - ``aparc50``
+     - Cortical parcellation (50 regions)
+
+Run ``brainchop --list`` for the full list.
+
+.. toctree::
+   :hidden:
+
+   api
