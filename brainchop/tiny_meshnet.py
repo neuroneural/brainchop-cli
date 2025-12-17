@@ -53,7 +53,6 @@ class SequentialConvArgmax:
         self.chunk_size = chunk_size
 
     def __call__(self, x: Tensor) -> Tensor:
-        print('using sequential argmax in new backend')
         outB = x[:, 0:1].realize()
         outC = Tensor.zeros_like(outB)
 
