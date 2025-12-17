@@ -34,64 +34,16 @@ brainchop input.nii.gz -m subcortical -o output.nii.gz
 
 ## Python API
 
-BrainChop provides a clean Python API for scripting:
-
 ```python
-from brainchop import load_nifti, save_nifti, Model, list_models
+from brainchop import load, segment, save, list_models
 
 # List available models
-for m in list_models():
-    print(f"{m.name}: {m.description}")
+print(list_models())
 
-# Load and segment a brain scan
-nifti = load_nifti("input.nii.gz")
-model = Model("subcortical")
-result = model.segment(nifti)
-save_nifti(result, "output.nii.gz")
-```
-
-### Batch Processing
-
-```python
-from brainchop import load_niftis, save_nifti, Model
-
-# Load multiple scans
-niftis = load_niftis(["scan1.nii.gz", "scan2.nii.gz", "scan3.nii.gz"])
-
-# Segment all (with memory-efficient sharding)
-model = Model("tissue_fast")
-results = model.segment_batch(niftis, shard_size=2)
-
-# Save outputs
-for i, result in enumerate(results):
-    save_nifti(result, f"output_{i}.nii.gz")
-```
-
-### Custom Models
-
-```python
-# Load a custom model with MeshNet format
-model = Model(config_path="custom/model.json", weights_path="custom/model.pth")
-
-# Load a custom model with Spec format (supports funky layers)
-model = Model(config_path="spec/model.json", weights_path="spec/model.pth")
-```
-
-### WebGPU Export
-
-Export models for browser deployment:
-
-```bash
-# Must set WEBGPU=1 before importing brainchop
-WEBGPU=1 python export_script.py
-```
-
-```python
-# export_script.py
-from brainchop import Model
-
-model = Model("tissue_fast")
-code_path, weights_path = model.export(output_dir="./web_model")
+# Load, segment, save
+volume, header = load("input.nii.gz")
+result = segment(volume, "subcortical", header)
+save(result, header, "output.nii.gz")
 ```
 
 ## Docker

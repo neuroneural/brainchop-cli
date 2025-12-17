@@ -1,48 +1,14 @@
 """
-brainchop - Portable brain segmentation tool.
-
-API-first design: use the Python API directly or via CLI.
+brainchop - Portable brain segmentation.
 
 Example:
-    from brainchop import load_nifti, save_nifti, Model, list_models
+    from brainchop import load, segment, save, list_models
 
-    # List models
-    for m in list_models():
-        print(f"{m.name}: {m.description}")
-
-    # Segment
-    nifti = load_nifti("input.nii.gz")
-    model = Model("subcortical")
-    result = model.segment(nifti)
-    save_nifti(result, "output.nii.gz")
+    volume, header = load("input.nii.gz")
+    result = segment(volume, "subcortical", header)
+    save(result, header, "output.nii.gz")
 """
 
-from brainchop.api import (
-    NIfTI,
-    Model,
-    ModelInfo,
-    list_models,
-    load_nifti,
-    load_niftis,
-    save_nifti,
-    nifti_to_tensor,
-    skull_strip,
-    argmax,
-    largest_component,
-    export_channels,
-)
+from brainchop.api import load, save, segment, segment_batch, list_models
 
-__all__ = [
-    "NIfTI",
-    "Model",
-    "ModelInfo",
-    "list_models",
-    "load_nifti",
-    "load_niftis",
-    "save_nifti",
-    "nifti_to_tensor",
-    "skull_strip",
-    "argmax",
-    "largest_component",
-    "export_channels",
-]
+__all__ = ["load", "save", "segment", "segment_batch", "list_models"]
