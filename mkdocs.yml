@@ -4,6 +4,7 @@ repo_url: https://github.com/neuroneural/brainchop-cli
 
 nav:
   - Home: index.md
+  - Examples: examples.md
   - API Reference: api.md
 
 theme:

@@ -39,7 +39,7 @@ for name, desc in list_models().items():
     print(f"{name}: {desc}")
 ```
 
-See [API Reference](api.md) for details.
+See [Examples](examples.md) for more use cases and [API Reference](api.md) for details.
 
 ## Available Models
 
