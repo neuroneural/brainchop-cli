@@ -1,22 +1,32 @@
 {
   "tissue_fast": {
     "folder": "model5_gw_ae",
-    "description": "our fastest tissue segmentation model that produces gray and white matter labels",
+    "description": "⚡ our fastest tissue segmentation model that produces gray and white matter labels",
     "considerations": "min/max normalization"
   },
   "subcortical": {
     "folder": "subcortical",
-    "description": "a robust model that can handle clinical scans and other difficult input volumes producing cortical tissue segmentation accompanied by 15 subcortical regions",
+    "description": "🪓 a robust model that can handle clinical scans and other difficult input volumes producing cortical tissue segmentation accompanied by 15 subcortical regions",
+    "considerations": "min/max normalization"
+  },
+  "subcortical-mini": {
+    "folder": "model18cls",
+    "description": "🪓 a smaller version of subcortical that has only 21 channels instead of 30",
     "considerations": "min/max normalization"
   },
   "DKatlas": {
     "folder": "model21_104class",
-    "description": "segments the brain into the Desikan-Killiany Atlas with 104 labels",
+    "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
     "considerations": "min/max normalization"
   },
   "mindgrab": {
     "folder": "mindgrab",
     "description": "tissue extraction",
     "considerations": "quantile normalization"
+  },
+  "aparc50": {
+    "folder": "model30chan50cls",
+    "description": "🧠 cortical parcellation model with 50 anatomical regions",
+    "considerations": "quantile normalization (5%-95%)"
   }
 }
