@@ -16,8 +16,6 @@ import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
-
 from tinygrad import Tensor
 
 from brainchop.niimath import (
@@ -26,9 +24,6 @@ from brainchop.niimath import (
     truncate_header_bytes,
 )
 from brainchop.tiny_meshnet import load_meshnet
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 # =============================================================================
@@ -122,7 +117,7 @@ def list_models() -> dict[str, str]:
     return {name: details["description"] for name, details in AVAILABLE_MODELS.items()}
 
 
-def load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume:
+def load(path: str, *, crop: float | None = None, ct: bool = False, comply: bool = False) -> Volume:
     """
     Load NIfTI file and conform to 256x256x256.
 
@@ -130,6 +125,7 @@ def load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume:
         path: Path to NIfTI file (.nii or .nii.gz)
         crop: Crop intensity percentile (e.g., 0.01 removes bottom 1%)
         ct: Use CT windowing instead of MRI normalization
+        comply: Insert niimath compliance arguments before conform
 
     Returns:
         Volume with data Tensor (256,256,256) and header bytes
@@ -145,7 +141,7 @@ def load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume:
     """
     from brainchop.utils import crop_to_cutoff
 
-    data, header = conform(os.path.abspath(path), ct=ct)
+    data, header = conform(os.path.abspath(path), ct=ct, comply=comply)
     if crop is not None:
         data, _ = crop_to_cutoff(data, crop)
     return Volume(Tensor(data), header)
@@ -249,7 +245,7 @@ def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
         dummy = Tensor(np.random.randn(batch_size, 1, 256, 256, 256).astype(np.float32))
         _ = m(dummy).realize()
         _save_optimization_cache(model_name, batch_size, beam)
-        print(f"brainchop :: Optimization complete!")
+        print("brainchop :: Optimization complete!")
     finally:
         if original_beam is not None:
             os.environ["BEAM"] = original_beam
@@ -263,7 +259,8 @@ def segment(
     *,
     shard_size: int = 1,
     beam: int = 0,
-) -> Volume | list[Volume]:
+    return_raw: bool = False,
+):  # type: ignore[return]
     """
     Segment brain volume(s).
 
@@ -272,9 +269,11 @@ def segment(
         model: Model name (e.g., "subcortical", "tissue_fast") or path to model dir
         shard_size: Batch size for processing multiple volumes
         beam: BEAM optimization level (0 = use cached or none)
+        return_raw: If True, also return raw model output (pre-argmax) for export_classes
 
     Returns:
         Segmented Volume(s) - single if input was single, list if input was list
+        If return_raw=True, returns tuple of (result, raw_output)
 
     Example:
         ```python
@@ -291,6 +290,10 @@ def segment(
         >>> results = segment(vols, "tissue_fast", shard_size=2)
         >>> len(results)
         4
+
+        # Get raw output for export_classes
+        >>> result, raw = segment(vol, "subcortical", return_raw=True)
+        >>> export_classes(raw, vol.header, "output.nii.gz")
         ```
     """
     # Handle single volume case
@@ -311,6 +314,7 @@ def segment(
 
         m = _load_model(model)
         results: list[Volume] = []
+        raw_outputs: list[Tensor] = []
 
         for i in range(0, len(volumes), shard_size):
             shard = volumes[i : i + shard_size]
@@ -322,7 +326,8 @@ def segment(
             if hasattr(m, "normalize"):
                 batched = m.normalize(batched)
 
-            output = m(batched)  # (B, D, H, W)
+            raw_output = m(batched)  # (B, C, D, H, W) before argmax
+            output = raw_output.argmax(axis=1)  # (B, D, H, W) after argmax
 
             # Split batch and convert back to (X,Y,Z)
             for j in range(output.shape[0]):
@@ -330,8 +335,14 @@ def segment(
                 header = shard[j].header
                 out_np, _ = bwlabel(header, out.numpy())
                 results.append(Volume(Tensor(out_np), header))
+                if return_raw:
+                    raw_outputs.append(raw_output[j:j+1])
 
-        return results[0] if single_input else results
+        result = results[0] if single_input else results
+        if return_raw:
+            raw = raw_outputs[0] if single_input else raw_outputs
+            return result, raw
+        return result
     finally:
         if original_beam is not None:
             os.environ["BEAM"] = original_beam
@@ -407,3 +418,53 @@ def export(
             os.environ["BEAM"] = original_beam
         elif "BEAM" in os.environ:
             del os.environ["BEAM"]
+
+
+def export_classes(raw_output: Tensor, header: bytes, output_path: str) -> list[str]:
+    """
+    Export per-class probability maps as separate NIfTI files.
+
+    Args:
+        raw_output: Raw model output tensor, shape (1, C, D, H, W) before argmax
+        header: 352-byte NIfTI header from input volume
+        output_path: Base output path (e.g., "output.nii.gz")
+
+    Returns:
+        List of saved file paths
+
+    Example:
+        ```python
+        >>> vol = load("brain.nii.gz")
+        >>> result, raw = segment(vol, "subcortical", return_raw=True)
+        >>> paths = export_classes(raw, vol.header, "output.nii.gz")
+        >>> print(paths)
+        ['output_c0.nii', 'output_c1.nii', ...]
+        ```
+    """
+    from brainchop.niimath import _write_nifti
+
+    # Strip extensions to append "_c{i}.nii"
+    base = output_path
+    for ext in [".nii.gz", ".nii"]:
+        if base.endswith(ext):
+            base = base[:-len(ext)]
+            break
+
+    # Get numpy array and drop batch dim: (1, C, D, H, W) -> (C, D, H, W)
+    ch_np = raw_output.numpy().squeeze(0)
+
+    # Modify header for float data
+    header_ba = bytearray(header)
+    header_ba[70:74] = b"\x10\x00\x20\x00"  # Set datatype to float32
+    header_bytes = bytes(header_ba)
+
+    saved_paths = []
+    for i in range(ch_np.shape[0]):
+        # Transpose from (D, H, W) to (W, H, D) for NIfTI
+        chan = ch_np[i].transpose((2, 1, 0))
+        out_fname = f"{base}_c{i}.nii"
+        _write_nifti(out_fname, chan, header_bytes)
+        saved_paths.append(out_fname)
+        print(f"brainchop :: Saved class {i} to {out_fname}")
+
+    return saved_paths

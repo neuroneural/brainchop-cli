@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 from brainchop.api import (
-    Volume, load, save, segment, list_models, optimize,
+    Volume, load, save, segment, list_models, optimize, export_classes,
     _is_first_run, _get_best_beam,
 )
 from brainchop.niimath import grow_border, truncate_header_bytes
@@ -20,24 +20,64 @@ def get_parser() -> argparse.ArgumentParser:
     default_model = list(models.keys())[0] if models else "tissue_fast"
 
     parser = argparse.ArgumentParser(
-        description="BrainChop: portable brain segmentation tool"
+        prog="brainchop",
+        description="BrainChop: portable brain segmentation tool",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  brainchop input.nii.gz -o output.nii.gz
+  brainchop input.nii.gz -m subcortical
+  brainchop *.nii.gz --batch-size 4
+  brainchop input.nii.gz --skull-strip --mask brain_mask.nii.gz
+"""
     )
 
+    # Positional
     parser.add_argument("input", nargs="*", help="Input NIfTI file(s)")
-    parser.add_argument("-o", "--output", default="output.nii.gz", help="Output path")
-    parser.add_argument("-m", "--model", default=default_model, help=f"Model (default: {default_model})")
-    parser.add_argument("-c", "--custom", help="Custom model directory")
-    parser.add_argument("-ss", "--skull-strip", action="store_true", help="Skull strip (alias for -m mindgrab)")
-    parser.add_argument("-l", "--list", action="store_true", help="List models")
-    parser.add_argument("-u", "--update", action="store_true", help="Update model listing")
-    parser.add_argument("--ct", action="store_true", help="CT scan conversion")
-    parser.add_argument("--crop", nargs="?", type=float, const=2.0, help="Crop percentile")
-    parser.add_argument("-i", "--inverse-conform", action="store_true", help="Inverse conform output")
-    parser.add_argument("-a", "--mask", nargs="?", const="mask.nii.gz", help="Save mask (mindgrab)")
-    parser.add_argument("-b", "--border", type=int, default=0, help="Mask border mm (mindgrab)")
-    parser.add_argument("-bs", "--batch-size", type=int, default=1, help="Batch size")
-    parser.add_argument("--no-optimize", action="store_true", help="Skip optimization prompt")
-    parser.add_argument("--beam", type=int, default=None, help="BEAM optimization level")
+
+    # Common flags (short + long)
+    parser.add_argument("-o", "--output", default="output.nii.gz",
+                        help="Output path (default: output.nii.gz)")
+    parser.add_argument("-m", "--model", default=default_model,
+                        help=f"Model name (default: {default_model})")
+    parser.add_argument("-l", "--list", action="store_true",
+                        help="List available models")
+    parser.add_argument("-u", "--update", action="store_true",
+                        help="Update model listing from remote")
+
+    # Model options (long-only, these are less common)
+    parser.add_argument("--custom", metavar="DIR",
+                        help="Custom model directory (containing model.json and model.pth)")
+    parser.add_argument("--skull-strip", action="store_true",
+                        help="Skull strip mode (alias for --model mindgrab)")
+
+    # Preprocessing (long-only)
+    parser.add_argument("--ct", action="store_true",
+                        help="CT scan: convert Hounsfield to Cormack units")
+    parser.add_argument("--crop", nargs="?", type=float, const=2.0, metavar="PCT",
+                        help="Crop to brain bounding box (default percentile: 2.0)")
+    parser.add_argument("--comply", action="store_true",
+                        help="Insert compliance arguments to niimath before conform")
+
+    # Postprocessing (long-only)
+    parser.add_argument("--inverse-conform", action="store_true",
+                        help="Reslice output back to original input space")
+    parser.add_argument("--export-classes", action="store_true",
+                        help="Export per-class probability maps as separate files")
+
+    # Mindgrab-specific (long-only)
+    parser.add_argument("--mask", nargs="?", const="mask.nii.gz", metavar="PATH",
+                        help="Save binary brain mask (mindgrab only, default: mask.nii.gz)")
+    parser.add_argument("--border", type=int, default=0, metavar="MM",
+                        help="Grow mask border in mm (mindgrab only, default: 0)")
+
+    # Performance (long-only)
+    parser.add_argument("--batch-size", type=int, default=1, metavar="N",
+                        help="Batch size for multiple inputs (default: 1)")
+    parser.add_argument("--beam", type=int, default=None, metavar="N",
+                        help="BEAM optimization level (default: use cached or 0)")
+    parser.add_argument("--no-optimize", action="store_true",
+                        help="Skip first-run optimization prompt")
 
     return parser
 
@@ -84,7 +124,7 @@ def main():
     if args.skull_strip:
         model_name = "mindgrab"
     elif args.custom:
-        model_name = args.custom
+        model_name = f"file://{os.path.abspath(args.custom)}"
     else:
         model_name = args.model
 
@@ -105,10 +145,10 @@ def main():
         print(f"brainchop :: [{i+1}/{len(args.input)}] {input_path}")
 
         # Load
-        vol = load(abs_path, crop=args.crop, ct=args.ct)
+        vol = load(abs_path, crop=args.crop, ct=args.ct, comply=args.comply)
 
         # Segment (single volume, so result is always Volume)
-        result = segment(vol, model_name, beam=beam)
+        result, raw_output = segment(vol, model_name, beam=beam, return_raw=True)
         assert isinstance(result, Volume)
 
         # Output path
@@ -117,12 +157,17 @@ def main():
         else:
             base = Path(input_path).stem.replace(".nii", "")
             # Use model name for output, hash if it's a path
-            if Path(model_name).is_dir():
+            if model_name.startswith("file://") or Path(model_name).is_dir():
                 import hashlib
                 model_label = hashlib.sha1(model_name.encode()).hexdigest()[:8]
             else:
                 model_label = model_name
             output_path = f"{base}_{model_label}_{i+1}.nii.gz"
+
+        # Export class probability maps if requested
+        if args.export_classes and raw_output is not None:
+            export_classes(raw_output, vol.header, output_path)
+            print(f"brainchop :: Exported class probability maps")
 
         # Save
         if model_name == "mindgrab":
