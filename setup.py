@@ -19,7 +19,7 @@ setup(
     install_requires=reqs,
     entry_points={
         "console_scripts": [
-            "brainchop=brainchop.main:main",
+            "brainchop=brainchop.cli:main",
         ],
     },
     include_package_data=True,
