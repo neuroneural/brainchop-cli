@@ -121,11 +121,20 @@ def segment(
     """
     # Handle single volume case
     single_input = not isinstance(volume, list)
-    volumes = [volume] if single_input else volume
-    headers = [header] if single_input and header is not None else header
+    if single_input:
+        volumes: list[np.ndarray] = [volume]  # type: ignore[list-item]
+    else:
+        volumes = volume  # type: ignore[assignment]
+
+    headers_list: list[bytes] | None = None
+    if header is not None:
+        if isinstance(header, bytes):
+            headers_list = [header]
+        else:
+            headers_list = header
 
     m = _load_model(model)
-    results = []
+    results: list[np.ndarray] = []
 
     for i in range(0, len(volumes), shard_size):
         shard = volumes[i : i + shard_size]
@@ -141,8 +150,8 @@ def segment(
 
         for j, out in enumerate(output):
             result = out.transpose((2, 1, 0)).astype(np.uint8)
-            if headers is not None:
-                result, _ = bwlabel(headers[i + j], result)
+            if headers_list is not None:
+                result, _ = bwlabel(headers_list[i + j], result)
             results.append(result)
 
     return results[0] if single_input else results

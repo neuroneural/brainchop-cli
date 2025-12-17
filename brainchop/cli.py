@@ -7,6 +7,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import numpy as np
+
 from brainchop.api import load, save, segment, list_models
 from brainchop.niimath import grow_border, truncate_header_bytes
 
@@ -71,8 +73,9 @@ def main():
         # Load
         volume, header = load(abs_path, crop=args.crop, ct=args.ct)
 
-        # Segment
+        # Segment (single volume, so result is always np.ndarray)
         result = segment(volume, model_name, header)
+        assert isinstance(result, np.ndarray)
 
         # Output path
         if len(args.input) == 1 and args.output != "output.nii.gz":
