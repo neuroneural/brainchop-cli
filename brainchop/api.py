@@ -429,17 +429,31 @@ class Model:
         from brainchop.export_model import export_model
         from tinygrad.nn.state import safe_save
 
-        # Create a dummy input tensor for tracing
-        dummy_input = Tensor(np.random.randn(1, 1, 256, 256, 256).astype(np.float32))
+        # Set device for export target
+        device_map = {"webgpu": "WEBGPU", "clang": "CPU", "wasm": "CPU"}
+        original_device = os.environ.get(device_map.get(target, "CPU"))
+        if target in device_map:
+            os.environ[device_map[target]] = "1"
 
-        model_name = self._name or "model"
-        prg, _, _, state = export_model(
-            self._model,
-            target,
-            dummy_input,
-            model_name=model_name,
-            stream_weights=stream_weights,
-        )
+        try:
+            # Create a dummy input tensor for tracing
+            dummy_input = Tensor(np.random.randn(1, 1, 256, 256, 256).astype(np.float32))
+
+            model_name = self._name or "model"
+            prg, _, _, state = export_model(
+                self._model,
+                target,
+                dummy_input,
+                model_name=model_name,
+                stream_weights=stream_weights,
+            )
+        finally:
+            # Restore original device setting
+            if target in device_map:
+                if original_device is not None:
+                    os.environ[device_map[target]] = original_device
+                elif device_map[target] in os.environ:
+                    del os.environ[device_map[target]]
 
         out_path = Path(output_dir)
         out_path.mkdir(parents=True, exist_ok=True)
