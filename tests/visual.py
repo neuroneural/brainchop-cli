@@ -68,15 +68,18 @@ print("running inference...")
 for input_path, model, output_path in output_paths:
     print(f"\n>>> {model}")
 
-    # Load
-    vol = bc.load(str(input_path))
+    try:
+        # Load
+        vol = bc.load(str(input_path))
 
-    # Segment (beam=0 means no optimization, no prompts)
-    result = bc.segment(vol, model, beam=0)
+        # Segment (beam=0 means no optimization, no prompts)
+        result = bc.segment(vol, model, beam=0)
 
-    # Save
-    bc.save(result, str(output_path))
-    print(f"    saved: {output_path}")
+        # Save
+        bc.save(result, str(output_path))
+        print(f"    saved: {output_path}")
+    except Exception as e:
+        print(f"    FAILED: {e}")
 
 print("=" * 80)
 print("done! run mrpeek commands above to inspect outputs")
