@@ -11,3 +11,4 @@ nifti/
 .DS_Store
 *.sh
 *.so
+_build/

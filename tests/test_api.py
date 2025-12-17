@@ -7,7 +7,16 @@ import numpy as np
 from pathlib import Path
 from tinygrad.helpers import fetch
 
-from brainchop import NIfTI, Model, list_models, ModelInfo
+from brainchop import (
+    NIfTI,
+    Model,
+    ModelInfo,
+    list_models,
+    load_nifti,
+    load_niftis,
+    save_nifti,
+    nifti_to_tensor,
+)
 
 
 # Test data
@@ -48,10 +57,10 @@ class TestListModels:
 
 
 class TestNIfTI:
-    """Tests for NIfTI class."""
+    """Tests for NIfTI loading functions."""
 
     def test_load_single(self, test_nifti_path):
-        nifti = NIfTI.load(str(test_nifti_path))
+        nifti = load_nifti(str(test_nifti_path))
         assert isinstance(nifti, NIfTI)
         assert isinstance(nifti.volume, np.ndarray)
         assert nifti.volume.shape == (256, 256, 256)
@@ -60,14 +69,14 @@ class TestNIfTI:
         assert nifti.source_path is not None
 
     def test_load_list(self, test_nifti_path):
-        niftis = NIfTI.load([str(test_nifti_path), str(test_nifti_path)])
+        niftis = load_niftis([str(test_nifti_path), str(test_nifti_path)])
         assert isinstance(niftis, list)
         assert len(niftis) == 2
         for n in niftis:
             assert isinstance(n, NIfTI)
 
     def test_load_with_crop(self, test_nifti_path):
-        nifti = NIfTI.load(str(test_nifti_path), crop_percentile=2.0)
+        nifti = load_nifti(str(test_nifti_path), crop_percentile=2.0)
         assert isinstance(nifti, NIfTI)
         assert nifti.crop_coords is not None
         # Cropped volume should be smaller or equal
@@ -76,14 +85,14 @@ class TestNIfTI:
         assert nifti.volume.shape[2] <= 256
 
     def test_to_tensor(self, test_nifti_path):
-        nifti = NIfTI.load(str(test_nifti_path))
-        tensor = nifti.to_tensor()
+        nifti = load_nifti(str(test_nifti_path))
+        tensor = nifti_to_tensor(nifti)
         assert tensor.shape == (1, 1, 256, 256, 256)
 
     def test_save(self, test_nifti_path, tmp_path):
-        nifti = NIfTI.load(str(test_nifti_path))
+        nifti = load_nifti(str(test_nifti_path))
         output_path = tmp_path / "output.nii.gz"
-        nifti.save(str(output_path))
+        save_nifti(nifti, str(output_path))
         assert output_path.exists()
 
 
@@ -106,39 +115,39 @@ class TestModel:
         assert info.name == "tissue_fast"
 
     def test_call_returns_numpy(self, test_nifti_path):
-        nifti = NIfTI.load(str(test_nifti_path))
+        nifti = load_nifti(str(test_nifti_path))
         model = Model("tissue_fast")
         output = model(nifti)
         assert isinstance(output, np.ndarray)
-        # Output shape: (B, D, H, W) since PREARGMAX is default
+        # Output shape: (1, D, H, W) since PREARGMAX is default
         assert output.shape[0] == 1  # batch size
 
     def test_segment_single(self, test_nifti_path):
-        nifti = NIfTI.load(str(test_nifti_path))
+        nifti = load_nifti(str(test_nifti_path))
         model = Model("tissue_fast")
         result = model.segment(nifti)
         assert isinstance(result, NIfTI)
         assert result.volume.shape == (256, 256, 256)
         assert result.volume.dtype == np.uint8
 
-    def test_segment_list(self, test_nifti_path):
-        niftis = NIfTI.load([str(test_nifti_path), str(test_nifti_path)])
+    def test_segment_batch(self, test_nifti_path):
+        niftis = load_niftis([str(test_nifti_path), str(test_nifti_path)])
         model = Model("tissue_fast")
-        results = model.segment(niftis)
+        results = model.segment_batch(niftis)
         assert isinstance(results, list)
         assert len(results) == 2
         for r in results:
             assert isinstance(r, NIfTI)
 
-    def test_segment_with_shard_size(self, test_nifti_path):
-        niftis = NIfTI.load([str(test_nifti_path)] * 4)
+    def test_segment_batch_with_shard_size(self, test_nifti_path):
+        niftis = load_niftis([str(test_nifti_path)] * 4)
         model = Model("tissue_fast")
-        results = model.segment(niftis, shard_size=2)
+        results = model.segment_batch(niftis, shard_size=2)
         assert isinstance(results, list)
         assert len(results) == 4
 
     def test_segment_no_postprocess(self, test_nifti_path):
-        nifti = NIfTI.load(str(test_nifti_path))
+        nifti = load_nifti(str(test_nifti_path))
         model = Model("tissue_fast")
         result = model.segment(nifti, postprocess=False)
         assert isinstance(result, NIfTI)
@@ -152,7 +161,7 @@ class TestEndToEnd:
     def test_basic_workflow(self, test_nifti_path, tmp_path):
         """Test the basic workflow: load -> segment -> save."""
         # Load
-        nifti = NIfTI.load(str(test_nifti_path))
+        nifti = load_nifti(str(test_nifti_path))
 
         # Segment
         model = Model("tissue_fast")
@@ -160,7 +169,7 @@ class TestEndToEnd:
 
         # Save
         output_path = tmp_path / "segmented.nii.gz"
-        result.save(str(output_path))
+        save_nifti(result, str(output_path))
 
         assert output_path.exists()
         assert output_path.stat().st_size > 0
@@ -169,22 +178,22 @@ class TestEndToEnd:
         """Test batch processing workflow."""
         # Load multiple
         paths = [str(test_nifti_path)] * 3
-        niftis = NIfTI.load(paths)
+        niftis = load_niftis(paths)
 
         # Segment batch
         model = Model("tissue_fast")
-        results = model.segment(niftis, shard_size=2)
+        results = model.segment_batch(niftis, shard_size=2)
 
         # Save all
         for i, result in enumerate(results):
             output_path = tmp_path / f"output_{i}.nii.gz"
-            result.save(str(output_path))
+            save_nifti(result, str(output_path))
             assert output_path.exists()
 
     def test_cropped_workflow(self, test_nifti_path, tmp_path):
         """Test workflow with cropping for faster inference."""
         # Load with crop
-        nifti = NIfTI.load(str(test_nifti_path), crop_percentile=2.0)
+        nifti = load_nifti(str(test_nifti_path), crop_percentile=2.0)
 
         # Segment
         model = Model("tissue_fast")
@@ -195,7 +204,7 @@ class TestEndToEnd:
 
         # Save
         output_path = tmp_path / "cropped_output.nii.gz"
-        result.save(str(output_path))
+        save_nifti(result, str(output_path))
         assert output_path.exists()
 
 

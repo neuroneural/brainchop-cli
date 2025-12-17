@@ -37,32 +37,34 @@ brainchop input.nii.gz -m subcortical -o output.nii.gz
 BrainChop provides a clean Python API for scripting:
 
 ```python
-from brainchop import NIfTI, Model, list_models
+from brainchop import load_nifti, save_nifti, Model, list_models
 
 # List available models
 for m in list_models():
     print(f"{m.name}: {m.description}")
 
 # Load and segment a brain scan
-nifti = NIfTI.load("input.nii.gz")
+nifti = load_nifti("input.nii.gz")
 model = Model("subcortical")
 result = model.segment(nifti)
-result.save("output.nii.gz")
+save_nifti(result, "output.nii.gz")
 ```
 
 ### Batch Processing
 
 ```python
+from brainchop import load_niftis, save_nifti, Model
+
 # Load multiple scans
-niftis = NIfTI.load(["scan1.nii.gz", "scan2.nii.gz", "scan3.nii.gz"])
+niftis = load_niftis(["scan1.nii.gz", "scan2.nii.gz", "scan3.nii.gz"])
 
 # Segment all (with memory-efficient sharding)
 model = Model("tissue_fast")
-results = model.segment(niftis, shard_size=2)
+results = model.segment_batch(niftis, shard_size=2)
 
 # Save outputs
 for i, result in enumerate(results):
-    result.save(f"output_{i}.nii.gz")
+    save_nifti(result, f"output_{i}.nii.gz")
 ```
 
 ### Custom Models

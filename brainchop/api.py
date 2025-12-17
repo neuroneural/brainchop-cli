@@ -5,17 +5,17 @@ This module provides a clean, API-first interface for brain MRI segmentation.
 The CLI is a thin wrapper around this API.
 
 Example usage:
-    from brainchop import NIfTI, Model, list_models
+    from brainchop import load_nifti, save_nifti, Model, list_models
 
     # List available models
     for m in list_models():
         print(f"{m.name}: {m.description}")
 
     # Load and segment
-    nifti = NIfTI.load("input.nii.gz")
+    nifti = load_nifti("input.nii.gz")
     model = Model("subcortical")
     result = model.segment(nifti)
-    result.save("output.nii.gz")
+    save_nifti(result, "output.nii.gz")
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import overload
 
 import numpy as np
 from tinygrad.tensor import Tensor
@@ -75,7 +74,7 @@ def list_models() -> list[ModelInfo]:
 @dataclass
 class NIfTI:
     """
-    Wrapper for NIfTI brain volumes.
+    NIfTI brain volume data.
 
     Holds the conformed 256x256x256 volume, header bytes, and optional
     crop coordinates for restoring original size.
@@ -86,105 +85,92 @@ class NIfTI:
     crop_coords: tuple[int, ...] | None = None  # (x_min, x_max, y_min, y_max, z_min, z_max)
     source_path: str | None = None  # Original file path
 
-    @overload
-    @classmethod
-    def load(
-        cls,
-        path: str,
-        *,
-        crop_percentile: float | None = None,
-        ct: bool = False,
-        comply: bool = False,
-    ) -> NIfTI: ...
 
-    @overload
-    @classmethod
-    def load(
-        cls,
-        path: list[str],
-        *,
-        crop_percentile: float | None = None,
-        ct: bool = False,
-        comply: bool = False,
-    ) -> list[NIfTI]: ...
+def load_nifti(
+    path: str,
+    *,
+    crop_percentile: float | None = None,
+    ct: bool = False,
+    comply: bool = False,
+) -> NIfTI:
+    """
+    Load and conform a NIfTI file to 256x256x256 uint8.
 
-    @classmethod
-    def load(
-        cls,
-        path: str | list[str],
-        *,
-        crop_percentile: float | None = None,
-        ct: bool = False,
-        comply: bool = False,
-    ) -> NIfTI | list[NIfTI]:
-        """
-        Load and conform NIfTI file(s) to 256x256x256 uint8.
+    Args:
+        path: Path to NIfTI file
+        crop_percentile: If set, crop volume by this percentile cutoff (faster inference)
+        ct: Convert CT scans from Hounsfield to Cormack units
+        comply: Insert compliance arguments to niimath
 
-        Args:
-            path: Path to NIfTI file, or list of paths
-            crop_percentile: If set, crop volume by this percentile cutoff (faster inference)
-            ct: Convert CT scans from Hounsfield to Cormack units
-            comply: Insert compliance arguments to niimath
+    Returns:
+        NIfTI data object
+    """
+    from brainchop.utils import crop_to_cutoff
 
-        Returns:
-            Single NIfTI if path is string, list of NIfTI if path is list
-        """
-        if isinstance(path, list):
-            return [
-                cls._load_single(p, crop_percentile=crop_percentile, ct=ct, comply=comply)
-                for p in path
-            ]
-        return cls._load_single(path, crop_percentile=crop_percentile, ct=ct, comply=comply)
+    abs_path = os.path.abspath(path)
+    volume, header = conform(abs_path, comply=comply, ct=ct)
 
-    @classmethod
-    def _load_single(
-        cls,
-        path: str,
-        *,
-        crop_percentile: float | None = None,
-        ct: bool = False,
-        comply: bool = False,
-    ) -> NIfTI:
-        """Load a single NIfTI file."""
-        from brainchop.utils import crop_to_cutoff
+    crop_coords = None
+    if crop_percentile is not None:
+        volume, crop_coords = crop_to_cutoff(volume, crop_percentile)
 
-        abs_path = os.path.abspath(path)
-        volume, header = conform(abs_path, comply=comply, ct=ct)
+    return NIfTI(
+        volume=volume,
+        header=header,
+        crop_coords=crop_coords,
+        source_path=abs_path,
+    )
 
-        crop_coords = None
-        if crop_percentile is not None:
-            volume, crop_coords = crop_to_cutoff(volume, crop_percentile)
 
-        return cls(
-            volume=volume,
-            header=header,
-            crop_coords=crop_coords,
-            source_path=abs_path,
-        )
+def load_niftis(
+    paths: list[str],
+    *,
+    crop_percentile: float | None = None,
+    ct: bool = False,
+    comply: bool = False,
+) -> list[NIfTI]:
+    """
+    Load and conform multiple NIfTI files.
 
-    def to_tensor(self) -> Tensor:
-        """Convert to tinygrad Tensor in model-ready format (1, 1, D, H, W)."""
-        # Transpose from (X, Y, Z) to (Z, Y, X) for model input
-        arr = self.volume.transpose((2, 1, 0)).astype(np.float32)
-        return Tensor(arr).rearrange("... -> 1 1 ...")
+    Args:
+        paths: List of paths to NIfTI files
+        crop_percentile: If set, crop volumes by this percentile cutoff
+        ct: Convert CT scans from Hounsfield to Cormack units
+        comply: Insert compliance arguments to niimath
 
-    def save(self, path: str, *, compress: bool = True) -> None:
-        """
-        Save NIfTI volume to path.
+    Returns:
+        List of NIfTI data objects
+    """
+    return [
+        load_nifti(p, crop_percentile=crop_percentile, ct=ct, comply=comply)
+        for p in paths
+    ]
 
-        Args:
-            path: Output path (.nii or .nii.gz)
-            compress: Whether to gzip compress (default True, inferred from extension)
-        """
-        gzip_flag = "1" if compress and not path.endswith(".nii") else "0"
-        header = truncate_header_bytes(self.header)
 
-        cmd = ["niimath", "-", "-gz", gzip_flag, path, "-odt", "char"]
-        subprocess.run(
-            cmd,
-            input=header + self.volume.tobytes(),
-            check=True,
-        )
+def save_nifti(nifti: NIfTI, path: str, *, compress: bool = True) -> None:
+    """
+    Save NIfTI volume to path.
+
+    Args:
+        nifti: NIfTI data to save
+        path: Output path (.nii or .nii.gz)
+        compress: Whether to gzip compress (default True, inferred from extension)
+    """
+    gzip_flag = "1" if compress and not path.endswith(".nii") else "0"
+    header = truncate_header_bytes(nifti.header)
+
+    cmd = ["niimath", "-", "-gz", gzip_flag, path, "-odt", "char"]
+    subprocess.run(
+        cmd,
+        input=header + nifti.volume.tobytes(),
+        check=True,
+    )
+
+
+def nifti_to_tensor(nifti: NIfTI) -> Tensor:
+    """Convert NIfTI to tinygrad Tensor in model-ready format (1, 1, D, H, W)."""
+    arr = nifti.volume.transpose((2, 1, 0)).astype(np.float32)
+    return Tensor(arr).rearrange("... -> 1 1 ...")
 
 
 class Model:
@@ -301,35 +287,47 @@ class Model:
         """Access the underlying tinygrad model directly for export/advanced use."""
         return self._model
 
-    @overload
-    def __call__(self, nifti: NIfTI, *, shard_size: int = 1) -> np.ndarray: ...
-
-    @overload
-    def __call__(self, nifti: list[NIfTI], *, shard_size: int = 1) -> np.ndarray: ...
-
-    def __call__(self, nifti: NIfTI | list[NIfTI], *, shard_size: int = 1) -> np.ndarray:
+    def __call__(self, nifti: NIfTI, *, shard_size: int = 1) -> np.ndarray:
         """
-        Run inference, return raw output (B, C, D, H, W).
+        Run inference on a single NIfTI, return raw output.
 
         Args:
-            nifti: Single NIfTI or list of NIfTIs
+            nifti: NIfTI data
+            shard_size: Unused (for API compatibility with batch version)
+
+        Returns:
+            Raw model output as numpy array (1, D, H, W)
+        """
+        tensor = nifti_to_tensor(nifti)
+
+        # Normalize
+        if hasattr(self._model, "normalize"):
+            tensor = self._model.normalize(tensor)
+
+        # Run inference
+        output = self._model(tensor)
+        return output.numpy()
+
+    def __call_batch__(self, niftis: list[NIfTI], *, shard_size: int = 1) -> np.ndarray:
+        """
+        Run inference on multiple NIfTIs, return raw output.
+
+        Args:
+            niftis: List of NIfTI data
             shard_size: Process inputs in chunks of this size (for memory management)
 
         Returns:
-            Raw model output as numpy array
+            Raw model output as numpy array (B, D, H, W)
         """
-        niftis = [nifti] if isinstance(nifti, NIfTI) else nifti
-
         all_outputs = []
         for i in range(0, len(niftis), shard_size):
             shard = niftis[i : i + shard_size]
 
             # Stack tensors
-            tensors = [n.to_tensor() for n in shard]
+            tensors = [nifti_to_tensor(n) for n in shard]
             if len(tensors) == 1:
                 batched = tensors[0]
             else:
-                # Stack along batch dimension
                 batched = Tensor.stack(*[t.squeeze(0) for t in tensors], dim=0)
 
             # Normalize
@@ -340,86 +338,95 @@ class Model:
             output = self._model(batched)
             all_outputs.append(output.numpy())
 
-        # Concatenate all shard outputs
         return np.concatenate(all_outputs, axis=0)
 
-    @overload
-    def segment(
-        self,
-        nifti: NIfTI,
-        *,
-        postprocess: bool = True,
-        shard_size: int = 1,
-    ) -> NIfTI: ...
-
-    @overload
-    def segment(
-        self,
-        nifti: list[NIfTI],
-        *,
-        postprocess: bool = True,
-        shard_size: int = 1,
-    ) -> list[NIfTI]: ...
-
-    def segment(
-        self,
-        nifti: NIfTI | list[NIfTI],
-        *,
-        postprocess: bool = True,
-        shard_size: int = 1,
-    ) -> NIfTI | list[NIfTI]:
+    def segment(self, nifti: NIfTI, *, postprocess: bool = True) -> NIfTI:
         """
-        Run inference + postprocessing, return segmented NIfTI(s).
+        Run inference + postprocessing, return segmented NIfTI.
 
         Args:
-            nifti: Single NIfTI or list of NIfTIs
+            nifti: NIfTI data
+            postprocess: Apply argmax + bwlabel (default True)
+
+        Returns:
+            Segmented NIfTI
+        """
+        from brainchop.utils import pad_to_original_size
+
+        raw_output = self.__call__(nifti)
+
+        if postprocess:
+            # Model outputs argmaxed labels (1, D, H, W)
+            # Rearrange from (1, D, H, W) to (Z, Y, X)
+            output = raw_output[0].transpose((2, 1, 0)).astype(np.uint8)
+
+            # Pad back if cropped
+            if nifti.crop_coords is not None:
+                output = pad_to_original_size(output, nifti.crop_coords)
+
+            # Connected component labeling
+            labels, new_header = bwlabel(nifti.header, output)
+            new_header = set_header_intent_label(new_header)
+        else:
+            # No postprocessing - raw output is (D, H, W), transpose to (Z, Y, X)
+            labels = raw_output[0].transpose((2, 1, 0)).astype(np.float32)
+            new_header = nifti.header
+
+        return NIfTI(
+            volume=labels,
+            header=new_header,
+            crop_coords=None,
+            source_path=nifti.source_path,
+        )
+
+    def segment_batch(
+        self,
+        niftis: list[NIfTI],
+        *,
+        postprocess: bool = True,
+        shard_size: int = 1,
+    ) -> list[NIfTI]:
+        """
+        Run inference + postprocessing on multiple NIfTIs.
+
+        Args:
+            niftis: List of NIfTI data
             postprocess: Apply argmax + bwlabel (default True)
             shard_size: Process inputs in chunks of this size
 
         Returns:
-            Segmented NIfTI(s) - single if input was single, list if input was list
+            List of segmented NIfTIs
         """
         from brainchop.utils import pad_to_original_size
 
-        single_input = isinstance(nifti, NIfTI)
-        niftis_list: list[NIfTI] = [nifti] if single_input else nifti  # type: ignore[assignment]
+        raw_output = self.__call_batch__(niftis, shard_size=shard_size)
 
-        # Run inference
-        raw_output = self.__call__(niftis_list, shard_size=shard_size)  # type: ignore[arg-type]
-
-        # Post-process each result
         results: list[NIfTI] = []
-        for i, n in enumerate(niftis_list):
-            output_channels = raw_output[i : i + 1]  # Keep batch dim
+        for i, n in enumerate(niftis):
+            output_channels = raw_output[i : i + 1]
 
             if postprocess:
-                # Model always outputs argmaxed labels (1, D, H, W)
-                # Rearrange from (1, D, H, W) to (Z, Y, X)
                 output = output_channels[0].transpose((2, 1, 0)).astype(np.uint8)
 
-                # Pad back if cropped
                 if n.crop_coords is not None:
                     output = pad_to_original_size(output, n.crop_coords)
 
-                # Connected component labeling
                 labels, new_header = bwlabel(n.header, output)
                 new_header = set_header_intent_label(new_header)
             else:
-                # No postprocessing - just return raw
-                output = output_channels[0].transpose((0, 3, 2, 1)).astype(np.float32)
+                labels = output_channels[0].transpose((2, 1, 0)).astype(np.float32)
                 new_header = n.header
-                labels = output
 
             results.append(
                 NIfTI(
                     volume=labels,
                     header=new_header,
-                    crop_coords=None,  # Already restored
+                    crop_coords=None,
                     source_path=n.source_path,
                 )
             )
 
-        return results[0] if single_input else results
+        return results
 
     def export(
         self,
