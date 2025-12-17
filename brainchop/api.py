@@ -210,6 +210,9 @@ class Model:
         Args:
             name: Model name (e.g., "subcortical", "mindgrab")
             config_path: Path to custom model.json (alternative to name)
+                         Supports two formats:
+                         - MeshNet format: {"layers": [...], "bnorm": bool, ...}
+                         - Spec format: {"forward_pass": [...], "preprocessing": {...}}
             weights_path: Path to custom model.pth (required if config_path set)
             optimize: Enable BEAM optimization (explicit opt-in)
             beam_level: BEAM level when optimize=True (default 2)
@@ -225,8 +228,8 @@ class Model:
 
         try:
             if config_path and weights_path:
-                # Custom model from paths
-                self._model = load_meshnet(config_path, weights_path)
+                # Custom model from paths - detect format
+                self._model = self._load_custom(config_path, weights_path)
                 self._info = ModelInfo(
                     name="custom",
                     description="Custom model",
@@ -244,6 +247,22 @@ class Model:
                 os.environ["BEAM"] = original_beam
             elif "BEAM" in os.environ and optimize:
                 del os.environ["BEAM"]
+
+    def _load_custom(self, config_path: str, weights_path: str):
+        """Load custom model, auto-detecting config format."""
+        import json
+
+        with open(config_path) as f:
+            config = json.load(f)
+
+        # Detect format: spec format has "forward_pass", meshnet has "layers"
+        if "forward_pass" in config:
+            # Use types.py build_model for spec format (supports funky layers)
+            from brainchop.types import build_model
+            return build_model(config_path, weights_path)
+        else:
+            # Use meshnet loader for standard format
+            return load_meshnet(config_path, weights_path)
 
     def _load_by_name(self, name: str) -> tuple:
         """Load model by name from registry."""

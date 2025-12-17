@@ -1,13 +1,10 @@
 import requests
 import os
-import subprocess
 import json
 import numpy as np
 from pathlib import Path
 from typing import Any, Tuple
-from urllib.parse import urlparse
-from .niimath import _write_nifti, grow_border
-from .tiny_meshnet import load_meshnet
+from .niimath import _write_nifti
 
 # ! : is of type termination (meaning runtime is interrupted)
 
@@ -71,11 +68,6 @@ def unwrap_path(path):  # -> String | !
     return str(path)
 
 
-def unwrap_model_name(s: str):  # -> String | !
-    assert s in AVAILABLE_MODELS.keys(), f"Error: {s} is not an available model"
-    return s
-
-
 def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
     """New native backend for models"""
     if model_name == ".":
@@ -106,87 +98,6 @@ def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
         except Exception:
             download(f"{base_url}{model_dir}/model.bin", bin_fn)
             return json_fn, bin_fn
-
-
-def _load_model_from_uri(uri: str):
-    """Loads a model from a file URI, correctly handling all path formats."""
-    parsed_uri = urlparse(uri)
-    if parsed_uri.scheme != 'file':
-        raise ValueError(f"Unsupported URI scheme: {parsed_uri.scheme}")
-
-    # Reconstruct path for non-standard cases like file://Users/spike/...
-    path_str = parsed_uri.path
-    if parsed_uri.netloc and parsed_uri.netloc != 'localhost':
-        path_str = "/" + parsed_uri.netloc + path_str
-
-    # **THE FIX**: If urlparse gives a path like '/~', strip the leading '/'
-    # so that .expanduser() can correctly interpret the tilde.
-    if path_str.startswith('/~'):
-        path_str = path_str[1:]
-
-    # Now, expand the tilde and resolve to an absolute path
-    model_dir = Path(path_str).expanduser().resolve()
-
-    if not model_dir.is_dir():
-        raise FileNotFoundError(f"Model directory not found: {model_dir}")
-
-    config_fn = model_dir / "model.json"
-    pth_fn = model_dir / "model.pth"
-    bin_fn = model_dir / "model.bin"
-
-    if not config_fn.exists():
-        raise FileNotFoundError(f"model.json not found in {model_dir}")
-
-    if pth_fn.exists():
-        weights_fn = pth_fn
-    elif bin_fn.exists():
-        weights_fn = bin_fn
-    else:
-        raise FileNotFoundError(f"No model weights (.pth or .bin) found in {model_dir}")
-
-    return get_model_from_custom_path(str(config_fn), str(weights_fn))
-
-
-# tinygrad model :: (pre-preprocessed) Tensor(1, ic,256,256,256) -> (pre-argmaxed) Tensor(1, oc, 256, 256, 256)
-def get_model(model_name):  # -> tinygrad model
-    if model_name.startswith("file://"):
-        return _load_model_from_uri(model_name)
-
-    config_fn, model_fn = find_pth_files(model_name)
-    config_fn = unwrap_path(config_fn)
-    model_fn = unwrap_path(model_fn)
-    return load_meshnet(config_fn, model_fn)
-
-
-def get_model_from_custom_path(config_path: str, weights_path: str):
-    """
-    Load a model from custom paths.
-
-    Args:
-        config_path: Path to the model JSON configuration. Can be "." to load the local model.
-        weights_path: Path to the model weights (.pth). Can be "." to load the local model.
-
-    Returns:
-        Loaded model callable
-    """
-    # If the special "." local model name is passed, defer to the standard get_model logic.
-    if config_path == "." or weights_path == ".":
-        return get_model(".")
-
-    config_p = Path(config_path)
-    weights_p = Path(weights_path)
-
-    if not config_p.exists():
-        raise FileNotFoundError(f"Config file not found: {config_p}")
-    if not weights_p.exists():
-        raise FileNotFoundError(f"Weights file not found: {weights_p}")
-
-    return load_meshnet(str(config_p), str(weights_p))
-
-
-def cleanup() -> None:
-    if os.path.exists("conformed.nii"):
-        subprocess.run(["rm", "conformed.nii"])
 
 
 def export_classes(output_channels, header: bytes, output_path: str):
@@ -255,7 +166,7 @@ def pad_to_original_size(
     padded_arr = np.zeros(original_shape, dtype=cropped_arr.dtype)
 
     # Check if crop is empty
-    if (slice_size := cropped_arr.size) == 0:
+    if cropped_arr.size == 0:
         return padded_arr
 
     # Calculate crop dimensions dynamically instead copying shape
@@ -270,44 +181,3 @@ def pad_to_original_size(
         )
 
     return padded_arr
-
-def write_output(processed_data, args):
-    """
-    Handle file output operations including niimath commands and subprocess calls.
-
-    Args:
-        processed_data: Processed segmentation data ready for output
-        args: Command line arguments containing output settings
-    """
-    output_dtype = "char"
-    # Handle class probability export if requested
-    if args.export_classes:
-        # Note: This requires access to output_channels, will need to be called separately
-        print(f"brainchop :: Exported classes to c[channel_number]_{args.output}")
-    # Determine gzip compression based on file extension
-    gzip_flag = "0" if str(args.output).endswith(".nii") else "1"
-    # Build base niimath command
-    cmd = ["niimath", "-"]
-    if args.inverse_conform and args.model != "mindgrab":
-        cmd += ["-reslice_nn", args.input]
-    # Handle mindgrab-specific processing
-    data_to_write = processed_data
-    if args.model == "mindgrab":
-        cmd = ["niimath", str(args.input)]
-        # Apply border growth if specified
-        if args.border > 0:
-            data_to_write = grow_border(processed_data, args.border)
-        # Write mask file if requested
-        if args.mask is not None:
-            cmdm = ["niimath", "-"]
-            cmdm += ["-reslice_nn", args.input]
-            subprocess.run(
-                cmdm + ["-gz", "1", args.mask, "-odt", "char"],
-                input=data_to_write,
-                check=True,
-            )
-        cmd += ["-reslice_mask", "-"]
-        output_dtype = "input_force"
-    # Finalize command and execute
-    cmd += ["-gz", gzip_flag, str(args.output), "-odt", output_dtype]
-    subprocess.run(cmd, input=data_to_write, check=True)
