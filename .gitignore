@@ -12,3 +12,4 @@ nifti/
 *.sh
 *.so
 _build/
+site/
