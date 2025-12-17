@@ -7,9 +7,7 @@ from pathlib import Path
 from typing import Any, Tuple
 from urllib.parse import urlparse
 from .niimath import _write_nifti, grow_border
-from .tfjs_meshnet import load_tfjs_meshnet
 from .tiny_meshnet import load_meshnet
-from .types import build_model  # local model backend
 
 # ! : is of type termination (meaning runtime is interrupted)
 
@@ -50,8 +48,6 @@ MODELS_JSON_URL = (
     "https://raw.githubusercontent.com/neuroneural/brainchop-cli/main/models.json"
 )
 AVAILABLE_MODELS = load_models()
-NEW_BACKEND = {"mindgrab", ".", "DKatlas", "aparc50", "subcortical"}
-NEW_ARCHITECTURE_MODELS = set()  # Models using the new architecture format
 
 
 def list_models() -> None:
@@ -80,33 +76,6 @@ def unwrap_model_name(s: str):  # -> String | !
     return s
 
 
-def detect_architecture_version(json_path: Path) -> str:
-    """
-    Detect whether a model JSON uses the new or old architecture format.
-    
-    Args:
-        json_path: Path to the model JSON file
-        
-    Returns:
-        str: "new" for new architecture format, "old" for deprecated format
-    """
-    try:
-        with open(json_path, 'r') as f:
-            data = json.load(f)
-        
-        # Check for new architecture format indicators
-        if "version" in data and "forward_pass" in data:
-            return "new"
-        # Check for old format indicators
-        elif "layers" in data and isinstance(data.get("layers"), list):
-            return "old"
-        else:
-            # Default to old if unclear
-            return "old"
-    except:
-        return "old"
-
-
 def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
     """New native backend for models"""
     if model_name == ".":
@@ -123,22 +92,6 @@ def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
         if not local_path.exists():
             download(url, local_path)
     return json_fn, pth_fn
-
-
-def find_tfjs_files(model_name) -> Tuple[Path | Any, Path | Any]:
-    """Deprecated tfjs weight backend"""
-    model_name = unwrap_model_name(model_name)
-    model_dir = AVAILABLE_MODELS[model_name]["folder"]
-    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
-    json_fn = cache_dir / "model.json"
-    bin_fn = cache_dir / "model.bin"
-    base_url = MESHNET_BASE_URL
-    for file in ["model.json", "model.bin"]:
-        url = f"{base_url}{model_dir}/{file}"
-        local_path = cache_dir / file
-        if not local_path.exists():
-            download(url, local_path)
-    return json_fn, bin_fn
 
 
 def _load_model_from_uri(uri: str):
@@ -184,67 +137,37 @@ def _load_model_from_uri(uri: str):
 def get_model(model_name):  # -> tinygrad model
     if model_name.startswith("file://"):
         return _load_model_from_uri(model_name)
-        
-    if model_name in NEW_BACKEND:
-        config_fn, model_fn = find_pth_files(model_name)
-        config_fn = unwrap_path(config_fn)
-        model_fn = unwrap_path(model_fn)
-        
-        # Detect architecture version
-        arch_version = detect_architecture_version(Path(config_fn))
-        
-        if arch_version == "new":
-            #print("brainchop :: Loading model with new architecture format")
-            return build_model(config_fn, model_fn)
-        else:
-            #print("brainchop :: Loading model with legacy architecture format")
-            return load_meshnet(config_fn, model_fn)
-    else:  # oldbackend
-        config_fn, binary_fn = find_tfjs_files(model_name)
-        config_fn = unwrap_path(config_fn)
-        binary_fn = unwrap_path(binary_fn)
-        model = load_tfjs_meshnet(config_fn, binary_fn)
-        return model
+
+    config_fn, model_fn = find_pth_files(model_name)
+    config_fn = unwrap_path(config_fn)
+    model_fn = unwrap_path(model_fn)
+    return load_meshnet(config_fn, model_fn)
 
 
 def get_model_from_custom_path(config_path: str, weights_path: str):
     """
-    Load a model from custom paths, auto-detecting the architecture format.
-    
+    Load a model from custom paths.
+
     Args:
         config_path: Path to the model JSON configuration. Can be "." to load the local model.
-        weights_path: Path to the model weights (.pth or .bin). Can be "." to load the local model.
-        
+        weights_path: Path to the model weights (.pth). Can be "." to load the local model.
+
     Returns:
         Loaded model callable
     """
     # If the special "." local model name is passed, defer to the standard get_model logic.
-    # This creates a dedicated code branch for explicitly specified local models.
     if config_path == "." or weights_path == ".":
         return get_model(".")
 
     config_p = Path(config_path)
     weights_p = Path(weights_path)
-    
+
     if not config_p.exists():
         raise FileNotFoundError(f"Config file not found: {config_p}")
     if not weights_p.exists():
         raise FileNotFoundError(f"Weights file not found: {weights_p}")
-    
-    # Detect architecture version
-    arch_version = detect_architecture_version(config_p)
-    
-    if arch_version == "new":
-        print("brainchop :: Loading custom model with new architecture format")
-        if weights_p.suffix == ".bin":
-            raise ValueError("New architecture format requires .pth weights file, got .bin")
-        return build_model(str(config_p), str(weights_p))
-    else:
-        print("brainchop :: Loading custom model with legacy architecture format")
-        if weights_p.suffix == ".bin":
-            return load_tfjs_meshnet(str(config_p), str(weights_p))
-        else:
-            return load_meshnet(str(config_p), str(weights_p))
+
+    return load_meshnet(str(config_p), str(weights_p))
 
 
 def cleanup() -> None:
