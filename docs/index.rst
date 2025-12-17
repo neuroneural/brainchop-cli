@@ -44,9 +44,9 @@ Install brainchop:
 
    from brainchop import load, segment, save
 
-   volume, header = load("input.nii.gz")
-   result = segment(volume, "subcortical", header)
-   save(result, header, "output.nii.gz")
+   vol = load("input.nii.gz")
+   result = segment(vol, "subcortical")
+   save(result, "output.nii.gz")
 
 Indices and Tables
 ==================

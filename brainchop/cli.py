@@ -7,9 +7,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from tinygrad import Tensor
-
-from brainchop.api import load, save, segment, list_models
+from brainchop.api import Volume, load, save, segment, list_models
 from brainchop.niimath import grow_border, truncate_header_bytes
 
 
@@ -71,11 +69,11 @@ def main():
         print(f"brainchop :: [{i+1}/{len(args.input)}] {input_path}")
 
         # Load
-        volume, header = load(abs_path, crop=args.crop, ct=args.ct)
+        vol = load(abs_path, crop=args.crop, ct=args.ct)
 
-        # Segment (single volume, so result is always Tensor)
-        result = segment(volume, model_name, header)
-        assert isinstance(result, Tensor)
+        # Segment (single volume, so result is always Volume)
+        result = segment(vol, model_name)
+        assert isinstance(result, Volume)
 
         # Output path
         if len(args.input) == 1 and args.output != "output.nii.gz":
@@ -92,21 +90,21 @@ def main():
 
         # Save
         if model_name == "mindgrab":
-            _save_mindgrab(result, header, abs_path, args, output_path)
+            _save_mindgrab(result, abs_path, args, output_path)
         elif args.inverse_conform:
-            _save_inverse_conform(result, header, abs_path, output_path)
+            _save_inverse_conform(result, abs_path, output_path)
         else:
-            save(result, header, output_path)
+            save(result, output_path)
 
         print(f"brainchop :: Saved {output_path}")
 
     print("brainchop :: Done!")
 
 
-def _save_mindgrab(result: Tensor, header: bytes, source_path: str, args, output_path: str):
+def _save_mindgrab(result: Volume, source_path: str, args, output_path: str):
     """Handle mindgrab output."""
-    header = truncate_header_bytes(header)
-    data = header + result.cast("uint8").numpy().tobytes()
+    header = truncate_header_bytes(result.header)
+    data = header + result.data.cast("uint8").numpy().tobytes()
 
     if args.border > 0:
         data = grow_border(data, args.border)
@@ -124,13 +122,13 @@ def _save_mindgrab(result: Tensor, header: bytes, source_path: str, args, output
     )
 
 
-def _save_inverse_conform(result: Tensor, header: bytes, source_path: str, output_path: str):
+def _save_inverse_conform(result: Volume, source_path: str, output_path: str):
     """Save with inverse conform."""
-    header = truncate_header_bytes(header)
+    header = truncate_header_bytes(result.header)
     gz = "0" if output_path.endswith(".nii") else "1"
     subprocess.run(
         ["niimath", "-", "-reslice_nn", source_path, "-gz", gz, output_path, "-odt", "char"],
-        input=header + result.cast("uint8").numpy().tobytes(), check=True
+        input=header + result.data.cast("uint8").numpy().tobytes(), check=True
     )
 
 

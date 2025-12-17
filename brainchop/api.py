@@ -4,15 +4,16 @@ brainchop API - Core scripting interface for brain segmentation.
 Example:
     from brainchop import load, segment, save, list_models
 
-    volume, header = load("input.nii.gz")
-    result = segment(volume, "subcortical")
-    save(result, header, "output.nii.gz")
+    vol = load("input.nii.gz")
+    result = segment(vol, "subcortical")
+    save(result, "output.nii.gz")
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
+from dataclasses import dataclass
 
 from tinygrad import Tensor
 
@@ -24,32 +25,39 @@ from brainchop.niimath import (
 from brainchop.tiny_meshnet import load_meshnet
 
 
+@dataclass
+class Volume:
+    """A brain volume with its NIfTI header."""
+    data: Tensor  # (256, 256, 256) uint8
+    header: bytes  # 352-byte NIfTI header
+
+
 def list_models() -> dict[str, str]:
     """Return available models as {name: description}."""
     from brainchop.utils import AVAILABLE_MODELS
     return {name: details["description"] for name, details in AVAILABLE_MODELS.items()}
 
 
-def load(path: str, *, crop: float | None = None, ct: bool = False) -> tuple[Tensor, bytes]:
+def load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume:
     """
     Load NIfTI file, conform to 256^3.
 
     Returns:
-        (volume, header) - volume is uint8 Tensor (256,256,256), header is bytes
+        Volume with data Tensor (256,256,256) and header bytes
     """
     from brainchop.utils import crop_to_cutoff
 
-    volume, header = conform(os.path.abspath(path), ct=ct)
+    data, header = conform(os.path.abspath(path), ct=ct)
     if crop is not None:
-        volume, _ = crop_to_cutoff(volume, crop)
-    return Tensor(volume), header
+        data, _ = crop_to_cutoff(data, crop)
+    return Volume(Tensor(data), header)
 
 
-def save(volume: Tensor, header: bytes, path: str) -> None:
-    """Save volume with header to NIfTI file."""
-    header = truncate_header_bytes(header)
+def save(volume: Volume, path: str) -> None:
+    """Save volume to NIfTI file."""
+    header = truncate_header_bytes(volume.header)
     gz = "1" if path.endswith(".gz") else "0"
-    data = volume.cast("uint8").numpy().tobytes()
+    data = volume.data.cast("uint8").numpy().tobytes()
     subprocess.run(
         ["niimath", "-", "-gz", gz, path, "-odt", "char"],
         input=header + data,
@@ -102,45 +110,33 @@ def _load_model(model: str):
 
 
 def segment(
-    volume: Tensor | list[Tensor],
+    volume: Volume | list[Volume],
     model: str,
-    header: bytes | list[bytes] | None = None,
     shard_size: int = 1,
-) -> Tensor | list[Tensor]:
+) -> Volume | list[Volume]:
     """
     Segment brain volume(s).
 
     Args:
-        volume: Single volume Tensor (256,256,256) or list of Tensors
+        volume: Single Volume or list of Volumes
         model: Model name (e.g., "subcortical", "tissue_fast") or path to model dir
-        header: Optional header(s) for bwlabel postprocessing
         shard_size: Batch size for processing multiple volumes
 
     Returns:
-        Segmented volume(s) - single Tensor if input was single, list if input was list
+        Segmented Volume(s) - single if input was single, list if input was list
     """
     # Handle single volume case
     single_input = not isinstance(volume, list)
-    if single_input:
-        volumes: list[Tensor] = [volume]  # type: ignore[list-item]
-    else:
-        volumes = volume  # type: ignore[assignment]
-
-    headers_list: list[bytes] | None = None
-    if header is not None:
-        if isinstance(header, bytes):
-            headers_list = [header]
-        else:
-            headers_list = header
+    volumes: list[Volume] = [volume] if single_input else volume  # type: ignore[assignment]
 
     m = _load_model(model)
-    results: list[Tensor] = []
+    results: list[Volume] = []
 
     for i in range(0, len(volumes), shard_size):
         shard = volumes[i : i + shard_size]
 
         # Stack tensors: (X,Y,Z) -> (1,1,D,H,W) then batch
-        tensors = [v.permute(2, 1, 0).cast("float32").rearrange("... -> 1 1 ...") for v in shard]
+        tensors = [v.data.permute(2, 1, 0).cast("float32").rearrange("... -> 1 1 ...") for v in shard]
         batched = Tensor.stack(*tensors, dim=0).rearrange("b 1 ... -> b ...") if len(tensors) > 1 else tensors[0]
 
         if hasattr(m, "normalize"):
@@ -151,9 +147,8 @@ def segment(
         # Split batch and convert back to (X,Y,Z)
         for j in range(output.shape[0]):
             out = output[j].permute(2, 1, 0).cast("uint8")  # (D,H,W) -> (X,Y,Z)
-            if headers_list is not None:
-                out_np, _ = bwlabel(headers_list[i + j], out.numpy())
-                out = Tensor(out_np)
-            results.append(out)
+            header = shard[j].header
+            out_np, _ = bwlabel(header, out.numpy())
+            results.append(Volume(Tensor(out_np), header))
 
     return results[0] if single_input else results

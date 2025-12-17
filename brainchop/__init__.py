@@ -4,13 +4,11 @@ brainchop - Portable brain segmentation.
 Example:
     from brainchop import load, segment, save, list_models
 
-    volume, header = load("input.nii.gz")
-    result = segment(volume, "subcortical", header)
-    save(result, header, "output.nii.gz")
+    vol = load("input.nii.gz")
+    result = segment(vol, "subcortical")
+    save(result, "output.nii.gz")
 """
 
-from tinygrad import Tensor
+from brainchop.api import Volume, load, save, segment, list_models
 
-from brainchop.api import load, save, segment, list_models
-
-__all__ = ["load", "save", "segment", "list_models", "Tensor"]
+__all__ = ["Volume", "load", "save", "segment", "list_models"]

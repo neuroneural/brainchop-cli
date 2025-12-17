@@ -36,13 +36,13 @@ def get_test_nifti_path() -> Path:
 
 def run_inference(model_name: str = "tissue_fast") -> np.ndarray:
     """Run inference and return raw output array."""
-    from brainchop import load, segment
+    from brainchop import Volume, load, segment
 
     nifti_path = get_test_nifti_path()
-    volume, header = load(str(nifti_path))
-    result = segment(volume, model_name)
-    assert not isinstance(result, list)
-    return result.numpy()
+    vol = load(str(nifti_path))
+    result = segment(vol, model_name)
+    assert isinstance(result, Volume)
+    return result.data.numpy()
 
 
 def get_current_backend() -> str:

@@ -14,9 +14,9 @@ Python API
    print(list_models())
 
    # Load, segment, save
-   volume, header = load("input.nii.gz")
-   result = segment(volume, "subcortical", header)
-   save(result, header, "output.nii.gz")
+   vol = load("input.nii.gz")
+   result = segment(vol, "subcortical")
+   save(result, "output.nii.gz")
 
 Batch Processing
 ~~~~~~~~~~~~~~~~
@@ -26,16 +26,14 @@ Batch Processing
    from brainchop import load, segment, save
 
    # Load multiple
-   data = [load(f"scan{i}.nii.gz") for i in range(4)]
-   volumes = [v for v, h in data]
-   headers = [h for v, h in data]
+   volumes = [load(f"scan{i}.nii.gz") for i in range(4)]
 
    # Segment batch (same function, pass list)
-   results = segment(volumes, "tissue_fast", headers, shard_size=2)
+   results = segment(volumes, "tissue_fast", shard_size=2)
 
    # Save
    for i, result in enumerate(results):
-       save(result, headers[i], f"output_{i}.nii.gz")
+       save(result, f"output_{i}.nii.gz")
 
 Command Line Interface
 ----------------------
