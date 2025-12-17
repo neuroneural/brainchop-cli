@@ -60,11 +60,25 @@ segment
 Segment brain volume(s).
 
 - ``volume``: Single volume ``(256,256,256)`` uint8 or list of volumes
-- ``model``: Model name (e.g., ``"subcortical"``, ``"tissue_fast"``)
+- ``model``: Model name (e.g., ``"subcortical"``) or path to custom model directory
 - ``header``: Optional header(s) for bwlabel postprocessing
 - ``shard_size``: Batch size for processing multiple volumes
 
 Returns segmented volume(s) - single array if input was single, list if input was list.
+
+Custom models can be loaded by path:
+
+.. code-block:: python
+
+   # By name (from registry)
+   result = segment(volume, "subcortical")
+
+   # By path (custom model directory with model.json + model.pth)
+   result = segment(volume, "/path/to/my_model")
+   result = segment(volume, ".")  # current directory
+
+   # By file:// URI
+   result = segment(volume, "file://~/models/custom")
 
 save
 ~~~~

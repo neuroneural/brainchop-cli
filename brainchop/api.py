@@ -57,14 +57,47 @@ def save(volume: np.ndarray, header: bytes, path: str) -> None:
     )
 
 
-def _load_model(name: str):
-    """Load model by name, return tinygrad model."""
+def _load_model(model: str):
+    """
+    Load model by name or path.
+
+    Args:
+        model: Model name (e.g., "subcortical") or path to model directory
+               containing model.json and model.pth/model.bin
+    """
+    from pathlib import Path
     from brainchop.utils import find_pth_files, AVAILABLE_MODELS, unwrap_path
 
-    if name not in AVAILABLE_MODELS:
-        raise ValueError(f"Unknown model: {name}. Available: {list(AVAILABLE_MODELS.keys())}")
+    # Check if it's a path (absolute, relative, or file://)
+    if model.startswith("file://"):
+        model = model.replace("file://", "")
+        if model.startswith("~"):
+            model = os.path.expanduser(model)
 
-    config_fn, model_fn = find_pth_files(name)
+    model_path = Path(model)
+    if model_path.exists() and model_path.is_dir():
+        # Custom model directory
+        config_fn = model_path / "model.json"
+        if not config_fn.exists():
+            raise FileNotFoundError(f"No model.json found in {model_path}")
+
+        # Find weights file
+        pth_fn = model_path / "model.pth"
+        bin_fn = model_path / "model.bin"
+        if pth_fn.exists():
+            weights_fn = pth_fn
+        elif bin_fn.exists():
+            weights_fn = bin_fn
+        else:
+            raise FileNotFoundError(f"No model.pth or model.bin found in {model_path}")
+
+        return load_meshnet(str(config_fn), str(weights_fn))
+
+    # Otherwise treat as model name
+    if model not in AVAILABLE_MODELS:
+        raise ValueError(f"Unknown model: {model}. Available: {list(AVAILABLE_MODELS.keys())}")
+
+    config_fn, model_fn = find_pth_files(model)
     return load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
 
 

@@ -55,7 +55,13 @@ def main():
         get_parser().print_help()
         return
 
-    model_name = "mindgrab" if args.skull_strip else args.model
+    # Determine model: --custom overrides -m, --skull-strip overrides both
+    if args.skull_strip:
+        model_name = "mindgrab"
+    elif args.custom:
+        model_name = args.custom
+    else:
+        model_name = args.model
 
     # Process each input
     for i, input_path in enumerate(args.input):
@@ -73,7 +79,13 @@ def main():
             output_path = args.output
         else:
             base = Path(input_path).stem.replace(".nii", "")
-            output_path = f"{base}_{model_name}_{i+1}.nii.gz"
+            # Use model name for output, hash if it's a path
+            if Path(model_name).is_dir():
+                import hashlib
+                model_label = hashlib.sha1(model_name.encode()).hexdigest()[:8]
+            else:
+                model_label = model_name
+            output_path = f"{base}_{model_label}_{i+1}.nii.gz"
 
         # Save
         if model_name == "mindgrab":
