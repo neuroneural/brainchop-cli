@@ -20,6 +20,7 @@ setup(
     extras_require={
         "all": [
             "mkdocs",
+            "mkdocs-material",
             "mkdocstrings[python]",
             "pytest",
             "ruff",

@@ -7,8 +7,28 @@ nav:
   - API Reference: api.md
 
 theme:
-  name: mkdocs
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
 
 plugins:
   - search
-  - mkdocstrings
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            heading_level: 3
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences

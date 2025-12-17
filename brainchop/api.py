@@ -27,23 +27,60 @@ from brainchop.tiny_meshnet import load_meshnet
 
 @dataclass
 class Volume:
-    """A brain volume with its NIfTI header."""
+    """
+    A brain volume with its NIfTI header.
+
+    Attributes:
+        data: Tensor of shape (256, 256, 256), dtype uint8
+        header: 352-byte NIfTI header
+
+    Example:
+        ```python
+        >>> vol = load("brain.nii.gz")
+        >>> vol.data.shape
+        (256, 256, 256)
+        >>> len(vol.header)
+        352
+        ```
+    """
     data: Tensor  # (256, 256, 256) uint8
     header: bytes  # 352-byte NIfTI header
 
 
 def list_models() -> dict[str, str]:
-    """Return available models as {name: description}."""
+    """
+    Return available models as {name: description}.
+
+    Example:
+        ```python
+        >>> list_models()
+        {'subcortical': 'Subcortical structures', 'tissue_fast': 'Fast 3-class tissue', ...}
+        ```
+    """
     from brainchop.utils import AVAILABLE_MODELS
     return {name: details["description"] for name, details in AVAILABLE_MODELS.items()}
 
 
 def load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume:
     """
-    Load NIfTI file, conform to 256^3.
+    Load NIfTI file and conform to 256x256x256.
+
+    Args:
+        path: Path to NIfTI file (.nii or .nii.gz)
+        crop: Crop intensity percentile (e.g., 0.01 removes bottom 1%)
+        ct: Use CT windowing instead of MRI normalization
 
     Returns:
         Volume with data Tensor (256,256,256) and header bytes
+
+    Example:
+        ```python
+        >>> vol = load("brain.nii.gz")
+        >>> vol.data.shape
+        (256, 256, 256)
+
+        >>> vol = load("brain.nii.gz", crop=0.01)  # crop dark voxels
+        ```
     """
     from brainchop.utils import crop_to_cutoff
 
@@ -54,7 +91,20 @@ def load(path: str, *, crop: float | None = None, ct: bool = False) -> Volume:
 
 
 def save(volume: Volume, path: str) -> None:
-    """Save volume to NIfTI file."""
+    """
+    Save volume to NIfTI file.
+
+    Args:
+        volume: Volume to save
+        path: Output path (.nii or .nii.gz)
+
+    Example:
+        ```python
+        >>> vol = load("brain.nii.gz")
+        >>> result = segment(vol, "subcortical")
+        >>> save(result, "segmented.nii.gz")
+        ```
+    """
     header = truncate_header_bytes(volume.header)
     gz = "1" if path.endswith(".gz") else "0"
     data = volume.data.cast("uint8").numpy().tobytes()
@@ -124,6 +174,23 @@ def segment(
 
     Returns:
         Segmented Volume(s) - single if input was single, list if input was list
+
+    Example:
+        ```python
+        >>> vol = load("brain.nii.gz")
+        >>> result = segment(vol, "subcortical")
+        >>> result.data.shape
+        (256, 256, 256)
+
+        # Batch processing
+        >>> vols = [load(f"brain_{i}.nii.gz") for i in range(4)]
+        >>> results = segment(vols, "tissue_fast", shard_size=2)
+        >>> len(results)
+        4
+
+        # Custom model
+        >>> result = segment(vol, "/path/to/custom/model")
+        ```
     """
     # Handle single volume case
     single_input = not isinstance(volume, list)
