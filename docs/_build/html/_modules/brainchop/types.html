@@ -1,0 +1,1000 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brainchop.types &mdash; brainchop 0.1.23 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=20522496"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            brainchop
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#installation-methods">Installation Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#using-pip-recommended">Using pip (Recommended)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#from-source">From Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#using-docker">Using Docker</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#verification">Verification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#gpu-support">GPU Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#python-api">Python API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#basic-segmentation">Basic Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#cropping-for-speed">Cropping for Speed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#custom-models">Custom Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#webgpu-export">WebGPU Export</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#command-line-interface">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#basic-usage">Basic Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#selecting-models">Selecting Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#list-available-models">List Available Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#using-a-specific-model">Using a Specific Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#skull-stripping">Skull Stripping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#advanced-options">Advanced Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#id1">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#image-preprocessing">Image Preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#export-options">Export Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#id2">Custom Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#local-model-development">Local Model Development</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#file-uri-loading">File URI Loading</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#updating-models">Updating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#common-workflows">Common Workflows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#quick-tissue-segmentation">Quick Tissue Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#clinical-scan-processing">Clinical Scan Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#atlas-based-parcellation">Atlas-based Parcellation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#brain-extraction-pipeline">Brain Extraction Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#batch-processing-workflow">Batch Processing Workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#environment-variables">Environment Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#out-of-memory">Out of Memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#slow-first-run">Slow First Run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#model-download-issues">Model Download Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Available Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-overview">Model Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#detailed-model-information">Detailed Model Information</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#tissue-fast">tissue_fast</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#subcortical">subcortical</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#subcortical-mini">subcortical-mini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#dkatlas">DKatlas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#mindgrab">mindgrab</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#aparc50">aparc50</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-sources">Model Sources</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#updating-models">Updating Models</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-architecture-formats">Model Architecture Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#core-api">Core API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#nifti-class">NIfTI Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.NIfTI"><code class="docutils literal notranslate"><span class="pre">NIfTI</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-class">Model Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.Model"><code class="docutils literal notranslate"><span class="pre">Model</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#modelinfo-class">ModelInfo Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.ModelInfo"><code class="docutils literal notranslate"><span class="pre">ModelInfo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#functions">Functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.list_models"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.skull_strip"><code class="docutils literal notranslate"><span class="pre">skull_strip()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.argmax"><code class="docutils literal notranslate"><span class="pre">argmax()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.largest_component"><code class="docutils literal notranslate"><span class="pre">largest_component()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.export_channels"><code class="docutils literal notranslate"><span class="pre">export_channels()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#quick-start-examples">Quick Start Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#basic-segmentation">Basic Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#cropping-for-speed">Cropping for Speed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#custom-models">Custom Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#raw-inference">Raw Inference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#webgpu-export">WebGPU Export</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.cli">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.get_parser"><code class="docutils literal notranslate"><span class="pre">get_parser()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.print_models"><code class="docutils literal notranslate"><span class="pre">print_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.find_weights"><code class="docutils literal notranslate"><span class="pre">find_weights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.utils">Utilities Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.download_model_listing"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.load_models"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.update_models"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.list_models"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.download"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.unwrap_path"><code class="docutils literal notranslate"><span class="pre">unwrap_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.find_pth_files"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.export_classes"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.crop_to_cutoff"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.pad_to_original_size"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-management">Model Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id0"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id1"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id2"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#download-and-cache">Download and Cache</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id3"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id4"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id5"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#image-processing">Image Processing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id6"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id7"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id8"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#model-loaders">Model Loaders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.tiny_meshnet">TinyGrad MeshNet Loader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.convert_keys"><code class="docutils literal notranslate"><span class="pre">convert_keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.sequential_argmax"><code class="docutils literal notranslate"><span class="pre">sequential_argmax()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.SequentialConvArgmax"><code class="docutils literal notranslate"><span class="pre">SequentialConvArgmax</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.chunked_conv"><code class="docutils literal notranslate"><span class="pre">chunked_conv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.qnormalize"><code class="docutils literal notranslate"><span class="pre">qnormalize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.set_channel_num"><code class="docutils literal notranslate"><span class="pre">set_channel_num()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.construct_layer"><code class="docutils literal notranslate"><span class="pre">construct_layer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.MeshNet"><code class="docutils literal notranslate"><span class="pre">MeshNet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.load_meshnet"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id9"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.types">Model Types (Spec Format)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.PreprocessOp"><code class="docutils literal notranslate"><span class="pre">PreprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Op"><code class="docutils literal notranslate"><span class="pre">Op</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.PostprocessOp"><code class="docutils literal notranslate"><span class="pre">PostprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Preprocess"><code class="docutils literal notranslate"><span class="pre">Preprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Layer"><code class="docutils literal notranslate"><span class="pre">Layer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Postprocess"><code class="docutils literal notranslate"><span class="pre">Postprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Metadata"><code class="docutils literal notranslate"><span class="pre">Metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.ModelSpec"><code class="docutils literal notranslate"><span class="pre">ModelSpec</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.load_spec"><code class="docutils literal notranslate"><span class="pre">load_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.build_model"><code class="docutils literal notranslate"><span class="pre">build_model()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.niimath">NIfTI Math Operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header_data_split"><code class="docutils literal notranslate"><span class="pre">header_data_split()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.read_header_bytes"><code class="docutils literal notranslate"><span class="pre">read_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.niimath_dtype"><code class="docutils literal notranslate"><span class="pre">niimath_dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.conform"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2dimensions"><code class="docutils literal notranslate"><span class="pre">header2dimensions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2endian"><code class="docutils literal notranslate"><span class="pre">header2endian()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.set_header_intent"><code class="docutils literal notranslate"><span class="pre">set_header_intent()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.set_header_intent_label"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2datatype"><code class="docutils literal notranslate"><span class="pre">header2datatype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2dtype"><code class="docutils literal notranslate"><span class="pre">header2dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.niimath_pipe_process"><code class="docutils literal notranslate"><span class="pre">niimath_pipe_process()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.grow_border"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.largest_cluster"><code class="docutils literal notranslate"><span class="pre">largest_cluster()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.truncate_header_bytes"><code class="docutils literal notranslate"><span class="pre">truncate_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.bwlabel"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#conformation-and-preprocessing">Conformation and Preprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id10"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#labeling-operations">Labeling Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id11"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id12"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#mask-operations">Mask Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id13"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#constants-and-configuration">Constants and Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#available-models">Available Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.AVAILABLE_MODELS"><code class="docutils literal notranslate"><span class="pre">AVAILABLE_MODELS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-urls">Model URLs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.BASE_URL"><code class="docutils literal notranslate"><span class="pre">BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.MESHNET_BASE_URL"><code class="docutils literal notranslate"><span class="pre">MESHNET_BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.MODELS_JSON_URL"><code class="docutils literal notranslate"><span class="pre">MODELS_JSON_URL</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">brainchop</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">brainchop.types</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for brainchop.types</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">BrainChop Model Specification</span>
+<span class="sd">Read-only dataclass specification for model architecture loading</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Operation Enums - Map directly to torch.nn.functional / tinygrad operations</span>
+<span class="c1"># ============================================================================</span>
+
+<div class="viewcode-block" id="PreprocessOp">
+<a class="viewcode-back" href="../../api.html#brainchop.types.PreprocessOp">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PreprocessOp</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Preprocessing operations&quot;&quot;&quot;</span>
+    <span class="n">QNORMALIZE</span> <span class="o">=</span> <span class="s2">&quot;qnormalize&quot;</span>      <span class="c1"># Custom quantile normalization</span>
+    <span class="n">MINMAX</span> <span class="o">=</span> <span class="s2">&quot;minmax&quot;</span>               <span class="c1"># Min-max to [0,1]</span>
+    <span class="n">ZSCORE</span> <span class="o">=</span> <span class="s2">&quot;zscore&quot;</span>               <span class="c1"># Standardization</span>
+    <span class="n">NONE</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span>                   <span class="c1"># Identity</span></div>
+
+
+
+<div class="viewcode-block" id="Op">
+<a class="viewcode-back" href="../../api.html#brainchop.types.Op">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Op</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;All layer operations - matches torch.nn.functional names&quot;&quot;&quot;</span>
+    <span class="c1"># Convolutions</span>
+    <span class="n">CONV1D</span> <span class="o">=</span> <span class="s2">&quot;conv1d&quot;</span>
+    <span class="n">CONV2D</span> <span class="o">=</span> <span class="s2">&quot;conv2d&quot;</span>
+    <span class="n">CONV3D</span> <span class="o">=</span> <span class="s2">&quot;conv3d&quot;</span>
+    
+    <span class="c1"># Normalization  </span>
+    <span class="n">BATCH_NORM</span> <span class="o">=</span> <span class="s2">&quot;batch_norm&quot;</span>
+    <span class="n">BATCH_NORM1D</span> <span class="o">=</span> <span class="s2">&quot;batch_norm1d&quot;</span>
+    <span class="n">BATCH_NORM2D</span> <span class="o">=</span> <span class="s2">&quot;batch_norm2d&quot;</span>
+    <span class="n">BATCH_NORM3D</span> <span class="o">=</span> <span class="s2">&quot;batch_norm3d&quot;</span>
+    <span class="n">GROUP_NORM</span> <span class="o">=</span> <span class="s2">&quot;group_norm&quot;</span>
+    <span class="n">INSTANCE_NORM</span> <span class="o">=</span> <span class="s2">&quot;instance_norm&quot;</span>
+    <span class="n">INSTANCE_NORM1D</span> <span class="o">=</span> <span class="s2">&quot;instance_norm1d&quot;</span>
+    <span class="n">INSTANCE_NORM2D</span> <span class="o">=</span> <span class="s2">&quot;instance_norm2d&quot;</span>
+    <span class="n">INSTANCE_NORM3D</span> <span class="o">=</span> <span class="s2">&quot;instance_norm3d&quot;</span>
+    <span class="n">LAYER_NORM</span> <span class="o">=</span> <span class="s2">&quot;layer_norm&quot;</span>
+    
+    <span class="c1"># Activations (match F.* names)</span>
+    <span class="n">RELU</span> <span class="o">=</span> <span class="s2">&quot;relu&quot;</span>
+    <span class="n">GELU</span> <span class="o">=</span> <span class="s2">&quot;gelu&quot;</span>
+    <span class="n">SILU</span> <span class="o">=</span> <span class="s2">&quot;silu&quot;</span>
+    <span class="n">ELU</span> <span class="o">=</span> <span class="s2">&quot;elu&quot;</span>
+    <span class="n">LEAKY_RELU</span> <span class="o">=</span> <span class="s2">&quot;leaky_relu&quot;</span>
+    <span class="n">TANH</span> <span class="o">=</span> <span class="s2">&quot;tanh&quot;</span>
+    <span class="n">SIGMOID</span> <span class="o">=</span> <span class="s2">&quot;sigmoid&quot;</span>
+    <span class="n">SOFTMAX</span> <span class="o">=</span> <span class="s2">&quot;softmax&quot;</span>
+    
+    <span class="c1"># Dropout</span>
+    <span class="n">DROPOUT</span> <span class="o">=</span> <span class="s2">&quot;dropout&quot;</span>
+    <span class="n">DROPOUT1D</span> <span class="o">=</span> <span class="s2">&quot;dropout1d&quot;</span>
+    <span class="n">DROPOUT2D</span> <span class="o">=</span> <span class="s2">&quot;dropout2d&quot;</span>
+    <span class="n">DROPOUT3D</span> <span class="o">=</span> <span class="s2">&quot;dropout3d&quot;</span>
+    
+    <span class="c1"># Pooling</span>
+    <span class="n">MAX_POOL1D</span> <span class="o">=</span> <span class="s2">&quot;max_pool1d&quot;</span>
+    <span class="n">MAX_POOL2D</span> <span class="o">=</span> <span class="s2">&quot;max_pool2d&quot;</span>
+    <span class="n">MAX_POOL3D</span> <span class="o">=</span> <span class="s2">&quot;max_pool3d&quot;</span>
+    <span class="n">AVG_POOL1D</span> <span class="o">=</span> <span class="s2">&quot;avg_pool1d&quot;</span>
+    <span class="n">AVG_POOL2D</span> <span class="o">=</span> <span class="s2">&quot;avg_pool2d&quot;</span>
+    <span class="n">AVG_POOL3D</span> <span class="o">=</span> <span class="s2">&quot;avg_pool3d&quot;</span>
+    <span class="n">ADAPTIVE_AVG_POOL1D</span> <span class="o">=</span> <span class="s2">&quot;adaptive_avg_pool1d&quot;</span>
+    <span class="n">ADAPTIVE_AVG_POOL2D</span> <span class="o">=</span> <span class="s2">&quot;adaptive_avg_pool2d&quot;</span>
+    <span class="n">ADAPTIVE_AVG_POOL3D</span> <span class="o">=</span> <span class="s2">&quot;adaptive_avg_pool3d&quot;</span>
+    
+    <span class="c1"># Linear</span>
+    <span class="n">LINEAR</span> <span class="o">=</span> <span class="s2">&quot;linear&quot;</span>
+    
+    <span class="c1"># Upsampling</span>
+    <span class="n">UPSAMPLE</span> <span class="o">=</span> <span class="s2">&quot;upsample&quot;</span>
+    <span class="n">INTERPOLATE</span> <span class="o">=</span> <span class="s2">&quot;interpolate&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="PostprocessOp">
+<a class="viewcode-back" href="../../api.html#brainchop.types.PostprocessOp">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PostprocessOp</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Postprocessing operations&quot;&quot;&quot;</span>
+    <span class="n">SOFTMAX</span> <span class="o">=</span> <span class="s2">&quot;softmax&quot;</span>
+    <span class="n">SIGMOID</span> <span class="o">=</span> <span class="s2">&quot;sigmoid&quot;</span>
+    <span class="n">ARGMAX</span> <span class="o">=</span> <span class="s2">&quot;argmax&quot;</span>
+    <span class="n">NONE</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span></div>
+
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Specification Dataclasses</span>
+<span class="c1"># ============================================================================</span>
+
+<div class="viewcode-block" id="Preprocess">
+<a class="viewcode-back" href="../../api.html#brainchop.types.Preprocess">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Preprocess</span><span class="p">:</span>
+    <span class="n">op</span><span class="p">:</span> <span class="n">PreprocessOp</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="Layer">
+<a class="viewcode-back" href="../../api.html#brainchop.types.Layer">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Layer</span><span class="p">:</span>
+    <span class="n">op</span><span class="p">:</span> <span class="n">Op</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">training_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># For dropout layers</span></div>
+
+
+
+<div class="viewcode-block" id="Postprocess">
+<a class="viewcode-back" href="../../api.html#brainchop.types.Postprocess">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Postprocess</span><span class="p">:</span>
+    <span class="n">op</span><span class="p">:</span> <span class="n">PostprocessOp</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="Metadata">
+<a class="viewcode-back" href="../../api.html#brainchop.types.Metadata">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Metadata</span><span class="p">:</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">framework</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;torch&quot;</span><span class="p">,</span> <span class="s2">&quot;tinygrad&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;tinygrad&quot;</span>
+    <span class="n">input_shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># [C, D, H, W] or [C, H, W]</span>
+    <span class="n">output_classes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="ModelSpec">
+<a class="viewcode-back" href="../../api.html#brainchop.types.ModelSpec">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ModelSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Complete model specification&quot;&quot;&quot;</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">Metadata</span>
+    <span class="n">preprocessing</span><span class="p">:</span> <span class="n">Preprocess</span>
+    <span class="n">forward_pass</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Layer</span><span class="p">]</span>
+    <span class="n">postprocessing</span><span class="p">:</span> <span class="n">Postprocess</span></div>
+
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Spec Loading</span>
+<span class="c1"># ============================================================================</span>
+
+<div class="viewcode-block" id="load_spec">
+<a class="viewcode-back" href="../../api.html#brainchop.types.load_spec">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_spec</span><span class="p">(</span><span class="n">spec_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelSpec</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load model specification from JSON file&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">spec_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    
+    <span class="c1"># Parse preprocessing</span>
+    <span class="n">preprocess_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;preprocessing&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;op&quot;</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{}})</span>
+    <span class="n">preprocessing</span> <span class="o">=</span> <span class="n">Preprocess</span><span class="p">(</span>
+        <span class="n">op</span><span class="o">=</span><span class="n">PreprocessOp</span><span class="p">(</span><span class="n">preprocess_data</span><span class="p">[</span><span class="s2">&quot;op&quot;</span><span class="p">]),</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">preprocess_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Parse forward pass</span>
+    <span class="n">forward_pass</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">layer_data</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;forward_pass&quot;</span><span class="p">]:</span>
+        <span class="n">forward_pass</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Layer</span><span class="p">(</span>
+            <span class="n">op</span><span class="o">=</span><span class="n">Op</span><span class="p">(</span><span class="n">layer_data</span><span class="p">[</span><span class="s2">&quot;op&quot;</span><span class="p">]),</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">layer_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+            <span class="n">training_only</span><span class="o">=</span><span class="n">layer_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;training_only&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="p">))</span>
+    
+    <span class="c1"># Parse postprocessing</span>
+    <span class="n">postprocess_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;postprocessing&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;op&quot;</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{}})</span>
+    <span class="n">postprocessing</span> <span class="o">=</span> <span class="n">Postprocess</span><span class="p">(</span>
+        <span class="n">op</span><span class="o">=</span><span class="n">PostprocessOp</span><span class="p">(</span><span class="n">postprocess_data</span><span class="p">[</span><span class="s2">&quot;op&quot;</span><span class="p">]),</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">postprocess_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Parse metadata</span>
+    <span class="n">meta_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">Metadata</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">meta_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+        <span class="n">framework</span><span class="o">=</span><span class="n">meta_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;framework&quot;</span><span class="p">,</span> <span class="s2">&quot;tinygrad&quot;</span><span class="p">),</span>
+        <span class="n">input_shape</span><span class="o">=</span><span class="n">meta_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input_shape&quot;</span><span class="p">),</span>
+        <span class="n">output_classes</span><span class="o">=</span><span class="n">meta_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_classes&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">ModelSpec</span><span class="p">(</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="s2">&quot;2.0&quot;</span><span class="p">),</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+        <span class="n">preprocessing</span><span class="o">=</span><span class="n">preprocessing</span><span class="p">,</span>
+        <span class="n">forward_pass</span><span class="o">=</span><span class="n">forward_pass</span><span class="p">,</span>
+        <span class="n">postprocessing</span><span class="o">=</span><span class="n">postprocessing</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Model Building - Maps spec to actual tinygrad model</span>
+<span class="c1"># ============================================================================</span>
+
+<div class="viewcode-block" id="build_model">
+<a class="viewcode-back" href="../../api.html#brainchop.types.build_model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_model</span><span class="p">(</span><span class="n">spec_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">weights_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build executable model from spec and weights.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        spec_path: Path to JSON specification</span>
+<span class="sd">        weights_path: Path to .pth or .safetensors weights</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Callable model with loaded weights</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad.nn.state</span><span class="w"> </span><span class="kn">import</span> <span class="n">torch_load</span><span class="p">,</span> <span class="n">load_state_dict</span><span class="p">,</span> <span class="n">get_state_dict</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad</span><span class="w"> </span><span class="kn">import</span> <span class="n">nn</span>
+    
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">load_spec</span><span class="p">(</span><span class="n">spec_path</span><span class="p">)</span>
+    
+    <span class="c1"># Load weights</span>
+    <span class="k">if</span> <span class="n">weights_path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.safetensors&#39;</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">safetensors</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_open</span>
+        <span class="k">with</span> <span class="n">safe_open</span><span class="p">(</span><span class="n">weights_path</span><span class="p">,</span> <span class="n">framework</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">get_tensor</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">torch_load</span><span class="p">(</span><span class="n">weights_path</span><span class="p">)</span>
+    
+    <span class="c1"># Build preprocessing</span>
+    <span class="n">preprocess_fn</span> <span class="o">=</span> <span class="n">_build_preprocess</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">preprocessing</span><span class="p">)</span>
+    
+    <span class="c1"># Build model with proper weight tracking</span>
+    <span class="n">model_layers</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="c1"># Track layer indices for weight mapping</span>
+    <span class="n">layer_idx</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="k">for</span> <span class="n">layer_spec</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">forward_pass</span><span class="p">:</span>
+        <span class="n">layer_info</span> <span class="o">=</span> <span class="n">_build_layer_with_weights</span><span class="p">(</span><span class="n">layer_spec</span><span class="p">,</span> <span class="n">layer_idx</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">layer_info</span><span class="p">:</span>
+            <span class="n">model_layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_info</span><span class="p">)</span>
+            <span class="c1"># Only increment for layers that consume weights</span>
+            <span class="k">if</span> <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]:</span>
+                <span class="n">layer_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+    
+    <span class="c1"># Build postprocessing</span>
+    <span class="n">postprocess_fn</span> <span class="o">=</span> <span class="n">_build_postprocess</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">postprocessing</span><span class="p">)</span>
+    
+    <span class="c1"># Create model class</span>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">layer_info</span> <span class="ow">in</span> <span class="n">model_layers</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">],</span> <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;training_only&#39;</span><span class="p">]))</span>
+            
+        <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">training</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">preprocess_fn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">layer</span><span class="p">,</span> <span class="n">training_only</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">training_only</span> <span class="ow">or</span> <span class="n">training</span><span class="p">:</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            
+            <span class="n">x</span> <span class="o">=</span> <span class="n">postprocess_fn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">x</span>
+    
+    <span class="c1"># Instantiate model</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">()</span>
+    
+    <span class="c1"># Load weights with proper mapping</span>
+    <span class="n">_load_weights_into_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">model_layers</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">model</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_layer_with_weights</span><span class="p">(</span><span class="n">layer_spec</span><span class="p">:</span> <span class="n">Layer</span><span class="p">,</span> <span class="n">layer_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build layer and track weight consumption&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad</span><span class="w"> </span><span class="kn">import</span> <span class="n">nn</span>
+    
+    <span class="n">layer_info</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;layer&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s1">&#39;training_only&#39;</span><span class="p">:</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">training_only</span><span class="p">,</span>
+        <span class="s1">&#39;consumes_weights&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s1">&#39;layer_idx&#39;</span><span class="p">:</span> <span class="n">layer_idx</span><span class="p">,</span>
+        <span class="s1">&#39;op&#39;</span><span class="p">:</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span>
+    <span class="p">}</span>
+    
+    <span class="c1"># Weighted layers</span>
+    <span class="k">if</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">CONV1D</span><span class="p">:</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span><span class="o">**</span><span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">CONV2D</span><span class="p">:</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="o">**</span><span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">CONV3D</span><span class="p">:</span>
+        <span class="c1"># For tinygrad, we need to handle 3D convs specially</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>  <span class="c1"># Tinygrad handles 3D internally</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">LINEAR</span><span class="p">:</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="o">**</span><span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="c1"># Batch normalization layers</span>
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">BATCH_NORM3D</span><span class="p">:</span>
+        <span class="n">num_features</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_features&quot;</span><span class="p">)</span>
+        <span class="c1"># Create batch norm but mark as inference-only</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_create_inference_batchnorm</span><span class="p">(</span><span class="n">num_features</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># BatchNorm has weights/bias/running_mean/running_var</span>
+        
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">BATCH_NORM2D</span><span class="p">:</span>
+        <span class="n">num_features</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_features&quot;</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_create_inference_batchnorm</span><span class="p">(</span><span class="n">num_features</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">BATCH_NORM1D</span><span class="p">:</span>
+        <span class="n">num_features</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_features&quot;</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_create_inference_batchnorm</span><span class="p">(</span><span class="n">num_features</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+    <span class="c1"># Non-weighted layers</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_build_functional_layer</span><span class="p">(</span><span class="n">layer_spec</span><span class="p">)</span>
+        <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    
+    <span class="k">return</span> <span class="n">layer_info</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_inference_batchnorm</span><span class="p">(</span><span class="n">num_features</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a batch norm layer for inference&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+    
+    <span class="k">class</span><span class="w"> </span><span class="nc">InferenceBatchNorm</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_features</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_features</span> <span class="o">=</span> <span class="n">num_features</span>
+            <span class="c1"># These will be loaded from state dict</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">running_mean</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">running_var</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-5</span>
+            
+        <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">running_mean</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">running_var</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Fallback to identity if stats not loaded</span>
+                <span class="k">return</span> <span class="n">x</span>
+                
+            <span class="c1"># Apply batch normalization in inference mode</span>
+            <span class="c1"># x_norm = (x - running_mean) / sqrt(running_var + eps)</span>
+            <span class="c1"># y = weight * x_norm + bias</span>
+            
+            <span class="c1"># Reshape for broadcasting</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_features</span>  <span class="c1"># Channel dimension</span>
+            
+            <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">running_mean</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">running_var</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+            
+            <span class="n">x_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">var</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+                <span class="n">x_norm</span> <span class="o">=</span> <span class="n">x_norm</span> <span class="o">*</span> <span class="n">weight</span>
+                
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">bias</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+                <span class="n">x_norm</span> <span class="o">=</span> <span class="n">x_norm</span> <span class="o">+</span> <span class="n">bias</span>
+                
+            <span class="k">return</span> <span class="n">x_norm</span>
+    
+    <span class="k">return</span> <span class="n">InferenceBatchNorm</span><span class="p">(</span><span class="n">num_features</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_functional_layer</span><span class="p">(</span><span class="n">layer_spec</span><span class="p">:</span> <span class="n">Layer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build non-weighted layer (activation, pooling, etc)&quot;&quot;&quot;</span>
+    
+    <span class="c1"># Activation functions</span>
+    <span class="k">if</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">RELU</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">relu</span><span class="p">()</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">GELU</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">gelu</span><span class="p">()</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">SILU</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">silu</span><span class="p">()</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">SIGMOID</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">()</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">TANH</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">tanh</span><span class="p">()</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">LEAKY_RELU</span><span class="p">:</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;negative_slope&quot;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">leakyrelu</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">ELU</span><span class="p">:</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;alpha&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">elu</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">SOFTMAX</span><span class="p">:</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dim&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span>
+    
+    <span class="c1"># Dropout</span>
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">DROPOUT</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Op</span><span class="o">.</span><span class="n">DROPOUT1D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">DROPOUT2D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">DROPOUT3D</span><span class="p">]:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    
+    <span class="c1"># Pooling</span>
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">MAX_POOL3D</span><span class="p">:</span>
+        <span class="n">kernel_size</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;kernel_size&quot;</span><span class="p">]</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stride&quot;</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
+        <span class="n">padding</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;padding&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">max_pool2d</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">Op</span><span class="o">.</span><span class="n">AVG_POOL3D</span><span class="p">:</span>
+        <span class="n">kernel_size</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;kernel_size&quot;</span><span class="p">]</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stride&quot;</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
+        <span class="n">padding</span> <span class="o">=</span> <span class="n">layer_spec</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;padding&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">avg_pool2d</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1">#print(f&quot;Warning: Operation {layer_spec.op} not implemented, skipping&quot;)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_weights_into_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">model_layers</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load weights into model with proper mapping&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+    
+    <span class="c1"># Create mapping from torch naming to our model structure</span>
+    <span class="n">torch_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">state_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    
+    <span class="c1"># Group torch keys by layer</span>
+    <span class="n">layer_groups</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">torch_keys</span><span class="p">:</span>
+        <span class="c1"># Parse keys like &quot;model.0.0.weight&quot;, &quot;model.0.1.running_mean&quot;, or &quot;model.9.weight&quot;</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;model&#39;</span><span class="p">:</span>
+            <span class="n">layer_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            
+            <span class="c1"># Check if this is a nested layer (has sublayer index) or direct layer</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                <span class="c1"># Format: model.X.Y.param_name (nested layers)</span>
+                <span class="n">sublayer_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">param_name</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">3</span><span class="p">:])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Format: model.X.param_name (direct layer, like final conv)</span>
+                <span class="n">sublayer_idx</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Use 0 as default sublayer for non-nested</span>
+                <span class="n">param_name</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+            
+            <span class="k">if</span> <span class="n">layer_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">layer_groups</span><span class="p">:</span>
+                <span class="n">layer_groups</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">sublayer_idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">layer_groups</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]:</span>
+                <span class="n">layer_groups</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">][</span><span class="n">sublayer_idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                
+            <span class="n">layer_groups</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">][</span><span class="n">sublayer_idx</span><span class="p">][</span><span class="n">param_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">key</span>
+    
+    <span class="c1">#print(f&quot;Found {len(layer_groups)} layer groups in state dict&quot;)</span>
+    
+    <span class="c1"># Map to our model layers - need to handle the interleaved conv+batchnorm pattern</span>
+    <span class="n">weighted_layers</span> <span class="o">=</span> <span class="p">[</span><span class="n">info</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">model_layers</span> <span class="k">if</span> <span class="n">info</span><span class="p">[</span><span class="s1">&#39;consumes_weights&#39;</span><span class="p">]]</span>
+    
+    <span class="c1"># From your weight structure, we can see the pattern:</span>
+    <span class="c1"># model.0.0.weight/bias = first conv</span>
+    <span class="c1"># model.0.1.weight/bias/running_mean/running_var = first batchnorm</span>
+    <span class="c1"># model.1.0.weight/bias = second conv</span>
+    <span class="c1"># model.1.1.weight/bias/running_mean/running_var = second batchnorm</span>
+    <span class="c1"># ...</span>
+    <span class="c1"># model.9.weight/bias = final conv (no batchnorm)</span>
+    
+    <span class="n">block_idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">layer_in_block</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="k">for</span> <span class="n">model_layer_idx</span><span class="p">,</span> <span class="n">layer_info</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">weighted_layers</span><span class="p">):</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span>
+        
+        <span class="c1">#print(f&quot;Loading weights for model layer {model_layer_idx} (torch block {block_idx}, layer {layer_in_block})&quot;)</span>
+        
+        <span class="k">if</span> <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;op&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Op</span><span class="o">.</span><span class="n">CONV1D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">CONV2D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">CONV3D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">LINEAR</span><span class="p">]:</span>
+            <span class="c1"># Load conv/linear weights from block_idx.layer_in_block</span>
+            <span class="k">if</span> <span class="n">block_idx</span> <span class="ow">in</span> <span class="n">layer_groups</span> <span class="ow">and</span> <span class="n">layer_in_block</span> <span class="ow">in</span> <span class="n">layer_groups</span><span class="p">[</span><span class="n">block_idx</span><span class="p">]:</span>
+                <span class="n">sublayer</span> <span class="o">=</span> <span class="n">layer_groups</span><span class="p">[</span><span class="n">block_idx</span><span class="p">][</span><span class="n">layer_in_block</span><span class="p">]</span>
+                
+                <span class="k">if</span> <span class="s1">&#39;weight&#39;</span> <span class="ow">in</span> <span class="n">sublayer</span><span class="p">:</span>
+                    <span class="n">weight_key</span> <span class="o">=</span> <span class="n">sublayer</span><span class="p">[</span><span class="s1">&#39;weight&#39;</span><span class="p">]</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="n">weight_key</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+                    <span class="c1">#print(f&quot;  Loaded weight: {weight_key} -&gt; {layer.weight.shape}&quot;)</span>
+                    
+                <span class="k">if</span> <span class="s1">&#39;bias&#39;</span> <span class="ow">in</span> <span class="n">sublayer</span><span class="p">:</span>
+                    <span class="n">bias_key</span> <span class="o">=</span> <span class="n">sublayer</span><span class="p">[</span><span class="s1">&#39;bias&#39;</span><span class="p">]</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="n">bias_key</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+                    <span class="c1">#print(f&quot;  Loaded bias: {bias_key} -&gt; {layer.bias.shape}&quot;)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1">#print(f&quot;  Warning: No weights found for conv layer at block {block_idx}, sublayer {layer_in_block}&quot;)</span>
+                <span class="k">pass</span>
+            
+            <span class="c1"># After conv, expect batchnorm next (except for final layer)</span>
+            <span class="n">layer_in_block</span> <span class="o">+=</span> <span class="mi">1</span>
+            
+        <span class="k">elif</span> <span class="n">layer_info</span><span class="p">[</span><span class="s1">&#39;op&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Op</span><span class="o">.</span><span class="n">BATCH_NORM1D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">BATCH_NORM2D</span><span class="p">,</span> <span class="n">Op</span><span class="o">.</span><span class="n">BATCH_NORM3D</span><span class="p">]:</span>
+            <span class="c1"># Load batch norm parameters from block_idx.layer_in_block</span>
+            <span class="k">if</span> <span class="n">block_idx</span> <span class="ow">in</span> <span class="n">layer_groups</span> <span class="ow">and</span> <span class="n">layer_in_block</span> <span class="ow">in</span> <span class="n">layer_groups</span><span class="p">[</span><span class="n">block_idx</span><span class="p">]:</span>
+                <span class="n">sublayer</span> <span class="o">=</span> <span class="n">layer_groups</span><span class="p">[</span><span class="n">block_idx</span><span class="p">][</span><span class="n">layer_in_block</span><span class="p">]</span>
+                
+                <span class="k">if</span> <span class="s1">&#39;weight&#39;</span> <span class="ow">in</span> <span class="n">sublayer</span><span class="p">:</span>
+                    <span class="n">weight_key</span> <span class="o">=</span> <span class="n">sublayer</span><span class="p">[</span><span class="s1">&#39;weight&#39;</span><span class="p">]</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="n">weight_key</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+                    <span class="c1">#print(f&quot;  Loaded BN weight: {weight_key} -&gt; {layer.weight.shape}&quot;)</span>
+                    
+                <span class="k">if</span> <span class="s1">&#39;bias&#39;</span> <span class="ow">in</span> <span class="n">sublayer</span><span class="p">:</span>
+                    <span class="n">bias_key</span> <span class="o">=</span> <span class="n">sublayer</span><span class="p">[</span><span class="s1">&#39;bias&#39;</span><span class="p">]</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="n">bias_key</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+                    <span class="c1">#print(f&quot;  Loaded BN bias: {bias_key} -&gt; {layer.bias.shape}&quot;)</span>
+                    
+                <span class="k">if</span> <span class="s1">&#39;running_mean&#39;</span> <span class="ow">in</span> <span class="n">sublayer</span><span class="p">:</span>
+                    <span class="n">mean_key</span> <span class="o">=</span> <span class="n">sublayer</span><span class="p">[</span><span class="s1">&#39;running_mean&#39;</span><span class="p">]</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">running_mean</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="n">mean_key</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+                    <span class="c1">#print(f&quot;  Loaded BN running_mean: {mean_key} -&gt; {layer.running_mean.shape}&quot;)</span>
+                    
+                <span class="k">if</span> <span class="s1">&#39;running_var&#39;</span> <span class="ow">in</span> <span class="n">sublayer</span><span class="p">:</span>
+                    <span class="n">var_key</span> <span class="o">=</span> <span class="n">sublayer</span><span class="p">[</span><span class="s1">&#39;running_var&#39;</span><span class="p">]</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">running_var</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="n">var_key</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+                    <span class="c1">#print(f&quot;  Loaded BN running_var: {var_key} -&gt; {layer.running_var.shape}&quot;)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1">#print(f&quot;  Warning: No weights found for batchnorm layer at block {block_idx}, sublayer {layer_in_block}&quot;)</span>
+                <span class="k">pass</span>
+            
+            <span class="c1"># After batchnorm, move to next block</span>
+            <span class="n">block_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">layer_in_block</span> <span class="o">=</span> <span class="mi">0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_preprocess</span><span class="p">(</span><span class="n">preprocess</span><span class="p">:</span> <span class="n">Preprocess</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build preprocessing function&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+    
+    <span class="k">if</span> <span class="n">preprocess</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">PreprocessOp</span><span class="o">.</span><span class="n">QNORMALIZE</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">qnormalize</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="n">x_np</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+            <span class="n">qmin</span> <span class="o">=</span> <span class="n">preprocess</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;qmin&quot;</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">)</span>
+            <span class="n">qmax</span> <span class="o">=</span> <span class="n">preprocess</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;qmax&quot;</span><span class="p">,</span> <span class="mf">0.98</span><span class="p">)</span>
+            <span class="n">eps</span> <span class="o">=</span> <span class="n">preprocess</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;eps&quot;</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span>
+            
+            <span class="n">qlow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">x_np</span><span class="p">,</span> <span class="n">qmin</span><span class="p">)</span>
+            <span class="n">qhigh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">x_np</span><span class="p">,</span> <span class="n">qmax</span><span class="p">)</span>
+            <span class="n">x_np</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_np</span> <span class="o">-</span> <span class="n">qlow</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">qhigh</span> <span class="o">-</span> <span class="n">qlow</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+            <span class="n">x_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x_np</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">x_np</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">qnormalize</span>
+    
+    <span class="k">elif</span> <span class="n">preprocess</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">PreprocessOp</span><span class="o">.</span><span class="n">MINMAX</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">preprocess</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">PreprocessOp</span><span class="o">.</span><span class="n">ZSCORE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># NONE</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_postprocess</span><span class="p">(</span><span class="n">postprocess</span><span class="p">:</span> <span class="n">Postprocess</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build postprocessing function&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">postprocess</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">PostprocessOp</span><span class="o">.</span><span class="n">SOFTMAX</span><span class="p">:</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">postprocess</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dim&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">postprocess</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">PostprocessOp</span><span class="o">.</span><span class="n">SIGMOID</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">()</span>
+    
+    <span class="k">elif</span> <span class="n">postprocess</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="n">PostprocessOp</span><span class="o">.</span><span class="n">ARGMAX</span><span class="p">:</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">postprocess</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dim&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># NONE</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span>
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Example JSON spec for your MeshNet</span>
+<span class="c1"># ============================================================================</span>
+
+<span class="n">EXAMPLE_MESHNET_SPEC</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">{</span>
+<span class="s2">  &quot;version&quot;: &quot;2.0&quot;,</span>
+<span class="s2">  &quot;metadata&quot;: {</span>
+<span class="s2">    &quot;description&quot;: &quot;MeshNet 3D CNN with dilations 1→2→4→8→16→8→4→2→1 for binary output&quot;,</span>
+<span class="s2">    &quot;framework&quot;: &quot;tinygrad&quot;,</span>
+<span class="s2">    &quot;input_shape&quot;: [1, 1, 256, 256, 256],</span>
+<span class="s2">    &quot;output_classes&quot;: 2</span>
+<span class="s2">  },</span>
+<span class="s2">  &quot;preprocessing&quot;: {</span>
+<span class="s2">    &quot;op&quot;: &quot;none&quot;,</span>
+<span class="s2">    &quot;params&quot;: </span><span class="si">{}</span>
+<span class="s2">  },</span>
+<span class="s2">  &quot;forward_pass&quot;: [</span>
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 1, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 1, &quot;stride&quot;: 1, &quot;dilation&quot;: 1, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 2, &quot;stride&quot;: 1, &quot;dilation&quot;: 2, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 4, &quot;stride&quot;: 1, &quot;dilation&quot;: 4, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 8, &quot;stride&quot;: 1, &quot;dilation&quot;: 8, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 16, &quot;stride&quot;: 1, &quot;dilation&quot;: 16, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 8, &quot;stride&quot;: 1, &quot;dilation&quot;: 8, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 4, &quot;stride&quot;: 1, &quot;dilation&quot;: 4, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 2, &quot;stride&quot;: 1, &quot;dilation&quot;: 2, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 26, &quot;kernel_size&quot;: 3, &quot;padding&quot;: 1, &quot;stride&quot;: 1, &quot;dilation&quot;: 1, &quot;bias&quot;: true}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;batch_norm3d&quot;, &quot;params&quot;: {&quot;num_features&quot;: 26}},</span>
+<span class="s2">    {&quot;op&quot;: &quot;elu&quot;, &quot;params&quot;: {&quot;alpha&quot;: 1.0}},</span>
+
+<span class="s2">    {&quot;op&quot;: &quot;conv3d&quot;, &quot;params&quot;: {&quot;in_channels&quot;: 26, &quot;out_channels&quot;: 2, &quot;kernel_size&quot;: 1, &quot;padding&quot;: 0, &quot;stride&quot;: 1, &quot;dilation&quot;: 1, &quot;bias&quot;: true}}</span>
+<span class="s2">  ],</span>
+<span class="s2">  &quot;postprocessing&quot;: {</span>
+<span class="s2">    &quot;op&quot;: &quot;none&quot;,</span>
+<span class="s2">    &quot;params&quot;: </span><span class="si">{}</span>
+<span class="s2">  }</span>
+<span class="s2">}</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Usage</span>
+<span class="c1"># ============================================================================</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># TODO @spikedoanz: add this in examples</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">build_model</span><span class="p">(</span>
+        <span class="n">spec_path</span><span class="o">=</span><span class="s2">&quot;meshnet.json&quot;</span><span class="p">,</span>
+        <span class="n">weights_path</span><span class="o">=</span><span class="s2">&quot;meshnet.pth&quot;</span>
+    <span class="p">)</span>
+    
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+    
+    <span class="n">dummy_input</span> <span class="o">=</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">dummy_input</span><span class="p">,</span> <span class="n">training</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Output shape: </span><span class="si">{</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mike Doan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,656 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brainchop.tiny_meshnet &mdash; brainchop 0.1.23 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=20522496"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            brainchop
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#installation-methods">Installation Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#using-pip-recommended">Using pip (Recommended)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#from-source">From Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation.html#using-docker">Using Docker</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#verification">Verification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#gpu-support">GPU Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../installation.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#python-api">Python API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#basic-segmentation">Basic Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#cropping-for-speed">Cropping for Speed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#custom-models">Custom Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#webgpu-export">WebGPU Export</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#command-line-interface">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#basic-usage">Basic Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#selecting-models">Selecting Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#list-available-models">List Available Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#using-a-specific-model">Using a Specific Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#skull-stripping">Skull Stripping</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#advanced-options">Advanced Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#id1">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#performance-optimization">Performance Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#image-preprocessing">Image Preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#export-options">Export Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#id2">Custom Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#local-model-development">Local Model Development</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#file-uri-loading">File URI Loading</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#updating-models">Updating Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#common-workflows">Common Workflows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#quick-tissue-segmentation">Quick Tissue Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#clinical-scan-processing">Clinical Scan Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#atlas-based-parcellation">Atlas-based Parcellation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#brain-extraction-pipeline">Brain Extraction Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#batch-processing-workflow">Batch Processing Workflow</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#environment-variables">Environment Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../usage.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#out-of-memory">Out of Memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#slow-first-run">Slow First Run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../usage.html#model-download-issues">Model Download Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Available Models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-overview">Model Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#detailed-model-information">Detailed Model Information</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#tissue-fast">tissue_fast</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#subcortical">subcortical</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#subcortical-mini">subcortical-mini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#dkatlas">DKatlas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#mindgrab">mindgrab</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#aparc50">aparc50</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-sources">Model Sources</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../models.html#updating-models">Updating Models</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../models.html#model-architecture-formats">Model Architecture Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#core-api">Core API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#nifti-class">NIfTI Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.NIfTI"><code class="docutils literal notranslate"><span class="pre">NIfTI</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-class">Model Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.Model"><code class="docutils literal notranslate"><span class="pre">Model</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#modelinfo-class">ModelInfo Class</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.ModelInfo"><code class="docutils literal notranslate"><span class="pre">ModelInfo</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#functions">Functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.list_models"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.skull_strip"><code class="docutils literal notranslate"><span class="pre">skull_strip()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.argmax"><code class="docutils literal notranslate"><span class="pre">argmax()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.largest_component"><code class="docutils literal notranslate"><span class="pre">largest_component()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.export_channels"><code class="docutils literal notranslate"><span class="pre">export_channels()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#quick-start-examples">Quick Start Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#basic-segmentation">Basic Segmentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#cropping-for-speed">Cropping for Speed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#custom-models">Custom Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#raw-inference">Raw Inference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#webgpu-export">WebGPU Export</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.cli">Command Line Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.get_parser"><code class="docutils literal notranslate"><span class="pre">get_parser()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.print_models"><code class="docutils literal notranslate"><span class="pre">print_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.find_weights"><code class="docutils literal notranslate"><span class="pre">find_weights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.cli.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.utils">Utilities Module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.download_model_listing"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.load_models"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.update_models"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.list_models"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.download"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.unwrap_path"><code class="docutils literal notranslate"><span class="pre">unwrap_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.find_pth_files"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.export_classes"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.crop_to_cutoff"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.utils.pad_to_original_size"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-management">Model Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id0"><code class="docutils literal notranslate"><span class="pre">list_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id1"><code class="docutils literal notranslate"><span class="pre">update_models()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id2"><code class="docutils literal notranslate"><span class="pre">find_pth_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#download-and-cache">Download and Cache</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id3"><code class="docutils literal notranslate"><span class="pre">download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id4"><code class="docutils literal notranslate"><span class="pre">download_model_listing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id5"><code class="docutils literal notranslate"><span class="pre">load_models()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#image-processing">Image Processing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id6"><code class="docutils literal notranslate"><span class="pre">crop_to_cutoff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id7"><code class="docutils literal notranslate"><span class="pre">pad_to_original_size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id8"><code class="docutils literal notranslate"><span class="pre">export_classes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#model-loaders">Model Loaders</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.tiny_meshnet">TinyGrad MeshNet Loader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.convert_keys"><code class="docutils literal notranslate"><span class="pre">convert_keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.sequential_argmax"><code class="docutils literal notranslate"><span class="pre">sequential_argmax()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.SequentialConvArgmax"><code class="docutils literal notranslate"><span class="pre">SequentialConvArgmax</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.chunked_conv"><code class="docutils literal notranslate"><span class="pre">chunked_conv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.qnormalize"><code class="docutils literal notranslate"><span class="pre">qnormalize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.set_channel_num"><code class="docutils literal notranslate"><span class="pre">set_channel_num()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.construct_layer"><code class="docutils literal notranslate"><span class="pre">construct_layer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.MeshNet"><code class="docutils literal notranslate"><span class="pre">MeshNet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.tiny_meshnet.load_meshnet"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id9"><code class="docutils literal notranslate"><span class="pre">load_meshnet()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#module-brainchop.types">Model Types (Spec Format)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.PreprocessOp"><code class="docutils literal notranslate"><span class="pre">PreprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Op"><code class="docutils literal notranslate"><span class="pre">Op</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.PostprocessOp"><code class="docutils literal notranslate"><span class="pre">PostprocessOp</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Preprocess"><code class="docutils literal notranslate"><span class="pre">Preprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Layer"><code class="docutils literal notranslate"><span class="pre">Layer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Postprocess"><code class="docutils literal notranslate"><span class="pre">Postprocess</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.Metadata"><code class="docutils literal notranslate"><span class="pre">Metadata</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.ModelSpec"><code class="docutils literal notranslate"><span class="pre">ModelSpec</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.load_spec"><code class="docutils literal notranslate"><span class="pre">load_spec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.types.build_model"><code class="docutils literal notranslate"><span class="pre">build_model()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#module-brainchop.niimath">NIfTI Math Operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header_data_split"><code class="docutils literal notranslate"><span class="pre">header_data_split()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.read_header_bytes"><code class="docutils literal notranslate"><span class="pre">read_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.niimath_dtype"><code class="docutils literal notranslate"><span class="pre">niimath_dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.conform"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2dimensions"><code class="docutils literal notranslate"><span class="pre">header2dimensions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2endian"><code class="docutils literal notranslate"><span class="pre">header2endian()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.set_header_intent"><code class="docutils literal notranslate"><span class="pre">set_header_intent()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.set_header_intent_label"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2datatype"><code class="docutils literal notranslate"><span class="pre">header2datatype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.header2dtype"><code class="docutils literal notranslate"><span class="pre">header2dtype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.niimath_pipe_process"><code class="docutils literal notranslate"><span class="pre">niimath_pipe_process()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.grow_border"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.largest_cluster"><code class="docutils literal notranslate"><span class="pre">largest_cluster()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.truncate_header_bytes"><code class="docutils literal notranslate"><span class="pre">truncate_header_bytes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#brainchop.niimath.bwlabel"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#conformation-and-preprocessing">Conformation and Preprocessing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id10"><code class="docutils literal notranslate"><span class="pre">conform()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#labeling-operations">Labeling Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id11"><code class="docutils literal notranslate"><span class="pre">bwlabel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id12"><code class="docutils literal notranslate"><span class="pre">set_header_intent_label()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#mask-operations">Mask Operations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#id13"><code class="docutils literal notranslate"><span class="pre">grow_border()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../api.html#constants-and-configuration">Constants and Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#available-models">Available Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.AVAILABLE_MODELS"><code class="docutils literal notranslate"><span class="pre">AVAILABLE_MODELS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../api.html#model-urls">Model URLs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.BASE_URL"><code class="docutils literal notranslate"><span class="pre">BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.MESHNET_BASE_URL"><code class="docutils literal notranslate"><span class="pre">MESHNET_BASE_URL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api.html#brainchop.utils.MODELS_JSON_URL"><code class="docutils literal notranslate"><span class="pre">MODELS_JSON_URL</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">brainchop</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">brainchop.tiny_meshnet</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for brainchop.tiny_meshnet</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad.tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad</span><span class="w"> </span><span class="kn">import</span> <span class="n">nn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tinygrad.nn.state</span><span class="w"> </span><span class="kn">import</span> <span class="n">torch_load</span><span class="p">,</span> <span class="n">safe_load</span><span class="p">,</span> <span class="n">load_state_dict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<div class="viewcode-block" id="convert_keys">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.convert_keys">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">convert_keys</span><span class="p">(</span><span class="n">torch_state_dict</span><span class="p">,</span> <span class="n">tiny_state_dict</span><span class="p">):</span>
+    <span class="n">torch_keys</span> <span class="o">=</span> <span class="n">torch_state_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="n">tiny_keys</span> <span class="o">=</span> <span class="n">tiny_state_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="n">new_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">torch_keys</span><span class="p">,</span> <span class="n">tiny_keys</span><span class="p">):</span>
+        <span class="n">new_dict</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch_state_dict</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">new_dict</span></div>
+
+
+<div class="viewcode-block" id="sequential_argmax">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.sequential_argmax">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sequential_argmax</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sequential argmax over channel dimension with eager evaluation.</span>
+
+<span class="sd">    NOTE: This function receives an already-materialized tensor, so it does NOT</span>
+<span class="sd">    save memory. For true memory savings, use SequentialConvArgmax which integrates</span>
+<span class="sd">    the final conv layer with argmax to avoid materializing all channels at once.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">num_channels</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">depth</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+
+    <span class="c1"># outB tracks max values seen so far</span>
+    <span class="c1"># outC tracks indices of the max channel</span>
+    <span class="n">outB</span> <span class="o">=</span> <span class="n">Tensor</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">),</span> <span class="o">-</span><span class="mf">1e9</span><span class="p">)</span>
+    <span class="n">outC</span> <span class="o">=</span> <span class="n">Tensor</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">num_channels</span><span class="p">)):</span>
+        <span class="c1"># Extract i-th channel</span>
+        <span class="n">outA</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+        <span class="c1"># Find where current channel &gt; max so far</span>
+        <span class="n">greater</span> <span class="o">=</span> <span class="p">(</span><span class="n">outA</span> <span class="o">&gt;</span> <span class="n">outB</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+        <span class="c1"># Update max values</span>
+        <span class="n">outB</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">greater</span><span class="p">)</span> <span class="o">*</span> <span class="n">outB</span> <span class="o">+</span> <span class="n">greater</span> <span class="o">*</span> <span class="n">outA</span><span class="p">)</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+        <span class="c1"># Update argmax indices</span>
+        <span class="n">outC</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">greater</span><span class="p">)</span> <span class="o">*</span> <span class="n">outC</span> <span class="o">+</span> <span class="n">greater</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">))</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">outC</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="SequentialConvArgmax">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.SequentialConvArgmax">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SequentialConvArgmax</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sequential argmax - trades speed for memory by processing channels iteratively.</span>
+<span class="sd">    ~10-15x slower than native argmax but bounds peak memory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SequentialConvArgmax.__init__">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.SequentialConvArgmax.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span> <span class="o">=</span> <span class="n">out_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;using sequential argmax in new backend&#39;</span><span class="p">)</span>
+        <span class="n">outB</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+        <span class="n">outC</span> <span class="o">=</span> <span class="n">Tensor</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">outB</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span><span class="p">):</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">outB</span>
+            <span class="n">outB</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">outB</span><span class="p">)</span>
+            <span class="n">outC</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">outC</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">outB</span> <span class="o">=</span> <span class="n">outB</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+                <span class="n">outC</span> <span class="o">=</span> <span class="n">outC</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">outC</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="chunked_conv">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.chunked_conv">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">chunked_conv</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">conv_layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">,</span> <span class="n">chunk_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">30</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Workaround for WebGPU matmul bug: when output exceeds 2^30 elements,</span>
+<span class="sd">    process output channels in chunks to avoid 32-bit integer overflow.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">reduce</span>
+    <span class="n">spatial</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">out_channels</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">output_elements</span> <span class="o">=</span> <span class="n">out_channels</span> <span class="o">*</span> <span class="n">spatial</span>
+
+    <span class="k">if</span> <span class="n">output_elements</span> <span class="o">&lt;=</span> <span class="n">chunk_limit</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">conv_layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="c1"># Chunked processing</span>
+    <span class="n">max_channels</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">chunk_limit</span> <span class="o">//</span> <span class="n">spatial</span><span class="p">)</span>
+    <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">max_channels</span><span class="p">):</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">max_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">)</span>
+        <span class="n">chunk_weight</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="n">chunk_bias</span> <span class="o">=</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">bias</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="k">if</span> <span class="n">conv_layer</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="n">chunk_out</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
+            <span class="n">weight</span><span class="o">=</span><span class="n">chunk_weight</span><span class="p">,</span>
+            <span class="n">bias</span><span class="o">=</span><span class="n">chunk_bias</span><span class="p">,</span>
+            <span class="n">groups</span><span class="o">=</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">groups</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span>
+            <span class="n">dilation</span><span class="o">=</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">dilation</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="n">conv_layer</span><span class="o">.</span><span class="n">padding</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+        <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk_out</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Tensor</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="o">*</span><span class="n">chunks</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="qnormalize">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.qnormalize">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">qnormalize</span><span class="p">(</span><span class="n">img</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">qmin</span><span class="o">=</span><span class="mf">0.02</span><span class="p">,</span> <span class="n">qmax</span><span class="o">=</span><span class="mf">0.98</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unit interval preprocessing with clipping and safe division for bf16&quot;&quot;&quot;</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    <span class="n">qlow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">qmin</span><span class="p">)</span> <span class="c1">#type:ignore . numpy api bad</span>
+    <span class="n">qhigh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">qmax</span><span class="p">)</span> <span class="c1">#type:ignore</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="p">(</span><span class="n">img</span> <span class="o">-</span> <span class="n">qlow</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">qhigh</span> <span class="o">-</span> <span class="n">qlow</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1">#type:ignore</span>
+    <span class="k">return</span> <span class="n">Tensor</span><span class="p">(</span><span class="n">img</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="set_channel_num">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.set_channel_num">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_channel_num</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">,</span> <span class="n">channels</span><span class="p">):</span>
+    <span class="c1"># input layer</span>
+    <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">in_channels</span>
+    <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">channels</span>
+    <span class="c1"># output layer</span>
+    <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">channels</span>
+    <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_classes</span>
+    <span class="c1"># hidden layers</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">layer</span><span class="p">[</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="p">[</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">channels</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+
+
+<div class="viewcode-block" id="construct_layer">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.construct_layer">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">construct_layer</span><span class="p">(</span><span class="n">dropout_p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bnorm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gelu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">elu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;kernel_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;kernel_size&quot;</span><span class="p">]]</span> <span class="o">*</span> <span class="mi">3</span>
+    <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">bnorm</span><span class="p">:</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">GroupNorm</span><span class="p">(</span>
+                <span class="n">num_groups</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;out_channels&quot;</span><span class="p">],</span>
+                <span class="n">num_channels</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;out_channels&quot;</span><span class="p">],</span>
+                <span class="n">affine</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">relu_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">relu</span><span class="p">()</span>
+    <span class="n">gelu_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">gelu</span><span class="p">()</span>
+    <span class="n">elu_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">elu</span><span class="p">()</span>
+    <span class="n">dropout_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">dropout_p</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">elu</span><span class="p">:</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">elu_fn</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">gelu</span><span class="p">:</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gelu_fn</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relu_fn</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dropout_p</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dropout_fn</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">layers</span></div>
+
+
+
+<div class="viewcode-block" id="MeshNet">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.MeshNet">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MeshNet</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configurable MeshNet from https://arxiv.org/pdf/1612.00940.pdf&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MeshNet.__init__">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.MeshNet.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="n">config_file</span><span class="p">,</span> <span class="n">fat</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Init&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">set_channel_num</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">),</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">n_classes</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">chn</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">channels</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fat</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;io&quot;</span><span class="p">}:</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chn</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chn</span>
+            <span class="k">if</span> <span class="n">fat</span> <span class="o">==</span> <span class="s2">&quot;io&quot;</span><span class="p">:</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chn</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chn</span>
+            <span class="k">if</span> <span class="n">fat</span> <span class="o">==</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">3</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chn</span>
+                <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">4</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chn</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Check if config specifies bias (default False for backward compat)</span>
+        <span class="n">use_bias</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">block_kwargs</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># All but the last layer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="n">construct_layer</span><span class="p">(</span>
+                    <span class="n">dropout_p</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;dropout_p&quot;</span><span class="p">],</span>
+                    <span class="n">bnorm</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;bnorm&quot;</span><span class="p">],</span>
+                    <span class="n">gelu</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gelu&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                    <span class="n">elu</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                    <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">block_kwargs</span><span class="p">,</span> <span class="s2">&quot;bias&quot;</span><span class="p">:</span> <span class="n">use_bias</span><span class="p">},</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Handle last layer specially - add it to model list</span>
+        <span class="n">last_config</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span>
+                <span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;in_channels&quot;</span><span class="p">],</span>
+                <span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;out_channels&quot;</span><span class="p">],</span>
+                <span class="n">kernel_size</span><span class="o">=</span><span class="nb">tuple</span><span class="p">([</span><span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;kernel_size&quot;</span><span class="p">]]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">),</span>
+                <span class="n">padding</span><span class="o">=</span><span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;padding&quot;</span><span class="p">],</span>
+                <span class="n">stride</span><span class="o">=</span><span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;stride&quot;</span><span class="p">],</span>
+                <span class="n">dilation</span><span class="o">=</span><span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;dilation&quot;</span><span class="p">],</span>
+                <span class="n">bias</span><span class="o">=</span><span class="n">use_bias</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_classes</span> <span class="o">=</span> <span class="n">last_config</span><span class="p">[</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seq_conv_argmax</span><span class="p">:</span> <span class="n">SequentialConvArgmax</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="MeshNet.init_seq_conv_argmax">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.MeshNet.init_seq_conv_argmax">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">init_seq_conv_argmax</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize SequentialConvArgmax for memory-efficient argmax.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seq_conv_argmax</span> <span class="o">=</span> <span class="n">SequentialConvArgmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_classes</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MeshNet.normalize">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.MeshNet.normalize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">qnormalize</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="c1"># TODO: interpret normalization from config file</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">chunked_conv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">layer</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">seq_conv_argmax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">seq_conv_argmax</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MeshNet.half">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.MeshNet.half">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">half</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert all weights to float16/half precision&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">):</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">half</span><span class="p">()</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">half</span><span class="p">()</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">GroupNorm</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">half</span><span class="p">()</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">half</span><span class="p">()</span><span class="o">.</span><span class="n">realize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+</div>
+
+
+<div class="viewcode-block" id="load_meshnet">
+<a class="viewcode-back" href="../../api.html#brainchop.tiny_meshnet.load_meshnet">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_meshnet</span><span class="p">(</span>
+    <span class="n">config_fn</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">model_fn</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span>
+    <span class="n">out_channels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="c1"># Read config to check if it has explicit channel values</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_fn</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="c1"># Check if config uses -1 placeholders (old style) or explicit values (new style)</span>
+    <span class="c1"># Old style: in_channels=-1, out_channels=-1 for first/last, values get overridden</span>
+    <span class="c1"># New style: all values are explicit, no -1 placeholders</span>
+    <span class="n">uses_placeholders</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">uses_placeholders</span><span class="p">:</span>
+        <span class="c1"># New style config with explicit values - read from config</span>
+        <span class="n">in_channels</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;in_channels&quot;</span><span class="p">]</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span>
+        <span class="n">out_channels</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;layers&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;out_channels&quot;</span><span class="p">]</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">MeshNet</span><span class="p">(</span>
+        <span class="n">in_channels</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
+        <span class="n">n_classes</span><span class="o">=</span><span class="n">out_channels</span><span class="p">,</span>
+        <span class="n">channels</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
+        <span class="n">config_file</span><span class="o">=</span><span class="n">config_fn</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># Try safetensors first, fall back to torch format</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">safe_load</span><span class="p">(</span><span class="n">model_fn</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">torch_load</span><span class="p">(</span><span class="n">model_fn</span><span class="p">)</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">convert_keys</span><span class="p">(</span><span class="n">state_dict</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get_state_dict</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+    <span class="n">load_state_dict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="c1"># Initialize SequentialConvArgmax for memory-efficient argmax</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">init_seq_conv_argmax</span><span class="p">()</span>
+    <span class="c1"># Convert to half precision if FP16 env var is set</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;FP16&quot;</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">half</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">model</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># TODO @spikedoanz: load default meshnet in this snippet</span>
+    <span class="k">pass</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mike Doan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
