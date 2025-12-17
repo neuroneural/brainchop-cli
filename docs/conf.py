@@ -5,6 +5,8 @@ import sys
 
 # Add the parent directory to the path so we can import brainchop
 sys.path.insert(0, os.path.abspath('..'))
+# Add the docs directory to the path so we can import generate_models
+sys.path.insert(0, os.path.abspath('.'))
 
 # Project information
 project = 'brainchop'
