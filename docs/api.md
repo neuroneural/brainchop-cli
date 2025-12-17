@@ -10,3 +10,4 @@
 ::: brainchop.segment
 ::: brainchop.save
 ::: brainchop.list_models
+::: brainchop.export

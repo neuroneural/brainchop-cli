@@ -219,3 +219,59 @@ def segment(
             results.append(Volume(Tensor(out_np), header))
 
     return results[0] if single_input else results
+
+
+def export(
+    model: str,
+    output_dir: str,
+    *,
+    target: str = "webgpu",
+) -> tuple[str, str]:
+    """
+    Export model to WebGPU or other target format.
+
+    Args:
+        model: Model name (e.g., "tissue_fast") or path to model dir
+        output_dir: Directory to save exported files
+        target: Export target ("webgpu", "clang", "wasm")
+
+    Returns:
+        Tuple of (js_path, weights_path)
+
+    Example:
+        ```python
+        >>> js_path, weights_path = export("tissue_fast", "/tmp/export")
+        >>> print(js_path)
+        /tmp/export/tissue_fast.js
+        ```
+    """
+    from pathlib import Path
+    from tinygrad.nn.state import safe_save
+    from brainchop.export_model import export_model
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Get model name for output files
+    model_name = Path(model).name if "/" in model else model
+
+    # Load model
+    m = _load_model(model)
+
+    # Create dummy input
+    dummy_input = Tensor.zeros(1, 1, 256, 256, 256, dtype="float32")
+
+    # Export
+    prg, _input_sizes, _output_sizes, state = export_model(
+        m, target, dummy_input, model_name=model_name
+    )
+
+    # Save JS code
+    js_path = output_path / f"{model_name}.js"
+    js_path.write_text(prg)
+
+    # Save weights
+    weights_path = output_path / f"{model_name}.safetensors"
+    safe_save(state, str(weights_path))
+
+    return str(js_path), str(weights_path)
