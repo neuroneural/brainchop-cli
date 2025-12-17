@@ -52,8 +52,7 @@ ENV CFLAGS="-O2 -fPIC -ffreestanding -fno-math-errno"
 ENV LDFLAGS="-fuse-ld=lld"
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir .
+RUN pip install --no-cache-dir .
 
 # Set the entrypoint
 ENTRYPOINT ["brainchop"]

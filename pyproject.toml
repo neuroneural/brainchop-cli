@@ -1,6 +1,52 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "pybind11>=2.5.0"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "brainchop"
+version = "0.1.24"
+description = "Portable and lightweight brain segmentation using tinygrad"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Mike Doan", email = "spikedoanz@gmail.com"}]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "tinygrad",
+    "niimath>=1.0.20250804",
+    "requests",
+    "safetensors",
+]
+
+[project.optional-dependencies]
+all = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+brainchop = "brainchop.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/neuroneural/brainchop-cli"
+Repository = "https://github.com/neuroneural/brainchop-cli"
+
+[tool.setuptools.packages.find]
+include = ["brainchop*"]
+
+[tool.setuptools.package-data]
+brainchop = ["niimath/*"]
 
 [tool.ty.src]
 exclude = ["brainchop/export_model.py", "docs/*"]
+
+[tool.ruff]
+line-length = 100
