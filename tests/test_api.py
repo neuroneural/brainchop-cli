@@ -1,8 +1,8 @@
 """Tests for brainchop API."""
 
 import pytest
-import numpy as np
 from pathlib import Path
+from tinygrad import Tensor
 from tinygrad.helpers import fetch
 
 from brainchop import load, save, segment, list_models
@@ -30,11 +30,10 @@ class TestListModels:
 
 
 class TestLoad:
-    def test_load_returns_volume_and_header(self, test_nifti_path):
+    def test_load_returns_tensor_and_header(self, test_nifti_path):
         volume, header = load(str(test_nifti_path))
-        assert isinstance(volume, np.ndarray)
+        assert isinstance(volume, Tensor)
         assert volume.shape == (256, 256, 256)
-        assert volume.dtype == np.uint8
         assert isinstance(header, bytes)
 
     def test_load_with_crop(self, test_nifti_path):
@@ -45,16 +44,16 @@ class TestLoad:
 
 
 class TestSegment:
-    def test_segment_returns_volume(self, test_nifti_path):
+    def test_segment_returns_tensor(self, test_nifti_path):
         volume, header = load(str(test_nifti_path))
         result = segment(volume, "tissue_fast")
-        assert isinstance(result, np.ndarray)
+        assert isinstance(result, Tensor)
         assert result.shape == (256, 256, 256)
-        assert result.dtype == np.uint8
 
     def test_segment_with_header(self, test_nifti_path):
         volume, header = load(str(test_nifti_path))
         result = segment(volume, "tissue_fast", header)
+        assert not isinstance(result, list)
         assert result.shape == (256, 256, 256)
 
 
@@ -70,6 +69,7 @@ class TestEndToEnd:
     def test_full_pipeline(self, test_nifti_path, tmp_path):
         volume, header = load(str(test_nifti_path))
         result = segment(volume, "tissue_fast", header)
+        assert not isinstance(result, list)
         output_path = tmp_path / "segmented.nii.gz"
         save(result, header, str(output_path))
         assert output_path.exists()

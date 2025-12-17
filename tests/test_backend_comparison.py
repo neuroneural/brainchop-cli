@@ -41,7 +41,8 @@ def run_inference(model_name: str = "tissue_fast") -> np.ndarray:
     nifti_path = get_test_nifti_path()
     volume, header = load(str(nifti_path))
     result = segment(volume, model_name)
-    return result
+    assert not isinstance(result, list)
+    return result.numpy()
 
 
 def get_current_backend() -> str:

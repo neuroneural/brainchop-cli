@@ -9,6 +9,8 @@ Example:
     save(result, header, "output.nii.gz")
 """
 
+from tinygrad import Tensor
+
 from brainchop.api import load, save, segment, list_models
 
-__all__ = ["load", "save", "segment", "list_models"]
+__all__ = ["load", "save", "segment", "list_models", "Tensor"]

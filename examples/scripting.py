@@ -12,4 +12,5 @@ for name, desc in list_models().items():
 # Load, segment, save
 volume, header = load("t1_crop.nii.gz")
 result = segment(volume, "tissue_fast", header)
+assert not isinstance(result, list)  # single input -> single output
 save(result, header, "output.nii.gz")

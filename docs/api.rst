@@ -35,7 +35,7 @@ load
 
 .. code-block:: python
 
-   load(path: str, *, crop: float | None = None, ct: bool = False) -> tuple[np.ndarray, bytes]
+   load(path: str, *, crop: float | None = None, ct: bool = False) -> tuple[Tensor, bytes]
 
 Load NIfTI file, conform to 256x256x256.
 
@@ -43,7 +43,7 @@ Load NIfTI file, conform to 256x256x256.
 - ``crop``: Percentile cutoff for cropping (faster inference)
 - ``ct``: Convert CT scans from Hounsfield to Cormack units
 
-Returns ``(volume, header)`` where volume is uint8 ``(256,256,256)``.
+Returns ``(volume, header)`` where volume is a Tensor ``(256,256,256)``.
 
 segment
 ~~~~~~~
@@ -51,20 +51,20 @@ segment
 .. code-block:: python
 
    segment(
-       volume: np.ndarray | list[np.ndarray],
+       volume: Tensor | list[Tensor],
        model: str,
        header: bytes | list[bytes] | None = None,
        shard_size: int = 1,
-   ) -> np.ndarray | list[np.ndarray]
+   ) -> Tensor | list[Tensor]
 
 Segment brain volume(s).
 
-- ``volume``: Single volume ``(256,256,256)`` uint8 or list of volumes
+- ``volume``: Single Tensor ``(256,256,256)`` or list of Tensors
 - ``model``: Model name (e.g., ``"subcortical"``) or path to custom model directory
 - ``header``: Optional header(s) for bwlabel postprocessing
 - ``shard_size``: Batch size for processing multiple volumes
 
-Returns segmented volume(s) - single array if input was single, list if input was list.
+Returns segmented volume(s) - single Tensor if input was single, list if input was list.
 
 Custom models can be loaded by path:
 
@@ -85,10 +85,10 @@ save
 
 .. code-block:: python
 
-   save(volume: np.ndarray, header: bytes, path: str) -> None
+   save(volume: Tensor, header: bytes, path: str) -> None
 
 Save volume with header to NIfTI file.
 
-- ``volume``: Volume to save
+- ``volume``: Tensor to save
 - ``header``: NIfTI header bytes
 - ``path``: Output path (``.nii`` or ``.nii.gz``)
