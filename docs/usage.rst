@@ -23,15 +23,15 @@ Batch Processing
 
 .. code-block:: python
 
-   from brainchop import load, segment_batch, save
+   from brainchop import load, segment, save
 
    # Load multiple
    data = [load(f"scan{i}.nii.gz") for i in range(4)]
    volumes = [v for v, h in data]
    headers = [h for v, h in data]
 
-   # Segment batch
-   results = segment_batch(volumes, "tissue_fast", headers, shard_size=2)
+   # Segment batch (same function, pass list)
+   results = segment(volumes, "tissue_fast", headers, shard_size=2)
 
    # Save
    for i, result in enumerate(results):

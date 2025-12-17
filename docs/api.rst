@@ -1,7 +1,7 @@
 API Reference
 =============
 
-brainchop provides a minimal Python API with 5 functions.
+brainchop provides a minimal Python API with 4 functions.
 
 Quick Start
 -----------
@@ -50,29 +50,21 @@ segment
 
 .. code-block:: python
 
-   segment(volume: np.ndarray, model: str, header: bytes | None = None) -> np.ndarray
-
-Segment brain volume.
-
-- ``volume``: Input volume ``(256,256,256)`` uint8
-- ``model``: Model name (e.g., ``"subcortical"``, ``"tissue_fast"``)
-- ``header``: Optional header for bwlabel postprocessing
-
-Returns segmented volume ``(256,256,256)`` uint8.
-
-segment_batch
-~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   segment_batch(
-       volumes: list[np.ndarray],
+   segment(
+       volume: np.ndarray | list[np.ndarray],
        model: str,
-       headers: list[bytes] | None = None,
+       header: bytes | list[bytes] | None = None,
        shard_size: int = 1,
-   ) -> list[np.ndarray]
+   ) -> np.ndarray | list[np.ndarray]
 
-Segment multiple volumes with optional sharding for memory control.
+Segment brain volume(s).
+
+- ``volume``: Single volume ``(256,256,256)`` uint8 or list of volumes
+- ``model``: Model name (e.g., ``"subcortical"``, ``"tissue_fast"``)
+- ``header``: Optional header(s) for bwlabel postprocessing
+- ``shard_size``: Batch size for processing multiple volumes
+
+Returns segmented volume(s) - single array if input was single, list if input was list.
 
 save
 ~~~~

@@ -9,6 +9,6 @@ Example:
     save(result, header, "output.nii.gz")
 """
 
-from brainchop.api import load, save, segment, segment_batch, list_models
+from brainchop.api import load, save, segment, list_models
 
-__all__ = ["load", "save", "segment", "segment_batch", "list_models"]
+__all__ = ["load", "save", "segment", "list_models"]

@@ -68,46 +68,29 @@ def _load_model(name: str):
     return load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
 
 
-def segment(volume: np.ndarray, model: str, header: bytes | None = None) -> np.ndarray:
+def segment(
+    volume: np.ndarray | list[np.ndarray],
+    model: str,
+    header: bytes | list[bytes] | None = None,
+    shard_size: int = 1,
+) -> np.ndarray | list[np.ndarray]:
     """
-    Segment brain volume.
+    Segment brain volume(s).
 
     Args:
-        volume: Input volume (256,256,256) uint8
+        volume: Single volume (256,256,256) or list of volumes
         model: Model name (e.g., "subcortical", "tissue_fast")
-        header: Optional header for bwlabel postprocessing
+        header: Optional header(s) for bwlabel postprocessing
+        shard_size: Batch size for processing multiple volumes
 
     Returns:
-        Segmented volume (256,256,256) uint8
+        Segmented volume(s) - single array if input was single, list if input was list
     """
-    m = _load_model(model)
+    # Handle single volume case
+    single_input = not isinstance(volume, list)
+    volumes = [volume] if single_input else volume
+    headers = [header] if single_input and header is not None else header
 
-    # Prepare tensor (Z,Y,X) -> (1,1,D,H,W)
-    tensor = Tensor(volume.transpose((2, 1, 0)).astype(np.float32)).rearrange("... -> 1 1 ...")
-
-    if hasattr(m, "normalize"):
-        tensor = m.normalize(tensor)
-
-    # Run inference
-    output = m(tensor).numpy()
-
-    # Output is (1,D,H,W), transpose to (X,Y,Z)
-    result = output[0].transpose((2, 1, 0)).astype(np.uint8)
-
-    # Postprocess with bwlabel if header provided
-    if header is not None:
-        result, _ = bwlabel(header, result)
-
-    return result
-
-
-def segment_batch(
-    volumes: list[np.ndarray],
-    model: str,
-    headers: list[bytes] | None = None,
-    shard_size: int = 1,
-) -> list[np.ndarray]:
-    """Segment multiple volumes."""
     m = _load_model(model)
     results = []
 
@@ -129,4 +112,4 @@ def segment_batch(
                 result, _ = bwlabel(headers[i + j], result)
             results.append(result)
 
-    return results
+    return results[0] if single_input else results
