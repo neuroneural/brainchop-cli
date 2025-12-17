@@ -12,6 +12,5 @@ import brainchop as bc
 
 js_path, weights_path = bc.export("tissue_fast", "/tmp/brainchop_export")
 
-print(f"Exported to:")
-print(f"  {js_path}")
-print(f"  {weights_path}")
+print(f"Wrote model program to: {js_path}")
+print(f"Wrote model weights to: {weights_path}")

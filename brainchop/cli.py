@@ -7,7 +7,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from brainchop.api import Volume, load, save, segment, list_models
+from brainchop.api import (
+    Volume, load, save, segment, list_models, optimize,
+    _is_first_run, _get_best_beam,
+)
 from brainchop.niimath import grow_border, truncate_header_bytes
 
 
@@ -33,8 +36,30 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("-a", "--mask", nargs="?", const="mask.nii.gz", help="Save mask (mindgrab)")
     parser.add_argument("-b", "--border", type=int, default=0, help="Mask border mm (mindgrab)")
     parser.add_argument("-bs", "--batch-size", type=int, default=1, help="Batch size")
+    parser.add_argument("--no-optimize", action="store_true", help="Skip optimization prompt")
+    parser.add_argument("--beam", type=int, default=None, help="BEAM optimization level")
 
     return parser
+
+
+def _prompt_for_optimization(model_name: str, batch_size: int) -> bool:
+    """Prompt user for first-run optimization."""
+    print(f"\nbrainchop :: First run detected for '{model_name}' with batch size {batch_size}")
+    print("brainchop :: Would you like to pre-optimize for faster subsequent runs?")
+    print("brainchop :: This compiles the model with BEAM=2 optimization (recommended)")
+    while True:
+        try:
+            response = input("brainchop :: Optimize now? [y/n]: ").strip().lower()
+        except EOFError:
+            return False
+        if response == "y":
+            optimize(model_name, beam=2, batch_size=batch_size)
+            return True
+        elif response == "n":
+            print("brainchop :: Skipping optimization.")
+            return False
+        else:
+            print("brainchop :: Please enter 'y' or 'n'")
 
 
 def main():
@@ -63,6 +88,17 @@ def main():
     else:
         model_name = args.model
 
+    # Handle BEAM optimization
+    beam = args.beam if args.beam is not None else 0
+    if beam == 0 and not args.no_optimize:
+        # Check if first run, prompt for optimization
+        if _is_first_run(model_name, args.batch_size):
+            _prompt_for_optimization(model_name, args.batch_size)
+        # Use cached beam value
+        cached = _get_best_beam(model_name, args.batch_size)
+        if cached:
+            beam = cached
+
     # Process each input
     for i, input_path in enumerate(args.input):
         abs_path = os.path.abspath(input_path)
@@ -72,7 +108,7 @@ def main():
         vol = load(abs_path, crop=args.crop, ct=args.ct)
 
         # Segment (single volume, so result is always Volume)
-        result = segment(vol, model_name)
+        result = segment(vol, model_name, beam=beam)
         assert isinstance(result, Volume)
 
         # Output path
