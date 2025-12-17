@@ -1,12 +1,13 @@
 """
-convenience printers for manual visual inspection of brainchop-cli output
+Convenience test for manual visual inspection of brainchop output.
+Runs all models through the API and generates mrpeek commands for inspection.
 """
 
 import hashlib
 from pathlib import Path
-from brainchop import list_models
 from tinygrad.helpers import fetch, getenv
-import subprocess
+
+import brainchop as bc
 
 CACHEDIR = Path.home() / ".cache" / "brainchop" / "output"
 CACHEDIR.mkdir(parents=True, exist_ok=True)
@@ -15,54 +16,67 @@ _URLS = {
     "t1_crop": "https://github.com/neuroneural/brainchop-models/raw/main/t1_crop.nii.gz"
 }
 
-_MODELS = sorted(list_models().keys())
-
-def get_brainchop_cmd(
-    path, model: str|None=None, args: list[str]=[], output_dir:Path|str|None=None) -> tuple[list[str], Path]:
-  model_strs = ["-m", model] if model else []
-  cmd = ["brainchop"]  + args + model_strs + [str(path)]
-  cmd_hash = hashlib.md5(" ".join(cmd).encode()).hexdigest()[:8]
-  output_path = CACHEDIR / str(cmd_hash+".nii.gz") if not output_dir else Path(output_dir)
-  return cmd + ["-o", str(output_path)], output_path
-
-def get_mrpeek_cmd(path) -> list[str]:
-  return ["mrpeek"] + ["-batch"] + [str(path)]
-
-def cmd_to_str(l: list[str]) -> str:
-  return " ".join(l)
+_MODELS = sorted(bc.list_models().keys())
 
 
-# list available models
+def get_output_path(input_path: Path, model: str) -> Path:
+    """Generate deterministic output path based on input and model."""
+    key = f"{input_path}_{model}"
+    hash_str = hashlib.md5(key.encode()).hexdigest()[:8]
+    return CACHEDIR / f"{hash_str}.nii.gz"
+
+
+def get_mrpeek_cmd(path: Path) -> str:
+    return f"mrpeek -batch {path}"
+
+
+# List available models
 print("available models:", _MODELS)
 
-# 0. download files
+# Download test files
 test_files = ["t1_crop"]
-paths = [fetch(_URLS[name], name + ".nii.gz") for name in test_files]
+paths = [Path(fetch(_URLS[name], name + ".nii.gz")) for name in test_files]
 
-# 1. print mrpeek commands for original files
-print("="*80)
+# Print mrpeek commands for original files
+print("=" * 80)
 print("mrpeek commands for original files:")
-mrpeek_cmds = [get_mrpeek_cmd(path) for path in paths]
-for cmd in mrpeek_cmds: print(cmd_to_str(cmd))
+for path in paths:
+    print(get_mrpeek_cmd(path))
 
-# 2. print brainchop commands (no args) # paths are deterministic given model, input filename and args
-print("="*80)
-print("brainchop commands:")
-brainchop_cmds = [get_brainchop_cmd(path, model)[0] for path in paths for model in _MODELS]
-output_paths   = [get_brainchop_cmd(path, model)[1] for path in paths for model in _MODELS]
-for cmd in brainchop_cmds: print(cmd_to_str(cmd))
-for path in output_paths: path.parent.mkdir(parents=True, exist_ok=True)
+# Generate output paths
+output_paths = [(path, model, get_output_path(path, model)) for path in paths for model in _MODELS]
 
-# 3. print mrpeek commnd for output files
-output_mrpeek_cmds = mrpeek_cmds = [get_mrpeek_cmd(path) for path in output_paths]
-for cmd in output_mrpeek_cmds: print(cmd_to_str(cmd))
+# Print expected output paths
+print("=" * 80)
+print("output files:")
+for input_path, model, output_path in output_paths:
+    print(f"  {model}: {output_path}")
 
-if getenv("DRYRUN"): exit(0)
+# Print mrpeek commands for output files
+print("=" * 80)
+print("mrpeek commands for outputs:")
+for _, _, output_path in output_paths:
+    print(get_mrpeek_cmd(output_path))
 
-# 4. run all commands (sequential for now)
-all_cmds = zip(mrpeek_cmds, brainchop_cmds, output_mrpeek_cmds)
-for cmd_pack in all_cmds: 
-  for cmd in cmd_pack:
-    print(">>> RUNNING: ", cmd_to_str(cmd))
-    subprocess.run(cmd)
-  print("=" * 80)
+if getenv("DRYRUN"):
+    print("\nDRYRUN mode - not running inference")
+    exit(0)
+
+# Run inference using API (no interactive prompts)
+print("=" * 80)
+print("running inference...")
+for input_path, model, output_path in output_paths:
+    print(f"\n>>> {model}")
+
+    # Load
+    vol = bc.load(str(input_path))
+
+    # Segment (beam=0 means no optimization, no prompts)
+    result = bc.segment(vol, model, beam=0)
+
+    # Save
+    bc.save(result, str(output_path))
+    print(f"    saved: {output_path}")
+
+print("=" * 80)
+print("done! run mrpeek commands above to inspect outputs")
