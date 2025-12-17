@@ -42,12 +42,11 @@ Install brainchop:
 
 .. code-block:: python
 
-   from brainchop import NIfTI, Model
+   from brainchop import load, segment, save
 
-   nifti = NIfTI.load("input.nii.gz")
-   model = Model("subcortical")
-   result = model.segment(nifti)
-   result.save("output.nii.gz")
+   volume, header = load("input.nii.gz")
+   result = segment(volume, "subcortical", header)
+   save(result, header, "output.nii.gz")
 
 Indices and Tables
 ==================

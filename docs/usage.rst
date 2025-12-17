@@ -6,104 +6,36 @@ This guide covers the various ways to use BrainChop for brain segmentation.
 Python API
 ----------
 
-BrainChop provides a clean Python API for scripting and integration.
-
-Basic Segmentation
-~~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
-   from brainchop import NIfTI, Model, list_models
+   from brainchop import load, segment, save, list_models
 
-   # List available models
-   for m in list_models():
-       print(f"{m.name}: {m.description}")
+   # List models
+   print(list_models())
 
-   # Load a brain scan
-   nifti = NIfTI.load("input.nii.gz")
-
-   # Load a model and segment
-   model = Model("subcortical")
-   result = model.segment(nifti)
-
-   # Save the result
-   result.save("output.nii.gz")
+   # Load, segment, save
+   volume, header = load("input.nii.gz")
+   result = segment(volume, "subcortical", header)
+   save(result, header, "output.nii.gz")
 
 Batch Processing
 ~~~~~~~~~~~~~~~~
 
-Process multiple scans efficiently:
-
 .. code-block:: python
 
-   from brainchop import NIfTI, Model
+   from brainchop import load, segment_batch, save
 
-   # Load multiple scans (same API, just pass a list)
-   niftis = NIfTI.load(["scan1.nii.gz", "scan2.nii.gz", "scan3.nii.gz"])
+   # Load multiple
+   data = [load(f"scan{i}.nii.gz") for i in range(4)]
+   volumes = [v for v, h in data]
+   headers = [h for v, h in data]
 
-   # Segment all with memory-efficient sharding
-   model = Model("tissue_fast")
-   results = model.segment(niftis, shard_size=2)
+   # Segment batch
+   results = segment_batch(volumes, "tissue_fast", headers, shard_size=2)
 
-   # Save outputs
+   # Save
    for i, result in enumerate(results):
-       result.save(f"output_{i}.nii.gz")
-
-Cropping for Speed
-~~~~~~~~~~~~~~~~~~
-
-Crop input volumes to speed up inference:
-
-.. code-block:: python
-
-   from brainchop import NIfTI, Model
-
-   # Load with cropping (removes empty space)
-   nifti = NIfTI.load("input.nii.gz", crop_percentile=2.0)
-
-   # Segment - output is automatically restored to full 256x256x256
-   model = Model("tissue_fast")
-   result = model.segment(nifti)
-   result.save("output.nii.gz")
-
-Custom Models
-~~~~~~~~~~~~~
-
-Load your own trained models:
-
-.. code-block:: python
-
-   from brainchop import Model
-
-   # MeshNet format (standard)
-   model = Model(
-       config_path="custom/model.json",
-       weights_path="custom/model.pth"
-   )
-
-   # Spec format (supports custom layer types)
-   model = Model(
-       config_path="spec/model.json",  # has "forward_pass" key
-       weights_path="spec/model.pth"
-   )
-
-WebGPU Export
-~~~~~~~~~~~~~
-
-Export models for browser deployment:
-
-.. code-block:: bash
-
-   # Must set WEBGPU=1 before importing brainchop
-   WEBGPU=1 python export_script.py
-
-.. code-block:: python
-
-   # export_script.py
-   from brainchop import Model
-
-   model = Model("tissue_fast")
-   code_path, weights_path = model.export(output_dir="./web_model")
+       save(result, headers[i], f"output_{i}.nii.gz")
 
 Command Line Interface
 ----------------------
