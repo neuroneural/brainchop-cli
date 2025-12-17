@@ -15,7 +15,7 @@ _URLS = {
     "t1_crop": "https://github.com/neuroneural/brainchop-models/raw/main/t1_crop.nii.gz"
 }
 
-_MODELS = sorted([m.name for m in list_models()])
+_MODELS = sorted(list_models().keys())
 
 def get_brainchop_cmd(
     path, model: str|None=None, args: list[str]=[], output_dir:Path|str|None=None) -> tuple[list[str], Path]:
