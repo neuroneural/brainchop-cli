@@ -3,9 +3,8 @@ convenience printers for manual visual inspection of brainchop-cli output
 """
 
 import hashlib
-from typing import Any
 from pathlib import Path
-from brainchop.utils import load_models
+from brainchop import list_models
 from tinygrad.helpers import fetch, getenv
 import subprocess
 
@@ -16,8 +15,7 @@ _URLS = {
     "t1_crop": "https://github.com/neuroneural/brainchop-models/raw/main/t1_crop.nii.gz"
 }
 
-_MODELS_JSON: dict[str,Any] = load_models()
-_MODELS = sorted([name for name in _MODELS_JSON.keys()])
+_MODELS = sorted([m.name for m in list_models()])
 
 def get_brainchop_cmd(
     path, model: str|None=None, args: list[str]=[], output_dir:Path|str|None=None) -> tuple[list[str], Path]:
