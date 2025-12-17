@@ -404,57 +404,50 @@ class Model:
 
     def export(
         self,
-        target: str = "webgpu",
-        *,
         output_dir: str = ".",
+        *,
         stream_weights: bool = False,
     ) -> tuple[str, str]:
         """
-        Export model to target format.
+        Export model to WebGPU format.
+
+        NOTE: Must run with WEBGPU=1 environment variable set before importing brainchop.
+        Example: WEBGPU=1 python my_export_script.py
 
         Args:
-            target: Export target ("webgpu", "clang", "wasm", "json")
             output_dir: Directory to write output files
-            stream_weights: Whether to stream weights (WebGPU only)
+            stream_weights: Whether to stream weights
 
         Returns:
             Tuple of (code_path, weights_path)
         """
         from brainchop.export_model import export_model
         from tinygrad.nn.state import safe_save
+        from tinygrad.tensor import Device
 
-        # Set device for export target
-        device_map = {"webgpu": "WEBGPU", "clang": "CPU", "wasm": "CPU"}
-        original_device = os.environ.get(device_map.get(target, "CPU"))
-        if target in device_map:
-            os.environ[device_map[target]] = "1"
-
-        try:
-            # Create a dummy input tensor for tracing
-            dummy_input = Tensor(np.random.randn(1, 1, 256, 256, 256).astype(np.float32))
-
-            model_name = self._name or "model"
-            prg, _, _, state = export_model(
-                self._model,
-                target,
-                dummy_input,
-                model_name=model_name,
-                stream_weights=stream_weights,
+        if Device.DEFAULT != "WEBGPU":
+            raise RuntimeError(
+                "Export requires WEBGPU device. Run with WEBGPU=1 env var set before importing brainchop.\n"
+                "Example: WEBGPU=1 python my_script.py"
             )
-        finally:
-            # Restore original device setting
-            if target in device_map:
-                if original_device is not None:
-                    os.environ[device_map[target]] = original_device
-                elif device_map[target] in os.environ:
-                    del os.environ[device_map[target]]
+
+        # Create a dummy input tensor for tracing
+        dummy_input = Tensor(np.random.randn(1, 1, 256, 256, 256).astype(np.float32))
+
+        model_name = self._name or "model"
+        prg, _, _, state = export_model(
+            self._model,
+            "webgpu",
+            dummy_input,
+            model_name=model_name,
+            stream_weights=stream_weights,
+        )
 
         out_path = Path(output_dir)
         out_path.mkdir(parents=True, exist_ok=True)
 
         # Save code
-        code_ext = ".js" if target == "webgpu" else ".c" if target in ("clang", "wasm") else ".json"
-        code_path = out_path / f"{model_name}{code_ext}"
+        code_path = out_path / f"{model_name}.js"
         with open(code_path, "w") as f:
             f.write(prg)
 

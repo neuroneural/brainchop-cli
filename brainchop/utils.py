@@ -84,14 +84,28 @@ def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
     cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
     json_fn = cache_dir / "model.json"
     pth_fn = cache_dir / "model.pth"
+    bin_fn = cache_dir / "model.bin"
 
-    base_url = MESHNET_BASE_URL
-    for file in ["model.json", "model.pth"]:
-        url = f"{base_url}{model_dir}/{file}"
-        local_path = cache_dir / file
-        if not local_path.exists():
-            download(url, local_path)
-    return json_fn, pth_fn
+    # Check if we already have the weights locally (either .pth or .bin)
+    if not json_fn.exists():
+        base_url = MESHNET_BASE_URL
+        url = f"{base_url}{model_dir}/model.json"
+        download(url, json_fn)
+
+    # Try to find weights file - check local first, then download
+    if pth_fn.exists():
+        return json_fn, pth_fn
+    elif bin_fn.exists():
+        return json_fn, bin_fn
+    else:
+        # Try downloading .pth first, fall back to .bin
+        base_url = MESHNET_BASE_URL
+        try:
+            download(f"{base_url}{model_dir}/model.pth", pth_fn)
+            return json_fn, pth_fn
+        except Exception:
+            download(f"{base_url}{model_dir}/model.bin", bin_fn)
+            return json_fn, bin_fn
 
 
 def _load_model_from_uri(uri: str):

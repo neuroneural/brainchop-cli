@@ -74,8 +74,9 @@ segmentation.save("output.nii.gz")
 # 6. Advanced: WebGPU export
 # -----------------------------------------------------------------------------
 # Export model to WebGPU JavaScript
-model.export("webgpu", output_dir="/tmp")
-# Creates: /tmp/subcortical.js + ./tmp/subcortical.safetensors
+# NOTE: Must run script with WEBGPU=1 env var: WEBGPU=1 python examples/scripting.py
+# model.export(output_dir="/tmp")
+# Creates: /tmp/subcortical.js + /tmp/subcortical.safetensors
 
 # -----------------------------------------------------------------------------
 # 7. Advanced: Direct tinygrad access
