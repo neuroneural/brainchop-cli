@@ -22,7 +22,6 @@ def sequential_argmax(x: Tensor) -> Tensor:
     save memory. For true memory savings, use SequentialConvArgmax which integrates
     the final conv layer with argmax to avoid materializing all channels at once.
     """
-    print('using sequential argmax on new backend')
     batch_size = x.shape[0]
     num_channels = x.shape[1]
     depth, height, width = x.shape[2], x.shape[3], x.shape[4]
@@ -54,7 +53,6 @@ class SequentialConvArgmax:
         self.chunk_size = chunk_size
 
     def __call__(self, x: Tensor) -> Tensor:
-        print('using sequential argmax in new backend')
         outB = x[:, 0:1].realize()
         outC = Tensor.zeros_like(outB)
 
@@ -206,10 +204,10 @@ class MeshNet:
         )
 
         self.n_classes = last_config["out_channels"]
-        self.seq_conv_argmax = None
+        self.seq_conv_argmax: SequentialConvArgmax | None = None
 
     def init_seq_conv_argmax(self):
-        """Initialize SequentialConvArgmax for PREARGMAX path."""
+        """Initialize SequentialConvArgmax for memory-efficient argmax."""
         self.seq_conv_argmax = SequentialConvArgmax(self.n_classes)
 
     def normalize(self, x):
@@ -221,9 +219,8 @@ class MeshNet:
                 x = chunked_conv(x, layer)
             else:
                 x = layer(x)
-        if 'PREARGMAX' in os.environ:
-            x = self.seq_conv_argmax(x)
-        return x
+        assert self.seq_conv_argmax is not None
+        return self.seq_conv_argmax(x)
 
     def half(self):
         """Convert all weights to float16/half precision"""
@@ -277,9 +274,8 @@ def load_meshnet(
         state_dict = torch_load(model_fn)
         state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
-    # Initialize SequentialConvArgmax for PREARGMAX path (after loading weights)
-    if 'PREARGMAX' in os.environ:
-        model.init_seq_conv_argmax()
+    # Initialize SequentialConvArgmax for memory-efficient argmax
+    model.init_seq_conv_argmax()
     # Convert to half precision if FP16 env var is set
     if os.environ.get("FP16"):
         model = model.half()

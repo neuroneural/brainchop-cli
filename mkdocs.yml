@@ -1,0 +1,35 @@
+site_name: brainchop
+site_url: https://neuroneural.github.io/brainchop-cli/
+repo_url: https://github.com/neuroneural/brainchop-cli
+
+nav:
+  - Home: index.md
+  - Examples: examples.md
+  - API Reference: api.md
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            heading_level: 3
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences

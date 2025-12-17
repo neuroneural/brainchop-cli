@@ -1,6 +1,7 @@
 *node_modules/
 *safetensors
-*nii.gz
+*.nii.gz
+!examples/brain.nii.gz
 *venv/
 *.egg-info/
 *.eggs/
@@ -11,3 +12,5 @@ nifti/
 .DS_Store
 *.sh
 *.so
+_build/
+site/
