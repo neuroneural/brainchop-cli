@@ -206,10 +206,10 @@ class MeshNet:
         )
 
         self.n_classes = last_config["out_channels"]
-        self.seq_conv_argmax = None
+        self.seq_conv_argmax: SequentialConvArgmax | None = None
 
     def init_seq_conv_argmax(self):
-        """Initialize SequentialConvArgmax for PREARGMAX path."""
+        """Initialize SequentialConvArgmax for memory-efficient argmax."""
         self.seq_conv_argmax = SequentialConvArgmax(self.n_classes)
 
     def normalize(self, x):
@@ -221,9 +221,8 @@ class MeshNet:
                 x = chunked_conv(x, layer)
             else:
                 x = layer(x)
-        if 'PREARGMAX' in os.environ:
-            x = self.seq_conv_argmax(x)
-        return x
+        assert self.seq_conv_argmax is not None
+        return self.seq_conv_argmax(x)
 
     def half(self):
         """Convert all weights to float16/half precision"""
@@ -277,9 +276,8 @@ def load_meshnet(
         state_dict = torch_load(model_fn)
         state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
-    # Initialize SequentialConvArgmax for PREARGMAX path (after loading weights)
-    if 'PREARGMAX' in os.environ:
-        model.init_seq_conv_argmax()
+    # Initialize SequentialConvArgmax for memory-efficient argmax
+    model.init_seq_conv_argmax()
     # Convert to half precision if FP16 env var is set
     if os.environ.get("FP16"):
         model = model.half()

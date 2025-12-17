@@ -374,15 +374,9 @@ class Model:
             output_channels = raw_output[i : i + 1]  # Keep batch dim
 
             if postprocess:
-                # Argmax
-                if "PREARGMAX" not in os.environ:
-                    output_channels = output_channels.argmax(axis=1)
-
-                # Rearrange from (1, D, H, W) or (1, C, D, H, W) to (Z, Y, X)
-                if output_channels.ndim == 4:
-                    output = output_channels[0].transpose((2, 1, 0)).astype(np.uint8)
-                else:
-                    output = output_channels[0, 0].transpose((2, 1, 0)).astype(np.uint8)
+                # Model always outputs argmaxed labels (1, D, H, W)
+                # Rearrange from (1, D, H, W) to (Z, Y, X)
+                output = output_channels[0].transpose((2, 1, 0)).astype(np.uint8)
 
                 # Pad back if cropped
                 if n.crop_coords is not None:
