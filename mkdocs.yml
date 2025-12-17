@@ -2,6 +2,9 @@ site_name: brainchop
 site_url: https://neuroneural.github.io/brainchop-cli/
 repo_url: https://github.com/neuroneural/brainchop-cli
 
+docs_dir: docs_src
+site_dir: docs
+
 nav:
   - Home: index.md
   - API Reference: api.md
