@@ -6,49 +6,65 @@ BrainChop is a lightweight tool for brain segmentation that runs on pretty much 
 
 ## Installation
 
-You can install BrainChop using pip (Python > 3.10)
-
-```
+```bash
 pip install brainchop
+```
+
+For development (includes docs, testing):
+
+```bash
+pip install -e ".[all]"
 ```
 
 ## CLI Usage
 
-To use BrainChop from the command line:
-
 ```bash
+# Segment a brain MRI
 brainchop input.nii.gz -o output.nii.gz
-```
 
-List available models:
-
-```bash
+# List available models
 brainchop --list
-```
 
-Use a specific model:
-
-```bash
+# Use a specific model
 brainchop input.nii.gz -m subcortical -o output.nii.gz
+
+# Skull stripping
+brainchop input.nii.gz --skull-strip -o brain.nii.gz
+
+# With BEAM optimization
+brainchop input.nii.gz -m tissue_fast --beam 2 -o output.nii.gz
 ```
 
 ## Python API
 
 ```python
-from brainchop import load, segment, save, list_models
+import brainchop as bc
 
 # List available models
-print(list_models())
+print(bc.list_models())
 
 # Load, segment, save
-volume, header = load("input.nii.gz")
-result = segment(volume, "subcortical", header)
-save(result, header, "output.nii.gz")
+vol = bc.load("input.nii.gz")
+result = bc.segment(vol, "subcortical")
+bc.save(result, "output.nii.gz")
+
+# With BEAM optimization
+bc.optimize("tissue_fast", beam=2)
+result = bc.segment(vol, "tissue_fast")
+
+# Export to WebGPU
+bc.export("tissue_fast", "/tmp/export")
+```
+
+## Documentation
+
+Serve docs locally:
+
+```bash
+mkdocs serve -w brainchop/
 ```
 
 ## Docker
-
-You can also install BrainChop using docker:
 
 ```bash
 git clone git@github.com:neuroneural/brainchop-cli.git
@@ -62,25 +78,13 @@ Then to run:
 docker run --rm -it --device=nvidia.com/gpu=all -v [[output directory]]:/app brainchop [[input nifti file]] -o [[output nifti file]]
 ```
 
-On some systems (like recent 25.05 nixos), the docker run command will need to be prepended with:
-
-```bash
-docker run --rm -it --device=nvidia.com/gpu=all
-```
-
 ## Requirements
 
 - Python 3.10+
-- tinygrad : our tiny and portable (but powerful) ML inference engine
-- numpy : basic tensor operations
-- requests : to download models
-
-Sometimes it may be necessary to install tinygrad from master branch:
-
-```bash
-uv pip install git+ssh://git@github.com/tinygrad/tinygrad.git
-```
+- tinygrad
+- numpy
+- requests
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License

@@ -10,7 +10,6 @@ dist/
 nifti/
 .DS_Store
 *.sh
-!mkdocs.sh
 *.so
 _build/
 site/
