@@ -1,6 +1,7 @@
 *node_modules/
 *safetensors
-*nii.gz
+*.nii.gz
+!examples/brain.nii.gz
 *venv/
 *.egg-info/
 *.eggs/
