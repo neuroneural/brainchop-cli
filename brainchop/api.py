@@ -23,7 +23,8 @@ from brainchop.niimath import (
     bwlabel,
     truncate_header_bytes,
 )
-from brainchop.tiny_meshnet import load_meshnet
+from brainchop.tiny_meshnet import load_meshnet, chunked_conv
+from tinygrad import nn
 
 
 # =============================================================================
@@ -172,13 +173,61 @@ def save(volume: Volume, path: str) -> None:
     )
 
 
-def _load_model(model: str):
+class TAAModel:
+    """Test-Time Augmentation wrapper using flip ensemble."""
+
+    def __init__(self, model):
+        self._model = model
+        self.n_classes = model.n_classes
+
+    def _forward_no_argmax(self, x: Tensor) -> Tensor:
+        """Forward pass through conv layers without final argmax."""
+        for layer in self._model.model:
+            if isinstance(layer, nn.Conv2d):
+                x = chunked_conv(x, layer)
+            else:
+                x = layer(x)
+        return x
+
+    def normalize(self, x: Tensor) -> Tensor:
+        """Delegate normalization to underlying model."""
+        return self._model.normalize(x)
+
+    def __call__(self, x: Tensor) -> Tensor:
+        """
+        Forward pass with flip ensemble (test-time augmentation).
+
+        Runs inference on both original and depth-flipped inputs,
+        then sums the logits before returning.
+
+        Args:
+            x: Input tensor (B, 1, D, H, W)
+
+        Returns:
+            Summed logits (B, C, D, H, W) - caller should apply argmax
+        """
+        # Forward on original
+        logits_orig = self._forward_no_argmax(x)
+
+        # Flip on depth axis (axis 2 in BCDHW format)
+        x_flipped = x.flip(2)
+        logits_flipped = self._forward_no_argmax(x_flipped)
+
+        # Unflip the flipped output on depth axis
+        logits_unflipped = logits_flipped.flip(2)
+
+        # Sum logits (averaging is equivalent for argmax)
+        return logits_orig + logits_unflipped
+
+
+def _load_model(model: str, *, taa: bool = False):
     """
     Load model by name or path.
 
     Args:
         model: Model name (e.g., "subcortical") or path to model directory
                containing model.json and model.pth/model.bin
+        taa: If True, wrap model with test-time augmentation (flip ensemble)
     """
     from pathlib import Path
     from brainchop.utils import find_pth_files, AVAILABLE_MODELS, unwrap_path
@@ -206,14 +255,16 @@ def _load_model(model: str):
         else:
             raise FileNotFoundError(f"No model.pth or model.bin found in {model_path}")
 
-        return load_meshnet(str(config_fn), str(weights_fn))
+        m = load_meshnet(str(config_fn), str(weights_fn))
+        return TAAModel(m) if taa else m
 
     # Otherwise treat as model name
     if model not in AVAILABLE_MODELS:
         raise ValueError(f"Unknown model: {model}. Available: {list(AVAILABLE_MODELS.keys())}")
 
     config_fn, model_fn = find_pth_files(model)
-    return load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
+    m = load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
+    return TAAModel(m) if taa else m
 
 
 def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
@@ -260,6 +311,7 @@ def segment(
     shard_size: int = 1,
     beam: int = 0,
     return_raw: bool = False,
+    taa: bool = False,
 ):  # type: ignore[return]
     """
     Segment brain volume(s).
@@ -270,6 +322,7 @@ def segment(
         shard_size: Batch size for processing multiple volumes
         beam: BEAM optimization level (0 = use cached or none)
         return_raw: If True, also return raw model output (pre-argmax) for export_classes
+        taa: If True, use test-time augmentation (flip ensemble)
 
     Returns:
         Segmented Volume(s) - single if input was single, list if input was list
@@ -312,7 +365,7 @@ def segment(
         if beam > 0:
             os.environ["BEAM"] = str(beam)
 
-        m = _load_model(model)
+        m = _load_model(model, taa=taa)
         results: list[Volume] = []
         raw_outputs: list[Tensor] = []
 
@@ -327,11 +380,11 @@ def segment(
                 batched = m.normalize(batched)
 
             raw_output = m(batched)
-            # Handle both raw logits (B, C, D, H, W) and pre-argmaxed output (B, D, H, W)
+            # TAAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
             if len(raw_output.shape) == 5:
-                output = raw_output.argmax(axis=1)
+                output = raw_output.argmax(axis=1)  # (B, C, D, H, W) -> (B, D, H, W)
             else:
-                output = raw_output
+                output = raw_output  # Already (B, D, H, W)
 
             # Split batch and convert back to (X,Y,Z)
             for j in range(output.shape[0]):
