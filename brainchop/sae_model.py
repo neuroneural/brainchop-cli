@@ -76,7 +76,7 @@ class SAENet:
         - Output: 1x1x1 conv to n_classes
     """
 
-    def __init__(self, state_dict: dict, n_classes: int = 3, permute: bool = True):
+    def __init__(self, state_dict: dict, n_classes: int = 3, permute: bool = False):
         """Load model from state dict with numeric keys.
 
         Args:
@@ -161,7 +161,7 @@ class SAENet:
         return self.seq_conv_argmax(x)
 
 
-def load_sae(model_path: str, n_classes: int = 3, permute: bool = True) -> SAENet:
+def load_sae(model_path: str, n_classes: int = 3, permute: bool = False) -> SAENet:
     """Load SAENet model from .pth file.
 
     Args:

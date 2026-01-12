@@ -303,7 +303,8 @@ def _load_model(model: str, *, tta: bool = False):
     if model_info.get("type") == "sae":
         model_fn = find_sae_files(model)
         n_classes = model_info.get("n_classes", 3)
-        m = load_sae(unwrap_path(model_fn), n_classes=n_classes)
+        permute = os.environ.get("SAE_PERMUTE", "0") == "1"
+        m = load_sae(unwrap_path(model_fn), n_classes=n_classes, permute=permute)
         return TTAModel(m) if tta else m
 
     # Default: MeshNet
