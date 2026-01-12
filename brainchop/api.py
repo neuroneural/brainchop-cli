@@ -326,8 +326,12 @@ def segment(
             if hasattr(m, "normalize"):
                 batched = m.normalize(batched)
 
-            raw_output = m(batched)  # (B, C, D, H, W) before argmax
-            output = raw_output.argmax(axis=1)  # (B, D, H, W) after argmax
+            raw_output = m(batched)
+            # Handle both raw logits (B, C, D, H, W) and pre-argmaxed output (B, D, H, W)
+            if len(raw_output.shape) == 5:
+                output = raw_output.argmax(axis=1)
+            else:
+                output = raw_output
 
             # Split batch and convert back to (X,Y,Z)
             for j in range(output.shape[0]):
