@@ -50,6 +50,21 @@ DILATION_SCHEDULE = {
 }
 
 
+def _permute_weights(weight, is_conv_transpose: bool = False):
+    """
+    Permute conv weights by swapping D and W spatial dimensions.
+
+    This aligns PyTorch weights with the expected input orientation.
+    PyTorch weight shape: (out_ch, in_ch, D, H, W) for Conv3d
+                         (in_ch, out_ch, D, H, W) for ConvTranspose3d
+    After permute: swap axes 2 and 4 (D <-> W)
+    """
+    import numpy as np
+    w = weight.numpy()
+    w = np.swapaxes(w, 2, 4)  # Swap D and W
+    return Tensor(w)
+
+
 class SAENet:
     """
     Spatial AutoEncoder network for brain segmentation.
@@ -61,8 +76,14 @@ class SAENet:
         - Output: 1x1x1 conv to n_classes
     """
 
-    def __init__(self, state_dict: dict, n_classes: int = 3):
-        """Load model from state dict with numeric keys."""
+    def __init__(self, state_dict: dict, n_classes: int = 3, permute: bool = True):
+        """Load model from state dict with numeric keys.
+
+        Args:
+            state_dict: Model weights with numeric keys (0.weight, 0.bias, etc.)
+            n_classes: Number of output classes
+            permute: If True, swap D and W dimensions in weights to match input orientation
+        """
         self.layers = []
         self.n_classes = n_classes
 
@@ -77,6 +98,10 @@ class SAENet:
                 layer_type = "conv_s2"
             else:
                 layer_type = "conv"
+
+            # Permute weights if needed (swap D <-> W)
+            if permute:
+                weight = _permute_weights(weight, is_conv_transpose=(layer_type == "convT"))
 
             self.layers.append((layer_type, idx, weight, bias))
 
@@ -123,7 +148,13 @@ class SAENet:
         return self.seq_conv_argmax(x)
 
 
-def load_sae(model_path: str, n_classes: int = 3) -> SAENet:
-    """Load SAENet model from .pth file."""
+def load_sae(model_path: str, n_classes: int = 3, permute: bool = True) -> SAENet:
+    """Load SAENet model from .pth file.
+
+    Args:
+        model_path: Path to .pth file with fused model weights
+        n_classes: Number of output classes
+        permute: If True, swap D and W dimensions in weights (default True for correct orientation)
+    """
     state_dict = torch_load(model_path)
-    return SAENet(state_dict, n_classes=n_classes)
+    return SAENet(state_dict, n_classes=n_classes, permute=permute)
