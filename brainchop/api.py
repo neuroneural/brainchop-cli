@@ -173,12 +173,39 @@ def save(volume: Volume, path: str) -> None:
     )
 
 
+def _create_flip_matrix(size: int) -> Tensor:
+    """Create a permutation matrix that reverses order along an axis."""
+    import numpy as np
+    # Anti-diagonal identity matrix: P[i, j] = 1 if j = size-1-i
+    P = np.zeros((size, size), dtype=np.float32)
+    for i in range(size):
+        P[i, size - 1 - i] = 1.0
+    return Tensor(P)
+
+
 class TTAModel:
     """Test-Time Augmentation wrapper using flip ensemble."""
 
     def __init__(self, model):
         self._model = model
         self.n_classes = model.n_classes
+        # Pre-create flip matrix for depth dimension (256)
+        self._flip_matrix = _create_flip_matrix(256)
+
+    def _flip_depth(self, x: Tensor) -> Tensor:
+        """Flip tensor along depth axis using matrix multiplication."""
+        # x: (B, C, D, H, W) - flip along D (axis 2)
+        # Reshape to (B*C, D, H*W), apply permutation, reshape back
+        b, c, d, h, w = x.shape
+        x_reshaped = x.reshape(b * c, d, h * w)  # (B*C, D, H*W)
+        # Permute depth: (B*C, D, H*W) @ (D, D) -> need to transpose for matmul
+        # x_reshaped is (B*C, D, H*W), we want to permute the D dimension
+        # So we do: P @ x_reshaped along the D axis
+        # Reshape to (B*C, H*W, D) for matmul, then back
+        x_t = x_reshaped.permute(0, 2, 1)  # (B*C, H*W, D)
+        x_flipped_t = x_t @ self._flip_matrix  # (B*C, H*W, D)
+        x_flipped = x_flipped_t.permute(0, 2, 1)  # (B*C, D, H*W)
+        return x_flipped.reshape(b, c, d, h, w)
 
     def _forward_no_argmax(self, x: Tensor) -> Tensor:
         """Forward pass through conv layers without final argmax."""
@@ -198,26 +225,30 @@ class TTAModel:
         Forward pass with flip ensemble (test-time augmentation).
 
         Runs inference on both original and depth-flipped inputs,
-        then sums the logits before returning.
+        sums the logits, then applies argmax.
 
         Args:
             x: Input tensor (B, 1, D, H, W)
 
         Returns:
-            Summed logits (B, C, D, H, W) - caller should apply argmax
+            Segmentation (B, D, H, W) after argmax
         """
+        # Force input into computation graph - add zero to create explicit dependency
+        x = x + Tensor.zeros(1)
+
         # Forward on original
         logits_orig = self._forward_no_argmax(x)
 
-        # Flip on depth axis (axis 2 in BCDHW format)
-        x_flipped = x.flip(2)
+        # Flip input on depth axis using permutation matrix
+        x_flipped = self._flip_depth(x)
         logits_flipped = self._forward_no_argmax(x_flipped)
 
         # Unflip the flipped output on depth axis
-        logits_unflipped = logits_flipped.flip(2)
+        logits_unflipped = self._flip_depth(logits_flipped)
 
-        # Sum logits (averaging is equivalent for argmax)
-        return logits_orig + logits_unflipped
+        # Sum logits and argmax (use model's seq_conv_argmax for WebGPU compatibility)
+        summed = logits_orig + logits_unflipped
+        return self._model.seq_conv_argmax(summed)
 
 
 def _load_model(model: str, *, tta: bool = False):
@@ -460,8 +491,8 @@ def export(
         # Load model
         m = _load_model(model, tta=tta)
 
-        # Create dummy input
-        dummy_input = Tensor.zeros(1, 1, 256, 256, 256, dtype="float32")
+        # Create dummy input - use randn to prevent JIT from treating as constant
+        dummy_input = Tensor.randn(1, 1, 256, 256, 256, dtype="float32")
 
         # Export
         prg, _input_sizes, _output_sizes, state = export_model(

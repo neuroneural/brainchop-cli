@@ -13,7 +13,7 @@ os.environ["WEBGPU"] = "1"
 
 import brainchop as bc
 
-js_path, weights_path = bc.export("tissue_fast", "/tmp/brainchop_export", tta=True)
+js_path, weights_path = bc.export("subcortical", "/tmp/brainchop_export", tta=True)
 
 print(f"Wrote model program to: {js_path}")
 print(f"Wrote model weights to: {weights_path}")
