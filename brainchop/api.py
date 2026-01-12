@@ -413,6 +413,7 @@ def export(
     *,
     target: str = "webgpu",
     beam: int = 0,
+    taa: bool = False,
 ) -> tuple[str, str]:
     """
     Export model to WebGPU or other target format.
@@ -422,6 +423,7 @@ def export(
         output_dir: Directory to save exported files
         target: Export target ("webgpu", "clang", "wasm")
         beam: BEAM optimization level (0 = no optimization)
+        taa: If True, export with test-time augmentation (flip ensemble)
 
     Returns:
         Tuple of (js_path, weights_path)
@@ -434,6 +436,9 @@ def export(
 
         # With BEAM optimization
         >>> js_path, weights_path = export("tissue_fast", "/tmp/export", beam=2)
+
+        # With test-time augmentation
+        >>> js_path, weights_path = export("tissue_fast", "/tmp/export", taa=True)
         ```
     """
     from tinygrad.nn.state import safe_save
@@ -444,6 +449,8 @@ def export(
 
     # Get model name for output files
     model_name = Path(model).name if "/" in model else model
+    if taa:
+        model_name = f"{model_name}_taa"
 
     original_beam = os.environ.get("BEAM")
     try:
@@ -451,7 +458,7 @@ def export(
             os.environ["BEAM"] = str(beam)
 
         # Load model
-        m = _load_model(model)
+        m = _load_model(model, taa=taa)
 
         # Create dummy input
         dummy_input = Tensor.zeros(1, 1, 256, 256, 256, dtype="float32")
