@@ -35,9 +35,10 @@ class SAENet:
         - Output: 1x1x1 conv to 3 classes
     """
 
-    def __init__(self, state_dict: dict):
+    def __init__(self, state_dict: dict, use_norm: bool = False):
         """Load model from state dict with numeric keys."""
         self.layers = []
+        self.use_norm = use_norm
 
         for idx in LAYER_INDICES:
             # Move weights from DISK to compute device via numpy roundtrip
@@ -82,17 +83,28 @@ class SAENet:
 
             if layer_type == "conv":
                 # Standard 3x3x3 conv, same padding
-                op_str = f"Conv3d({w_shape[1]}→{w_shape[0]}, k={w_shape[2]}, s=1, p=1)"
+                out_ch = w_shape[0]
+                op_str = f"Conv3d({w_shape[1]}→{out_ch}, k={w_shape[2]}, s=1, p=1)"
                 x = x.conv2d(weight, bias, padding=1)
             elif layer_type == "conv_s2":
                 # Strided 3x3x3 conv for downsampling
-                op_str = f"Conv3d({w_shape[1]}→{w_shape[0]}, k={w_shape[2]}, s=2, p=1)"
+                out_ch = w_shape[0]
+                op_str = f"Conv3d({w_shape[1]}→{out_ch}, k={w_shape[2]}, s=2, p=1)"
                 x = x.conv2d(weight, bias, padding=1, stride=2)
             elif layer_type == "convT":
                 # ConvTranspose for upsampling (2x2x2 kernel, stride 2)
                 # ConvTranspose weight shape is (in_ch, out_ch, D, H, W)
-                op_str = f"ConvT3d({w_shape[0]}→{w_shape[1]}, k={w_shape[2]}, s=2, p=0)"
+                out_ch = w_shape[1]
+                op_str = f"ConvT3d({w_shape[0]}→{out_ch}, k={w_shape[2]}, s=2, p=0)"
                 x = x.conv_transpose2d(weight, bias, stride=2, padding=0)
+
+            # Add BatchNorm (compute stats from current batch)
+            if self.use_norm:
+                # x: (B, C, D, H, W) - normalize per channel
+                mean = x.mean(axis=(0, 2, 3, 4), keepdim=True)
+                var = ((x - mean) ** 2).mean(axis=(0, 2, 3, 4), keepdim=True)
+                x = (x - mean) / (var + 1e-5).sqrt()
+                op_str += " + BN"
 
             # SiLU activation after each conv (except output)
             x = x.silu()
@@ -122,15 +134,15 @@ class SAENet:
         return self.seq_conv_argmax(x)
 
 
-def load_sae(model_path: str = "model_sae_16_fused.pth") -> SAENet:
+def load_sae(model_path: str = "model_sae_16_fused.pth", use_norm: bool = False) -> SAENet:
     """Load SAENet model from .pth file."""
     state_dict = torch_load(model_path)
-    return SAENet(state_dict)
+    return SAENet(state_dict, use_norm=use_norm)
 
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python sae_forward.py input.nii.gz output.nii.gz [--model path/to/model.pth] [--debug]")
+        print("Usage: python sae_forward.py input.nii.gz output.nii.gz [--model path/to/model.pth] [--debug] [--norm]")
         sys.exit(1)
 
     input_path = sys.argv[1]
@@ -145,8 +157,13 @@ def main():
     # Debug mode
     debug = "--debug" in sys.argv
 
+    # Add BatchNorm after each conv
+    use_norm = "--norm" in sys.argv
+
     print(f"Loading model from {model_path}...")
-    model = load_sae(model_path)
+    if use_norm:
+        print("Using BatchNorm after each conv layer")
+    model = load_sae(model_path, use_norm=use_norm)
 
     print(f"Loading input from {input_path}...")
     vol = load(input_path)
