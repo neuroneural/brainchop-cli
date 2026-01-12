@@ -24,26 +24,34 @@ DOWNSAMPLE_LAYER = 10  # stride=2, 256³ → 128³
 UPSAMPLE_LAYER = 22    # ConvTranspose stride=2, 128³ → 256³
 
 # Dilation schedule from modelAEgelu_dilated.json
+# JSON has 16 layers: 5 encoder + 5 bottleneck + 5 decoder + 1 final
+# Downsample/upsample are added by model class (not in JSON)
 # padding = dilation for 3x3 kernel to maintain spatial size
 DILATION_SCHEDULE = {
-    0: 1,   # encoder
+    # Encoder (JSON 0-4): d=1,2,4,6,8
+    0: 1,
     2: 2,
     4: 4,
     6: 6,
     8: 8,
-    10: 10, # downsample (strided)
-    12: 12, # bottleneck
-    14: 16, # bottleneck peak
-    16: 12,
-    18: 10,
-    20: 8,
-    22: 1,  # upsample (ConvTranspose, no dilation)
-    23: 6,  # decoder
-    25: 4,
-    27: 2,
-    29: 1,
+    # Downsample (not in JSON, strided conv)
+    10: 1,
+    # Bottleneck (JSON 5-9): d=10,12,16,12,10
+    12: 10,
+    14: 12,
+    16: 16,  # peak
+    18: 12,
+    20: 10,
+    # Upsample (ConvTranspose, no dilation)
+    22: 1,
+    # Decoder (JSON 10-14): d=8,6,4,2,1
+    23: 8,
+    25: 6,
+    27: 4,
+    29: 2,
     31: 1,
-    33: 1,  # final 1x1
+    # Final 1x1 (JSON 15)
+    33: 1,
 }
 
 
