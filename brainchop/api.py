@@ -24,6 +24,7 @@ from brainchop.niimath import (
     truncate_header_bytes,
 )
 from brainchop.tiny_meshnet import load_meshnet, chunked_conv
+from brainchop.sae_model import load_sae
 from tinygrad import nn
 
 
@@ -261,7 +262,7 @@ def _load_model(model: str, *, tta: bool = False):
         tta: If True, wrap model with test-time augmentation (flip ensemble)
     """
     from pathlib import Path
-    from brainchop.utils import find_pth_files, AVAILABLE_MODELS, unwrap_path
+    from brainchop.utils import find_pth_files, find_sae_files, AVAILABLE_MODELS, unwrap_path
 
     # Check if it's a path (absolute, relative, or file://)
     if model.startswith("file://"):
@@ -293,6 +294,16 @@ def _load_model(model: str, *, tta: bool = False):
     if model not in AVAILABLE_MODELS:
         raise ValueError(f"Unknown model: {model}. Available: {list(AVAILABLE_MODELS.keys())}")
 
+    model_info = AVAILABLE_MODELS[model]
+
+    # Check model type - SAE or MeshNet
+    if model_info.get("type") == "sae":
+        model_fn = find_sae_files(model)
+        n_classes = model_info.get("n_classes", 3)
+        m = load_sae(unwrap_path(model_fn), n_classes=n_classes)
+        return TTAModel(m) if tta else m
+
+    # Default: MeshNet
     config_fn, model_fn = find_pth_files(model)
     m = load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
     return TTAModel(m) if tta else m

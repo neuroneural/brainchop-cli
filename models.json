@@ -1,4 +1,11 @@
 {
+  "robust_tissue": {
+    "folder": "robust_tissue",
+    "type": "sae",
+    "n_classes": 3,
+    "description": "🧠 robust tissue segmentation using spatial autoencoder architecture",
+    "considerations": "quantile normalization"
+  },
   "tissue_fast": {
     "folder": "model5_gw_ae",
     "description": "⚡ our fastest tissue segmentation model that produces gray and white matter labels",
