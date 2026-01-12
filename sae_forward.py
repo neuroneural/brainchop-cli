@@ -23,6 +23,29 @@ LAYER_INDICES = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 23, 25, 27, 29, 31, 
 DOWNSAMPLE_LAYER = 10  # stride=2, 256³ → 128³
 UPSAMPLE_LAYER = 22    # ConvTranspose stride=2, 128³ → 256³
 
+# Dilation schedule from modelAEgelu_dilated.json
+# padding = dilation for 3x3 kernel to maintain spatial size
+DILATION_SCHEDULE = {
+    0: 1,   # encoder
+    2: 2,
+    4: 4,
+    6: 6,
+    8: 8,
+    10: 10, # downsample (strided)
+    12: 12, # bottleneck
+    14: 16, # bottleneck peak
+    16: 12,
+    18: 10,
+    20: 8,
+    22: 1,  # upsample (ConvTranspose, no dilation)
+    23: 6,  # decoder
+    25: 4,
+    27: 2,
+    29: 1,
+    31: 1,
+    33: 1,  # final 1x1
+}
+
 
 class SAENet:
     """
@@ -80,19 +103,21 @@ class SAENet:
         # Process all layers except the last (which has no activation)
         for layer_type, idx, weight, bias in self.layers[:-1]:
             w_shape = list(weight.shape)  # (out_ch, in_ch, D, H, W) or (in_ch, out_ch, D, H, W) for convT
+            dilation = DILATION_SCHEDULE.get(idx, 1)
+            padding = dilation  # padding = dilation for 3x3 kernel
 
             if layer_type == "conv":
-                # Standard 3x3x3 conv, same padding
+                # Standard 3x3x3 conv with dilation
                 out_ch = w_shape[0]
-                op_str = f"Conv3d({w_shape[1]}→{out_ch}, k={w_shape[2]}, s=1, p=1)"
-                x = x.conv2d(weight, bias, padding=1)
+                op_str = f"Conv3d({w_shape[1]}→{out_ch}, k={w_shape[2]}, d={dilation}, p={padding})"
+                x = x.conv2d(weight, bias, padding=padding, dilation=dilation)
             elif layer_type == "conv_s2":
-                # Strided 3x3x3 conv for downsampling
+                # Strided 3x3x3 conv for downsampling (with dilation)
                 out_ch = w_shape[0]
-                op_str = f"Conv3d({w_shape[1]}→{out_ch}, k={w_shape[2]}, s=2, p=1)"
-                x = x.conv2d(weight, bias, padding=1, stride=2)
+                op_str = f"Conv3d({w_shape[1]}→{out_ch}, k={w_shape[2]}, s=2, d={dilation}, p={padding})"
+                x = x.conv2d(weight, bias, padding=padding, stride=2, dilation=dilation)
             elif layer_type == "convT":
-                # ConvTranspose for upsampling (2x2x2 kernel, stride 2)
+                # ConvTranspose for upsampling (2x2x2 kernel, stride 2, no dilation)
                 # ConvTranspose weight shape is (in_ch, out_ch, D, H, W)
                 out_ch = w_shape[1]
                 op_str = f"ConvT3d({w_shape[0]}→{out_ch}, k={w_shape[2]}, s=2, p=0)"
