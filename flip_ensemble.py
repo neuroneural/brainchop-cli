@@ -65,7 +65,8 @@ def main():
 
     if use_flip:
         print("Using flip ensemble...")
-        flipped = data.flip(2)
+        print(data.shape)
+        flipped = data.flip(0)
         data = data.reshape(1, 1, 256, 256, 256)
         flipped = flipped.reshape(1, 1, 256, 256, 256)
         batched = Tensor.cat(data, flipped, dim=0)  # (2, 1, 256, 256, 256)
@@ -124,7 +125,7 @@ def main():
         # Split, unflip, sum
         original_out = raw_output[0:1]
         flipped_out = raw_output[1:2]
-        unflipped_out = flipped_out.flip(4)
+        unflipped_out = flipped_out.flip(2)
         combined = Tensor.cat(original_out, unflipped_out, dim=0)
         summed = combined.sum(axis=0)  # (C, D, H, W)
         segmentation = summed.argmax(axis=0)  # (D, H, W)
