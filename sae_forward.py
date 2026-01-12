@@ -139,13 +139,16 @@ class SAENet:
                 x = (x - mean) / (var + 1e-5).sqrt()
                 op_str += " + BN"
 
-            # SiLU activation after each conv (except output)
-            x = x.silu()
+            # SiLU activation after each conv (except output and ConvTranspose)
+            # ConvTranspose (upsample) has no activation - goes directly to next conv
+            if layer_type != "convT":
+                x = x.silu()
 
             if debug:
                 x = x.realize()
                 xnp = x.numpy()
-                print(f"  Layer {idx:2d}: {op_str} + SiLU → shape={list(x.shape)}, norm={((xnp**2).sum()**0.5):.2e}, range=[{xnp.min():.2f}, {xnp.max():.2f}]")
+                act_str = "" if layer_type == "convT" else " + SiLU"
+                print(f"  Layer {idx:2d}: {op_str}{act_str} → shape={list(x.shape)}, norm={((xnp**2).sum()**0.5):.2e}, range=[{xnp.min():.2f}, {xnp.max():.2f}]")
 
         # Final layer: 1x1x1 conv, no activation, no padding
         _, idx, weight, bias = self.layers[-1]
