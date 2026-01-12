@@ -173,7 +173,7 @@ def save(volume: Volume, path: str) -> None:
     )
 
 
-class TAAModel:
+class TTAModel:
     """Test-Time Augmentation wrapper using flip ensemble."""
 
     def __init__(self, model):
@@ -220,14 +220,14 @@ class TAAModel:
         return logits_orig + logits_unflipped
 
 
-def _load_model(model: str, *, taa: bool = False):
+def _load_model(model: str, *, tta: bool = False):
     """
     Load model by name or path.
 
     Args:
         model: Model name (e.g., "subcortical") or path to model directory
                containing model.json and model.pth/model.bin
-        taa: If True, wrap model with test-time augmentation (flip ensemble)
+        tta: If True, wrap model with test-time augmentation (flip ensemble)
     """
     from pathlib import Path
     from brainchop.utils import find_pth_files, AVAILABLE_MODELS, unwrap_path
@@ -256,7 +256,7 @@ def _load_model(model: str, *, taa: bool = False):
             raise FileNotFoundError(f"No model.pth or model.bin found in {model_path}")
 
         m = load_meshnet(str(config_fn), str(weights_fn))
-        return TAAModel(m) if taa else m
+        return TTAModel(m) if tta else m
 
     # Otherwise treat as model name
     if model not in AVAILABLE_MODELS:
@@ -264,7 +264,7 @@ def _load_model(model: str, *, taa: bool = False):
 
     config_fn, model_fn = find_pth_files(model)
     m = load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
-    return TAAModel(m) if taa else m
+    return TTAModel(m) if tta else m
 
 
 def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
@@ -311,7 +311,7 @@ def segment(
     shard_size: int = 1,
     beam: int = 0,
     return_raw: bool = False,
-    taa: bool = False,
+    tta: bool = False,
 ):  # type: ignore[return]
     """
     Segment brain volume(s).
@@ -322,7 +322,7 @@ def segment(
         shard_size: Batch size for processing multiple volumes
         beam: BEAM optimization level (0 = use cached or none)
         return_raw: If True, also return raw model output (pre-argmax) for export_classes
-        taa: If True, use test-time augmentation (flip ensemble)
+        tta: If True, use test-time augmentation (flip ensemble)
 
     Returns:
         Segmented Volume(s) - single if input was single, list if input was list
@@ -365,7 +365,7 @@ def segment(
         if beam > 0:
             os.environ["BEAM"] = str(beam)
 
-        m = _load_model(model, taa=taa)
+        m = _load_model(model, tta=tta)
         results: list[Volume] = []
         raw_outputs: list[Tensor] = []
 
@@ -380,7 +380,7 @@ def segment(
                 batched = m.normalize(batched)
 
             raw_output = m(batched)
-            # TAAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
+            # TTAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
             if len(raw_output.shape) == 5:
                 output = raw_output.argmax(axis=1)  # (B, C, D, H, W) -> (B, D, H, W)
             else:
@@ -413,7 +413,7 @@ def export(
     *,
     target: str = "webgpu",
     beam: int = 0,
-    taa: bool = False,
+    tta: bool = False,
 ) -> tuple[str, str]:
     """
     Export model to WebGPU or other target format.
@@ -423,7 +423,7 @@ def export(
         output_dir: Directory to save exported files
         target: Export target ("webgpu", "clang", "wasm")
         beam: BEAM optimization level (0 = no optimization)
-        taa: If True, export with test-time augmentation (flip ensemble)
+        tta: If True, export with test-time augmentation (flip ensemble)
 
     Returns:
         Tuple of (js_path, weights_path)
@@ -438,7 +438,7 @@ def export(
         >>> js_path, weights_path = export("tissue_fast", "/tmp/export", beam=2)
 
         # With test-time augmentation
-        >>> js_path, weights_path = export("tissue_fast", "/tmp/export", taa=True)
+        >>> js_path, weights_path = export("tissue_fast", "/tmp/export", tta=True)
         ```
     """
     from tinygrad.nn.state import safe_save
@@ -449,8 +449,8 @@ def export(
 
     # Get model name for output files
     model_name = Path(model).name if "/" in model else model
-    if taa:
-        model_name = f"{model_name}_taa"
+    if tta:
+        model_name = f"{model_name}_tta"
 
     original_beam = os.environ.get("BEAM")
     try:
@@ -458,7 +458,7 @@ def export(
             os.environ["BEAM"] = str(beam)
 
         # Load model
-        m = _load_model(model, taa=taa)
+        m = _load_model(model, tta=tta)
 
         # Create dummy input
         dummy_input = Tensor.zeros(1, 1, 256, 256, 256, dtype="float32")
