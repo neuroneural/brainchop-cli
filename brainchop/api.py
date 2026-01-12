@@ -210,6 +210,9 @@ class TTAModel:
 
     def _forward_no_argmax(self, x: Tensor) -> Tensor:
         """Forward pass through conv layers without final argmax."""
+        # Use forward_no_argmax if available (SAENet), otherwise iterate layers (MeshNet)
+        if hasattr(self._model, 'forward_no_argmax'):
+            return self._model.forward_no_argmax(x)
         for layer in self._model.model:
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)

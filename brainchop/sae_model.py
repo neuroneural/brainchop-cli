@@ -111,15 +111,15 @@ class SAENet:
         """Quantile normalization (same as MeshNet)."""
         return qnormalize(x)
 
-    def __call__(self, x: Tensor) -> Tensor:
+    def forward_no_argmax(self, x: Tensor) -> Tensor:
         """
-        Forward pass.
+        Forward pass returning logits (no argmax).
 
         Args:
             x: Input tensor (B, 1, D, H, W)
 
         Returns:
-            Segmentation (B, D, H, W) after argmax
+            Logits tensor (B, n_classes, D, H, W)
         """
         # Process all layers except the last (which has no activation)
         for layer_type, idx, weight, bias in self.layers[:-1]:
@@ -144,6 +144,19 @@ class SAENet:
         padding = (kernel_size - 1) // 2  # 0 for 1x1, 1 for 3x3
         x = x.conv2d(weight, bias, padding=padding)
 
+        return x
+
+    def __call__(self, x: Tensor) -> Tensor:
+        """
+        Forward pass.
+
+        Args:
+            x: Input tensor (B, 1, D, H, W)
+
+        Returns:
+            Segmentation (B, D, H, W) after argmax
+        """
+        x = self.forward_no_argmax(x)
         # Memory-efficient argmax
         return self.seq_conv_argmax(x)
 
