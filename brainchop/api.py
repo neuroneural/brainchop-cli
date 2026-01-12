@@ -23,7 +23,8 @@ from brainchop.niimath import (
     bwlabel,
     truncate_header_bytes,
 )
-from brainchop.tiny_meshnet import load_meshnet
+from brainchop.tiny_meshnet import load_meshnet, chunked_conv
+from tinygrad import nn
 
 
 # =============================================================================
@@ -172,13 +173,92 @@ def save(volume: Volume, path: str) -> None:
     )
 
 
-def _load_model(model: str):
+def _create_flip_matrix(size: int) -> Tensor:
+    """Create a permutation matrix that reverses order along an axis."""
+    import numpy as np
+    # Anti-diagonal identity matrix: P[i, j] = 1 if j = size-1-i
+    P = np.zeros((size, size), dtype=np.float32)
+    for i in range(size):
+        P[i, size - 1 - i] = 1.0
+    return Tensor(P)
+
+
+class TTAModel:
+    """Test-Time Augmentation wrapper using flip ensemble."""
+
+    def __init__(self, model):
+        self._model = model
+        self.n_classes = model.n_classes
+        # Pre-create flip matrix for depth dimension (256)
+        self._flip_matrix = _create_flip_matrix(256)
+
+    def _flip_depth(self, x: Tensor) -> Tensor:
+        """Flip tensor along depth axis using matrix multiplication."""
+        # x: (B, C, D, H, W) - flip along D (axis 2)
+        # Reshape to (B*C, D, H*W), apply permutation, reshape back
+        b, c, d, h, w = x.shape
+        x_reshaped = x.reshape(b * c, d, h * w)  # (B*C, D, H*W)
+        # Permute depth: (B*C, D, H*W) @ (D, D) -> need to transpose for matmul
+        # x_reshaped is (B*C, D, H*W), we want to permute the D dimension
+        # So we do: P @ x_reshaped along the D axis
+        # Reshape to (B*C, H*W, D) for matmul, then back
+        x_t = x_reshaped.permute(0, 2, 1)  # (B*C, H*W, D)
+        x_flipped_t = x_t @ self._flip_matrix  # (B*C, H*W, D)
+        x_flipped = x_flipped_t.permute(0, 2, 1)  # (B*C, D, H*W)
+        return x_flipped.reshape(b, c, d, h, w)
+
+    def _forward_no_argmax(self, x: Tensor) -> Tensor:
+        """Forward pass through conv layers without final argmax."""
+        for layer in self._model.model:
+            if isinstance(layer, nn.Conv2d):
+                x = chunked_conv(x, layer)
+            else:
+                x = layer(x)
+        return x
+
+    def normalize(self, x: Tensor) -> Tensor:
+        """Delegate normalization to underlying model."""
+        return self._model.normalize(x)
+
+    def __call__(self, x: Tensor) -> Tensor:
+        """
+        Forward pass with flip ensemble (test-time augmentation).
+
+        Runs inference on both original and depth-flipped inputs,
+        sums the logits, then applies argmax.
+
+        Args:
+            x: Input tensor (B, 1, D, H, W)
+
+        Returns:
+            Segmentation (B, D, H, W) after argmax
+        """
+        # Force input into computation graph - add zero to create explicit dependency
+        x = x + Tensor.zeros(1)
+
+        # Forward on original
+        logits_orig = self._forward_no_argmax(x)
+
+        # Flip input on depth axis using permutation matrix
+        x_flipped = self._flip_depth(x)
+        logits_flipped = self._forward_no_argmax(x_flipped)
+
+        # Unflip the flipped output on depth axis
+        logits_unflipped = self._flip_depth(logits_flipped)
+
+        # Sum logits and argmax (use model's seq_conv_argmax for WebGPU compatibility)
+        summed = logits_orig + logits_unflipped
+        return self._model.seq_conv_argmax(summed)
+
+
+def _load_model(model: str, *, tta: bool = False):
     """
     Load model by name or path.
 
     Args:
         model: Model name (e.g., "subcortical") or path to model directory
                containing model.json and model.pth/model.bin
+        tta: If True, wrap model with test-time augmentation (flip ensemble)
     """
     from pathlib import Path
     from brainchop.utils import find_pth_files, AVAILABLE_MODELS, unwrap_path
@@ -206,14 +286,16 @@ def _load_model(model: str):
         else:
             raise FileNotFoundError(f"No model.pth or model.bin found in {model_path}")
 
-        return load_meshnet(str(config_fn), str(weights_fn))
+        m = load_meshnet(str(config_fn), str(weights_fn))
+        return TTAModel(m) if tta else m
 
     # Otherwise treat as model name
     if model not in AVAILABLE_MODELS:
         raise ValueError(f"Unknown model: {model}. Available: {list(AVAILABLE_MODELS.keys())}")
 
     config_fn, model_fn = find_pth_files(model)
-    return load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
+    m = load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
+    return TTAModel(m) if tta else m
 
 
 def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
@@ -260,6 +342,7 @@ def segment(
     shard_size: int = 1,
     beam: int = 0,
     return_raw: bool = False,
+    tta: bool = False,
 ):  # type: ignore[return]
     """
     Segment brain volume(s).
@@ -270,6 +353,7 @@ def segment(
         shard_size: Batch size for processing multiple volumes
         beam: BEAM optimization level (0 = use cached or none)
         return_raw: If True, also return raw model output (pre-argmax) for export_classes
+        tta: If True, use test-time augmentation (flip ensemble)
 
     Returns:
         Segmented Volume(s) - single if input was single, list if input was list
@@ -312,7 +396,7 @@ def segment(
         if beam > 0:
             os.environ["BEAM"] = str(beam)
 
-        m = _load_model(model)
+        m = _load_model(model, tta=tta)
         results: list[Volume] = []
         raw_outputs: list[Tensor] = []
 
@@ -327,11 +411,11 @@ def segment(
                 batched = m.normalize(batched)
 
             raw_output = m(batched)
-            # Handle both raw logits (B, C, D, H, W) and pre-argmaxed output (B, D, H, W)
+            # TTAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
             if len(raw_output.shape) == 5:
-                output = raw_output.argmax(axis=1)
+                output = raw_output.argmax(axis=1)  # (B, C, D, H, W) -> (B, D, H, W)
             else:
-                output = raw_output
+                output = raw_output  # Already (B, D, H, W)
 
             # Split batch and convert back to (X,Y,Z)
             for j in range(output.shape[0]):
@@ -360,6 +444,7 @@ def export(
     *,
     target: str = "webgpu",
     beam: int = 0,
+    tta: bool = False,
 ) -> tuple[str, str]:
     """
     Export model to WebGPU or other target format.
@@ -369,6 +454,7 @@ def export(
         output_dir: Directory to save exported files
         target: Export target ("webgpu", "clang", "wasm")
         beam: BEAM optimization level (0 = no optimization)
+        tta: If True, export with test-time augmentation (flip ensemble)
 
     Returns:
         Tuple of (js_path, weights_path)
@@ -381,6 +467,9 @@ def export(
 
         # With BEAM optimization
         >>> js_path, weights_path = export("tissue_fast", "/tmp/export", beam=2)
+
+        # With test-time augmentation
+        >>> js_path, weights_path = export("tissue_fast", "/tmp/export", tta=True)
         ```
     """
     from tinygrad.nn.state import safe_save
@@ -391,6 +480,8 @@ def export(
 
     # Get model name for output files
     model_name = Path(model).name if "/" in model else model
+    if tta:
+        model_name = f"{model_name}_tta"
 
     original_beam = os.environ.get("BEAM")
     try:
@@ -398,10 +489,10 @@ def export(
             os.environ["BEAM"] = str(beam)
 
         # Load model
-        m = _load_model(model)
+        m = _load_model(model, tta=tta)
 
-        # Create dummy input
-        dummy_input = Tensor.zeros(1, 1, 256, 256, 256, dtype="float32")
+        # Create dummy input - use randn to prevent JIT from treating as constant
+        dummy_input = Tensor.randn(1, 1, 256, 256, 256, dtype="float32")
 
         # Export
         prg, _input_sizes, _output_sizes, state = export_model(
