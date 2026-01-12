@@ -92,6 +92,21 @@ def find_pth_files(model_name) -> Tuple[Path | Any, Path | Any]:
             return json_fn, bin_fn
 
 
+SAE_BASE_URL = "https://github.com/neuroneural/brainchop-models/raw/main/sae/"
+
+
+def find_sae_files(model_name) -> Path:
+    """Find or download SAE model weights."""
+    model_dir = AVAILABLE_MODELS[model_name]["folder"]
+    cache_dir = Path.home() / ".cache" / "brainchop" / "models" / model_dir
+    pth_fn = cache_dir / "model.pth"
+
+    if not pth_fn.exists():
+        download(f"{SAE_BASE_URL}{model_dir}/model.pth", pth_fn)
+
+    return pth_fn
+
+
 def crop_to_cutoff(arr: np.ndarray, cutoff_percent: float = 2.0):
     """Crop volume to bounding box above percentile cutoff."""
     if not isinstance(arr, np.ndarray) or arr.ndim != 3:
