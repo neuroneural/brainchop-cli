@@ -243,8 +243,7 @@ export default {model_name};
 def export_model(model, target:str, *inputs, model_name: Optional[str] = "model", stream_weights=False):
   assert Device.DEFAULT in EXPORT_SUPPORTED_DEVICE, f"only {', '.join(EXPORT_SUPPORTED_DEVICE)} are supported"
 
-  # NOTE: CPU_COUNT=1, since export does not support threading
-  with Context(JIT=2, CPU_COUNT=1): run,special_names = jit_model(model, *inputs)
+  with Context(JIT=2): run,special_names = jit_model(model, *inputs)
   functions, statements, bufs, bufs_to_save = compile_net(run, special_names)
   state = get_state_dict(model)
   weight_names = {id(x.uop.base.realized): name for name, x in state.items()}
