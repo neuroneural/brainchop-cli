@@ -146,7 +146,7 @@ def load(path: str, *, crop: float | None = None, ct: bool = False, comply: bool
     data, header = conform(os.path.abspath(path), ct=ct, comply=comply)
     if crop is not None:
         data, _ = crop_to_cutoff(data, crop)
-    return Volume(Tensor(data), header)
+    return Volume(Tensor(data.copy()), header)
 
 
 def save(volume: Volume, path: str) -> None:
