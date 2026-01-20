@@ -187,26 +187,61 @@ def _create_flip_matrix(size: int) -> Tensor:
 class TTAModel:
     """Test-Time Augmentation wrapper using flip ensemble."""
 
-    def __init__(self, model):
+    def __init__(self, model, flip_axis: str = "sagittal"):
+        """
+        Initialize TTA wrapper.
+
+        Args:
+            model: The underlying segmentation model
+            flip_axis: Which axis to flip for TTA:
+                - "sagittal" (default): flip along D axis (left-right)
+                - "coronal": flip along H axis (front-back)
+                - "axial": flip along W axis (top-bottom)
+        """
         self._model = model
         self.n_classes = model.n_classes
-        # Pre-create flip matrix for depth dimension (256)
+        self._flip_axis = flip_axis
+        # Pre-create flip matrix for all dimensions (256)
         self._flip_matrix = _create_flip_matrix(256)
 
-    def _flip_depth(self, x: Tensor) -> Tensor:
-        """Flip tensor along depth axis using matrix multiplication."""
-        # x: (B, C, D, H, W) - flip along D (axis 2)
-        # Reshape to (B*C, D, H*W), apply permutation, reshape back
+    def _flip_sagittal(self, x: Tensor) -> Tensor:
+        """Flip tensor along depth/sagittal axis (D, axis 2)."""
+        # x: (B, C, D, H, W) - flip along D
         b, c, d, h, w = x.shape
         x_reshaped = x.reshape(b * c, d, h * w)  # (B*C, D, H*W)
-        # Permute depth: (B*C, D, H*W) @ (D, D) -> need to transpose for matmul
-        # x_reshaped is (B*C, D, H*W), we want to permute the D dimension
-        # So we do: P @ x_reshaped along the D axis
-        # Reshape to (B*C, H*W, D) for matmul, then back
         x_t = x_reshaped.permute(0, 2, 1)  # (B*C, H*W, D)
         x_flipped_t = x_t @ self._flip_matrix  # (B*C, H*W, D)
         x_flipped = x_flipped_t.permute(0, 2, 1)  # (B*C, D, H*W)
         return x_flipped.reshape(b, c, d, h, w)
+
+    def _flip_coronal(self, x: Tensor) -> Tensor:
+        """Flip tensor along height/coronal axis (H, axis 3)."""
+        # x: (B, C, D, H, W) - flip along H
+        b, c, d, h, w = x.shape
+        x_reshaped = x.reshape(b * c * d, h, w)  # (B*C*D, H, W)
+        x_t = x_reshaped.permute(0, 2, 1)  # (B*C*D, W, H)
+        x_flipped_t = x_t @ self._flip_matrix  # (B*C*D, W, H)
+        x_flipped = x_flipped_t.permute(0, 2, 1)  # (B*C*D, H, W)
+        return x_flipped.reshape(b, c, d, h, w)
+
+    def _flip_axial(self, x: Tensor) -> Tensor:
+        """Flip tensor along width/axial axis (W, axis 4)."""
+        # x: (B, C, D, H, W) - flip along W
+        b, c, d, h, w = x.shape
+        x_reshaped = x.reshape(b * c * d * h, w)  # (B*C*D*H, W)
+        x_flipped = x_reshaped @ self._flip_matrix  # (B*C*D*H, W)
+        return x_flipped.reshape(b, c, d, h, w)
+
+    def _flip(self, x: Tensor) -> Tensor:
+        """Flip tensor along the configured axis."""
+        if self._flip_axis == "sagittal":
+            return self._flip_sagittal(x)
+        elif self._flip_axis == "coronal":
+            return self._flip_coronal(x)
+        elif self._flip_axis == "axial":
+            return self._flip_axial(x)
+        else:
+            raise ValueError(f"Unknown flip axis: {self._flip_axis}")
 
     def _forward_no_argmax(self, x: Tensor) -> Tensor:
         """Forward pass through conv layers without final argmax."""
@@ -228,7 +263,7 @@ class TTAModel:
         """
         Forward pass with flip ensemble (test-time augmentation).
 
-        Runs inference on both original and depth-flipped inputs,
+        Runs inference on both original and flipped inputs,
         sums the logits, then applies argmax.
 
         Args:
@@ -243,19 +278,17 @@ class TTAModel:
         # Forward on original
         logits_orig = self._forward_no_argmax(x)
 
-        # Flip input on depth axis using permutation matrix
-        x_flipped = self._flip_depth(x)
+        # Flip input, run inference, then unflip output
+        x_flipped = self._flip(x)
         logits_flipped = self._forward_no_argmax(x_flipped)
+        logits_unflipped = self._flip(logits_flipped)
 
-        # Unflip the flipped output on depth axis
-        logits_unflipped = self._flip_depth(logits_flipped)
-
-        # Sum logits and argmax (use model's seq_conv_argmax for WebGPU compatibility)
+        # Sum logits and argmax
         summed = logits_orig + logits_unflipped
         return self._model.seq_conv_argmax(summed)
 
 
-def _load_model(model: str, *, tta: bool = False):
+def _load_model(model: str, *, tta: bool = False, flip_axis: str = "sagittal"):
     """
     Load model by name or path.
 
@@ -263,6 +296,7 @@ def _load_model(model: str, *, tta: bool = False):
         model: Model name (e.g., "subcortical") or path to model directory
                containing model.json and model.pth/model.bin
         tta: If True, wrap model with test-time augmentation (flip ensemble)
+        flip_axis: Which axis to flip for TTA ("sagittal", "coronal", "axial")
     """
     from pathlib import Path
     from brainchop.utils import find_pth_files, find_sae_files, AVAILABLE_MODELS, unwrap_path
@@ -291,7 +325,7 @@ def _load_model(model: str, *, tta: bool = False):
             raise FileNotFoundError(f"No model.pth or model.bin found in {model_path}")
 
         m = load_meshnet(str(config_fn), str(weights_fn))
-        return TTAModel(m) if tta else m
+        return TTAModel(m, flip_axis=flip_axis) if tta else m
 
     # Otherwise treat as model name
     if model not in AVAILABLE_MODELS:
@@ -305,12 +339,12 @@ def _load_model(model: str, *, tta: bool = False):
         n_classes = model_info.get("n_classes", 3)
         permute = os.environ.get("SAE_PERMUTE", "0") == "1"
         m = load_sae(unwrap_path(model_fn), n_classes=n_classes, permute=permute)
-        return TTAModel(m) if tta else m
+        return TTAModel(m, flip_axis=flip_axis) if tta else m
 
     # Default: MeshNet
     config_fn, model_fn = find_pth_files(model)
     m = load_meshnet(unwrap_path(config_fn), unwrap_path(model_fn))
-    return TTAModel(m) if tta else m
+    return TTAModel(m, flip_axis=flip_axis) if tta else m
 
 
 def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
@@ -460,6 +494,7 @@ def export(
     target: str = "webgpu",
     beam: int = 0,
     tta: bool = False,
+    flip_axis: str = "sagittal",
 ) -> tuple[str, str]:
     """
     Export model to WebGPU or other target format.
@@ -470,6 +505,7 @@ def export(
         target: Export target ("webgpu", "clang", "wasm")
         beam: BEAM optimization level (0 = no optimization)
         tta: If True, export with test-time augmentation (flip ensemble)
+        flip_axis: Which axis to flip for TTA ("sagittal", "coronal", "axial")
 
     Returns:
         Tuple of (js_path, weights_path)
@@ -483,8 +519,11 @@ def export(
         # With BEAM optimization
         >>> js_path, weights_path = export("tissue_fast", "/tmp/export", beam=2)
 
-        # With test-time augmentation
+        # With test-time augmentation (sagittal flip)
         >>> js_path, weights_path = export("tissue_fast", "/tmp/export", tta=True)
+
+        # With coronal TTA
+        >>> js_path, weights_path = export("tissue_fast", "/tmp/export", tta=True, flip_axis="coronal")
         ```
     """
     from tinygrad.nn.state import safe_save
@@ -496,7 +535,10 @@ def export(
     # Get model name for output files
     model_name = Path(model).name if "/" in model else model
     if tta:
-        model_name = f"{model_name}_tta"
+        if flip_axis == "sagittal":
+            model_name = f"{model_name}_tta"
+        else:
+            model_name = f"{model_name}_tta_{flip_axis}"
 
     original_beam = os.environ.get("BEAM")
     try:
@@ -504,7 +546,7 @@ def export(
             os.environ["BEAM"] = str(beam)
 
         # Load model
-        m = _load_model(model, tta=tta)
+        m = _load_model(model, tta=tta, flip_axis=flip_axis)
 
         # Create dummy input - use randn to prevent JIT from treating as constant
         dummy_input = Tensor.randn(1, 1, 256, 256, 256, dtype="float32")
