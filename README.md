@@ -85,6 +85,12 @@ docker run --rm -it --device=nvidia.com/gpu=all -v [[output directory]]:/app bra
 - numpy
 - requests
 
+to use the WEBGPU export backend, also install dawn
+```
+brew tap wpmed92/dawn
+brew install dawn
+```
+
 ## License
 
 MIT License
