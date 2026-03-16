@@ -50,8 +50,11 @@ def get_memory_stats():
     # Fallback: process RSS via resource module
     try:
         import resource
+        import platform
         rusage = resource.getrusage(resource.RUSAGE_SELF)
-        stats["rss_mb"] = rusage.ru_maxrss / (1024 * 1024)  # macOS reports in bytes
+        # macOS reports ru_maxrss in bytes, Linux in kilobytes
+        divisor = (1024 * 1024) if platform.system() == "Darwin" else 1024
+        stats["rss_mb"] = rusage.ru_maxrss / divisor
     except Exception:
         pass
 
