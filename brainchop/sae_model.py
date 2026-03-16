@@ -173,18 +173,19 @@ class SAENet:
 
         return x
 
-    def __call__(self, x: Tensor) -> Tensor:
+    def __call__(self, x: Tensor, fuse_chunk=None) -> Tensor:
         """
         Forward pass.
 
         Args:
             x: Input tensor (B, 1, D, H, W)
+            fuse_chunk: Number of output channels per chunk (None = full conv)
 
         Returns:
             Segmentation (B, D, H, W) after argmax
         """
         x = self.forward_no_final(x)
-        return self.seq_conv_argmax(x)
+        return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 
 
 def load_sae(model_path: str, n_classes: int = 3, permute: bool = False) -> SAENet:

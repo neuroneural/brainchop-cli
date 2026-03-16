@@ -44,11 +44,13 @@ def sequential_argmax(x: Tensor) -> Tensor:
 
 class SequentialConvArgmax:
     """
-    Fused conv + argmax that never materializes the full output tensor.
+    Fused conv + argmax with adaptive chunking.
 
-    Computes one output channel at a time from the final conv layer's weights,
-    keeping only the running max and argmax. Peak memory is the input to the
-    final conv plus two spatial tensors, not (B, n_classes, D, H, W).
+    Tries the full conv first (fastest). On MemoryError, halves the chunk
+    size and retries until it fits. The working chunk size is cached so
+    subsequent runs skip the probing.
+
+    Set FUSE_CHUNK envvar to override (0 = auto-probe).
     """
 
     def __init__(self, out_channels: int, final_conv: nn.Conv2d):
@@ -61,23 +63,43 @@ class SequentialConvArgmax:
             padding=final_conv.padding,
         )
 
-    def _conv_channel(self, x: Tensor, i: int) -> Tensor:
-        """Compute a single output channel of the final conv."""
-        b = self.bias[i:i+1] if self.bias is not None else None
-        return x.conv2d(self.weight[i:i+1], b, **self.conv_kwargs)
+    def _conv_channels(self, x: Tensor, start: int, end: int) -> Tensor:
+        """Compute a slice of output channels [start:end] of the final conv."""
+        b = self.bias[start:end] if self.bias is not None else None
+        return x.conv2d(self.weight[start:end], b, **self.conv_kwargs)
 
-    def __call__(self, x: Tensor) -> Tensor:
-        """Fused conv+argmax. x is the input to the final conv (pre-conv features)."""
-        outB = self._conv_channel(x, 0).realize()
-        outC = Tensor.zeros_like(outB)
+    def _chunked_argmax(self, x: Tensor, chunk_size: int) -> Tensor:
+        """Conv + argmax in chunks of chunk_size channels."""
+        # First chunk
+        end = min(chunk_size, self.out_channels)
+        logits = self._conv_channels(x, 0, end).realize()
+        outB = logits.max(axis=1, keepdim=True)
+        outC = logits.argmax(axis=1, keepdim=True).cast("float32")
+        del logits
+        outB, outC = outB.realize(), outC.realize()
 
-        for i in range(1, self.out_channels):
-            ch = self._conv_channel(x, i)
-            mask = ch > outB
-            outB = mask.where(ch, outB).realize()
-            outC = mask.where(float(i), outC).realize()
+        offset = end
+        while offset < self.out_channels:
+            end = min(offset + chunk_size, self.out_channels)
+            logits = self._conv_channels(x, offset, end).realize()
+            chunk_max = logits.max(axis=1, keepdim=True)
+            chunk_idx = logits.argmax(axis=1, keepdim=True).cast("float32") + float(offset)
+            del logits
+            mask = chunk_max > outB
+            outB = mask.where(chunk_max, outB).realize()
+            outC = mask.where(chunk_idx, outC).realize()
+            offset = end
 
         return outC.squeeze(1)
+
+    def __call__(self, x: Tensor, chunk_size: int | None = None) -> Tensor:
+        """Fused conv+argmax. x is the input to the final conv (pre-conv features).
+
+        Args:
+            chunk_size: Number of output channels per chunk. None = full conv (no chunking).
+        """
+        cs = chunk_size if chunk_size is not None else self.out_channels
+        return self._chunked_argmax(x, cs)
 
     def argmax_only(self, x: Tensor) -> Tensor:
         """Argmax over pre-computed logits (B, C, D, H, W). No conv fusion."""
@@ -243,14 +265,14 @@ class MeshNet:
     def normalize(self, x):
         return qnormalize(x) # TODO: interpret normalization from config file
 
-    def __call__(self, x):
+    def __call__(self, x, fuse_chunk=None):
         for layer in self.model[:-1]:  # all layers except final conv
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)
             else:
                 x = layer(x)
         assert self.seq_conv_argmax is not None
-        return self.seq_conv_argmax(x)
+        return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 
     def half(self):
         """Convert all weights to float16/half precision"""

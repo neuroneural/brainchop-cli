@@ -83,6 +83,27 @@ def _is_first_run(model_name: str, batch_size: int) -> bool:
     return not any(e["BS"] == batch_size for e in cache_data["beams"])
 
 
+# =============================================================================
+# FUSE_CHUNK Cache
+# =============================================================================
+
+def _get_cached_fuse_chunk(model_name: str) -> int | None:
+    """Get cached FUSE_CHUNK for a model."""
+    cache_data = _load_optimization_cache(model_name)
+    return cache_data.get("fuse_chunk")
+
+
+def _save_fuse_chunk(model_name: str, chunk_size: int) -> None:
+    """Save FUSE_CHUNK to model cache."""
+    cache_dir = _get_cache_dir(model_name)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / "optimizations.json"
+    cache_data = _load_optimization_cache(model_name)
+    cache_data["fuse_chunk"] = chunk_size
+    with open(cache_file, "w") as f:
+        json.dump(cache_data, f, indent=2)
+
+
 @dataclass
 class Volume:
     """
@@ -384,6 +405,48 @@ def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
             del os.environ["BEAM"]
 
 
+def _resolve_fuse_chunk(model_name: str, n_classes: int) -> int | None:
+    """Resolve FUSE_CHUNK: envvar > cache > None (auto-probe)."""
+    env_val = os.environ.get("FUSE_CHUNK")
+    if env_val is not None:
+        return int(env_val)
+    cached = _get_cached_fuse_chunk(model_name)
+    if cached is not None:
+        return cached
+    return None  # will auto-probe
+
+
+def _run_with_fuse_chunk(m, batched, model_name: str, fuse_chunk: int | None, tta: bool = False):
+    """Run model with fuse_chunk, auto-probing on MemoryError."""
+    if tta:
+        # TTA path doesn't use fused conv (needs full logits)
+        return m(batched)
+
+    n_classes = m.n_classes
+
+    if fuse_chunk is not None:
+        # Known chunk size — just run
+        return m(batched, fuse_chunk=fuse_chunk)
+
+    # Auto-probe: try full, halve on OOM
+    chunk = n_classes
+    while chunk >= 1:
+        try:
+            result = m(batched, fuse_chunk=chunk)
+            # Success — cache it
+            if chunk < n_classes:
+                print(f"brainchop :: FUSE_CHUNK={chunk} (auto-detected for '{model_name}', set FUSE_CHUNK to override)")
+                _save_fuse_chunk(model_name, chunk)
+            return result
+        except MemoryError:
+            if chunk == 1:
+                raise  # can't go lower
+            chunk = max(1, chunk // 2)
+            print(f"brainchop :: OOM at FUSE_CHUNK={chunk * 2}, retrying with FUSE_CHUNK={chunk}...")
+
+    raise RuntimeError("unreachable")
+
+
 def segment(
     volume: Volume | list[Volume],
     model: str,
@@ -446,6 +509,11 @@ def segment(
             os.environ["BEAM"] = str(beam)
 
         m = _load_model(model, tta=tta)
+
+        # Resolve FUSE_CHUNK
+        n_classes = m.n_classes if not tta else m._model.n_classes if hasattr(m, '_model') else 0
+        fuse_chunk = _resolve_fuse_chunk(model_name, n_classes)
+
         results: list[Volume] = []
         raw_outputs: list[Tensor] = []
 
@@ -459,7 +527,7 @@ def segment(
             if hasattr(m, "normalize"):
                 batched = m.normalize(batched)
 
-            raw_output = m(batched)
+            raw_output = _run_with_fuse_chunk(m, batched, model_name, fuse_chunk, tta=tta)
             # TTAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
             if len(raw_output.shape) == 5:
                 output = raw_output.argmax(axis=1)  # (B, C, D, H, W) -> (B, D, H, W)
