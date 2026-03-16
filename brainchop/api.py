@@ -83,6 +83,17 @@ def _is_first_run(model_name: str, batch_size: int) -> bool:
     return not any(e["BS"] == batch_size for e in cache_data["beams"])
 
 
+def _save_fuse_chunk(model_name: str, chunk_size: int) -> None:
+    """Save FUSE_CHUNK to model cache."""
+    cache_dir = _get_cache_dir(model_name)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / "optimizations.json"
+    cache_data = _load_optimization_cache(model_name)
+    cache_data["fuse_chunk"] = chunk_size
+    with open(cache_file, "w") as f:
+        json.dump(cache_data, f, indent=2)
+
+
 @dataclass
 class Volume:
     """
@@ -283,9 +294,9 @@ class TTAModel:
         logits_flipped = self._forward_no_argmax(x_flipped)
         logits_unflipped = self._flip(logits_flipped)
 
-        # Sum logits and argmax
+        # Sum logits and argmax (logits already computed, use non-fused path)
         summed = logits_orig + logits_unflipped
-        return self._model.seq_conv_argmax(summed)
+        return self._model.seq_conv_argmax.argmax_only(summed)
 
 
 def _load_model(model: str, *, tta: bool = False, flip_axis: str = "sagittal"):
@@ -384,6 +395,30 @@ def optimize(model: str, *, beam: int = 2, batch_size: int = 1) -> None:
             del os.environ["BEAM"]
 
 
+def _run_with_fuse_chunk(m, batched, model_name: str, tta: bool = False):
+    """Run model, auto-probing FUSE_CHUNK on MemoryError. Priority: envvar > cache > auto."""
+    if tta:
+        return m(batched)
+
+    n_classes = m.n_classes
+    env_val = os.environ.get("FUSE_CHUNK")
+    chunk = int(env_val) if env_val is not None else \
+            _load_optimization_cache(model_name).get("fuse_chunk") or n_classes
+
+    while chunk >= 1:
+        try:
+            result = m(batched, fuse_chunk=chunk)
+            if chunk < n_classes and env_val is None:
+                print(f"brainchop :: FUSE_CHUNK={chunk} (auto-detected for '{model_name}', set FUSE_CHUNK to override)")
+                _save_fuse_chunk(model_name, chunk)
+            return result
+        except MemoryError:
+            if chunk == 1:
+                raise
+            chunk = max(1, chunk // 2)
+            print(f"brainchop :: OOM at FUSE_CHUNK={chunk * 2}, retrying with FUSE_CHUNK={chunk}...")
+
+
 def segment(
     volume: Volume | list[Volume],
     model: str,
@@ -459,7 +494,7 @@ def segment(
             if hasattr(m, "normalize"):
                 batched = m.normalize(batched)
 
-            raw_output = m(batched)
+            raw_output = _run_with_fuse_chunk(m, batched, model_name, tta=tta)
             # TTAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
             if len(raw_output.shape) == 5:
                 output = raw_output.argmax(axis=1)  # (B, C, D, H, W) -> (B, D, H, W)
@@ -495,6 +530,7 @@ def export(
     beam: int = 0,
     tta: bool = False,
     flip_axis: str = "sagittal",
+    force: bool = False,
 ) -> tuple[str, str]:
     """
     Export model to WebGPU or other target format.
@@ -506,6 +542,7 @@ def export(
         beam: BEAM optimization level (0 = no optimization)
         tta: If True, export with test-time augmentation (flip ensemble)
         flip_axis: Which axis to flip for TTA ("sagittal", "coronal", "axial")
+        force: If True, skip memory safety checks
 
     Returns:
         Tuple of (js_path, weights_path)
@@ -528,6 +565,36 @@ def export(
     """
     from tinygrad.nn.state import safe_save
     from brainchop.export_model import export_model
+
+    # Memory safety guard: small chunk limits can cause OOM
+    chunk_limit = int(os.environ.get("CHUNK_LIMIT", 0))
+    min_safe_chunk = 256 * 1024 * 1024  # 256MB
+    if chunk_limit > 0 and chunk_limit < min_safe_chunk and not force:
+        chunk_mb = chunk_limit // (1024 * 1024)
+        raise RuntimeError(
+            f"CHUNK_LIMIT={chunk_mb}MB is too small and may cause OOM. "
+            f"Use CHUNK_LIMIT >= 256MB or set force=True to override."
+        )
+
+    # Check available system memory - block if free memory is below threshold
+    require_free_gb = int(os.environ.get("REQUIRE_FREE_GB", 0))
+    if require_free_gb > 0:
+        import subprocess
+        result = subprocess.run(
+            ["vm_stat"], capture_output=True, text=True
+        )
+        # Parse free pages from vm_stat output
+        for line in result.stdout.split("\n"):
+            if "Pages free:" in line:
+                free_pages = int(line.split(":")[1].strip().rstrip("."))
+                # macOS page size is typically 16KB
+                free_gb = (free_pages * 16384) / (1024 ** 3)
+                if free_gb < require_free_gb:
+                    raise RuntimeError(
+                        f"Only {free_gb:.1f}GB free memory, need {require_free_gb}GB. "
+                        f"Close other apps or set force=True to override."
+                    )
+                break
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)

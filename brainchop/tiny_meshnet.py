@@ -44,34 +44,80 @@ def sequential_argmax(x: Tensor) -> Tensor:
 
 class SequentialConvArgmax:
     """
-    Sequential argmax - trades speed for memory by processing channels iteratively.
-    ~10-15x slower than native argmax but bounds peak memory.
+    Fused conv + argmax with adaptive chunking.
+
+    Tries the full conv first (fastest). On MemoryError, halves the chunk
+    size and retries until it fits. The working chunk size is cached so
+    subsequent runs skip the probing.
+
+    Set FUSE_CHUNK envvar to override (0 = auto-probe).
     """
 
-    def __init__(self, out_channels: int, chunk_size: int = 16):
+    def __init__(self, out_channels: int, final_conv: nn.Conv2d):
         self.out_channels = out_channels
-        self.chunk_size = chunk_size
+        self.weight = final_conv.weight
+        self.bias = final_conv.bias
+        self.conv_kwargs = dict(
+            stride=final_conv.stride,
+            dilation=final_conv.dilation,
+            padding=final_conv.padding,
+        )
 
-    def __call__(self, x: Tensor) -> Tensor:
+    def _conv_channels(self, x: Tensor, start: int, end: int) -> Tensor:
+        """Compute a slice of output channels [start:end] of the final conv."""
+        b = self.bias[start:end] if self.bias is not None else None
+        return x.conv2d(self.weight[start:end], b, **self.conv_kwargs)
+
+    def _chunked_argmax(self, x: Tensor, chunk_size: int) -> Tensor:
+        """Conv + argmax in chunks of chunk_size channels."""
+        # First chunk
+        end = min(chunk_size, self.out_channels)
+        logits = self._conv_channels(x, 0, end).realize()
+        outB = logits.max(axis=1, keepdim=True)
+        outC = logits.argmax(axis=1, keepdim=True).cast("float32")
+        del logits
+        outB, outC = outB.realize(), outC.realize()
+
+        offset = end
+        while offset < self.out_channels:
+            end = min(offset + chunk_size, self.out_channels)
+            logits = self._conv_channels(x, offset, end).realize()
+            chunk_max = logits.max(axis=1, keepdim=True)
+            chunk_idx = logits.argmax(axis=1, keepdim=True).cast("float32") + float(offset)
+            del logits
+            mask = chunk_max > outB
+            outB = mask.where(chunk_max, outB).realize()
+            outC = mask.where(chunk_idx, outC).realize()
+            offset = end
+
+        return outC.squeeze(1)
+
+    def __call__(self, x: Tensor, chunk_size: int | None = None) -> Tensor:
+        """Fused conv+argmax. x is the input to the final conv (pre-conv features)."""
+        return self._chunked_argmax(x, chunk_size or self.out_channels)
+
+    def argmax_only(self, x: Tensor) -> Tensor:
+        """Argmax over pre-computed logits (B, C, D, H, W). No conv fusion."""
         outB = x[:, 0:1].realize()
         outC = Tensor.zeros_like(outB)
 
         for i in range(1, self.out_channels):
             mask = x[:, i:i+1] > outB
-            outB = mask.where(x[:, i:i+1], outB)
-            outC = mask.where(float(i), outC)
-            if i % self.chunk_size == 0:
-                outB = outB.realize()
-                outC = outC.realize()
+            outB = mask.where(x[:, i:i+1], outB).realize()
+            outC = mask.where(float(i), outC).realize()
 
         return outC.squeeze(1)
 
 
-def chunked_conv(x: Tensor, conv_layer: nn.Conv2d, chunk_limit: int = 2**30) -> Tensor:
+def chunked_conv(x: Tensor, conv_layer: nn.Conv2d, chunk_limit: int | None = None) -> Tensor:
     """
-    Workaround for WebGPU matmul bug: when output exceeds 2^30 elements,
+    Workaround for WebGPU matmul bug: when output exceeds chunk_limit elements,
     process output channels in chunks to avoid 32-bit integer overflow.
+
+    Set CHUNK_LIMIT env var to override the default of 2^30 (~1GB).
     """
+    if chunk_limit is None:
+        chunk_limit = int(os.environ.get("CHUNK_LIMIT", 2**30))
     from functools import reduce
     spatial = int(reduce(lambda a, b: int(a) * int(b), x.shape[2:], 1))
     out_channels = int(conv_layer.weight.shape[0])
@@ -207,20 +253,21 @@ class MeshNet:
         self.seq_conv_argmax: SequentialConvArgmax | None = None
 
     def init_seq_conv_argmax(self):
-        """Initialize SequentialConvArgmax for memory-efficient argmax."""
-        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes)
+        """Initialize SequentialConvArgmax with the final conv layer fused in."""
+        final_conv = self.model[-1]  # last layer is always nn.Conv2d
+        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes, final_conv)
 
     def normalize(self, x):
         return qnormalize(x) # TODO: interpret normalization from config file
 
-    def __call__(self, x):
-        for layer in self.model:
+    def __call__(self, x, fuse_chunk=None):
+        for layer in self.model[:-1]:  # all layers except final conv
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)
             else:
                 x = layer(x)
         assert self.seq_conv_argmax is not None
-        return self.seq_conv_argmax(x)
+        return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 
     def half(self):
         """Convert all weights to float16/half precision"""
