@@ -119,8 +119,8 @@ def print_results(results):
             rss = f"{r['memory']['after']['rss_mb']:.0f}"
 
         err = r.get("error") or ""
-        if len(err) > 30:
-            err = err[:30] + "…"
+        if len(err) > 60:
+            err = err[:60] + "…"
 
         print(f"{r['model']:<{name_w}}  {r['status']:<9} {time_str:>8}  {rss:>10}  {err}")
 
