@@ -105,7 +105,16 @@ class SAENet:
 
             self.layers.append((layer_type, idx, weight, bias))
 
-        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes)
+        # Build a dummy nn.Conv2d to hold the final layer's weights for fused argmax
+        _, idx, weight, bias = self.layers[-1]
+        kernel_size = weight.shape[2]
+        padding = (kernel_size - 1) // 2
+        from tinygrad import nn as tg_nn
+        final_conv = tg_nn.Conv2d(weight.shape[1], weight.shape[0],
+                                   kernel_size=[kernel_size]*3, padding=padding)
+        final_conv.weight = weight
+        final_conv.bias = bias
+        self.seq_conv_argmax = SequentialConvArgmax(self.n_classes, final_conv)
 
     def normalize(self, x: Tensor) -> Tensor:
         """Quantile normalization (same as MeshNet)."""
@@ -146,6 +155,24 @@ class SAENet:
 
         return x
 
+    def forward_no_final(self, x: Tensor) -> Tensor:
+        """Forward pass through all layers except the final conv."""
+        for layer_type, idx, weight, bias in self.layers[:-1]:
+            dilation = DILATION_SCHEDULE.get(idx, 1)
+            padding = dilation
+
+            if layer_type == "conv":
+                x = x.conv2d(weight, bias, padding=padding, dilation=dilation)
+            elif layer_type == "conv_s2":
+                x = x.conv2d(weight, bias, padding=padding, stride=2, dilation=dilation)
+            elif layer_type == "convT":
+                x = x.conv_transpose2d(weight, bias, stride=2, padding=0)
+
+            if layer_type != "convT":
+                x = x.silu()
+
+        return x
+
     def __call__(self, x: Tensor) -> Tensor:
         """
         Forward pass.
@@ -156,8 +183,7 @@ class SAENet:
         Returns:
             Segmentation (B, D, H, W) after argmax
         """
-        x = self.forward_no_argmax(x)
-        # Memory-efficient argmax
+        x = self.forward_no_final(x)
         return self.seq_conv_argmax(x)
 
 

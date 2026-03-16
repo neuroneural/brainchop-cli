@@ -283,9 +283,9 @@ class TTAModel:
         logits_flipped = self._forward_no_argmax(x_flipped)
         logits_unflipped = self._flip(logits_flipped)
 
-        # Sum logits and argmax
+        # Sum logits and argmax (logits already computed, use non-fused path)
         summed = logits_orig + logits_unflipped
-        return self._model.seq_conv_argmax(summed)
+        return self._model.seq_conv_argmax.argmax_only(summed)
 
 
 def _load_model(model: str, *, tta: bool = False, flip_axis: str = "sagittal"):
@@ -495,6 +495,7 @@ def export(
     beam: int = 0,
     tta: bool = False,
     flip_axis: str = "sagittal",
+    force: bool = False,
 ) -> tuple[str, str]:
     """
     Export model to WebGPU or other target format.
@@ -506,6 +507,7 @@ def export(
         beam: BEAM optimization level (0 = no optimization)
         tta: If True, export with test-time augmentation (flip ensemble)
         flip_axis: Which axis to flip for TTA ("sagittal", "coronal", "axial")
+        force: If True, skip memory safety checks
 
     Returns:
         Tuple of (js_path, weights_path)
@@ -528,6 +530,36 @@ def export(
     """
     from tinygrad.nn.state import safe_save
     from brainchop.export_model import export_model
+
+    # Memory safety guard: small chunk limits can cause OOM
+    chunk_limit = int(os.environ.get("CHUNK_LIMIT", 0))
+    min_safe_chunk = 256 * 1024 * 1024  # 256MB
+    if chunk_limit > 0 and chunk_limit < min_safe_chunk and not force:
+        chunk_mb = chunk_limit // (1024 * 1024)
+        raise RuntimeError(
+            f"CHUNK_LIMIT={chunk_mb}MB is too small and may cause OOM. "
+            f"Use CHUNK_LIMIT >= 256MB or set force=True to override."
+        )
+
+    # Check available system memory - block if free memory is below threshold
+    require_free_gb = int(os.environ.get("REQUIRE_FREE_GB", 0))
+    if require_free_gb > 0:
+        import subprocess
+        result = subprocess.run(
+            ["vm_stat"], capture_output=True, text=True
+        )
+        # Parse free pages from vm_stat output
+        for line in result.stdout.split("\n"):
+            if "Pages free:" in line:
+                free_pages = int(line.split(":")[1].strip().rstrip("."))
+                # macOS page size is typically 16KB
+                free_gb = (free_pages * 16384) / (1024 ** 3)
+                if free_gb < require_free_gb:
+                    raise RuntimeError(
+                        f"Only {free_gb:.1f}GB free memory, need {require_free_gb}GB. "
+                        f"Close other apps or set force=True to override."
+                    )
+                break
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
