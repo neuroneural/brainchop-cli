@@ -93,13 +93,8 @@ class SequentialConvArgmax:
         return outC.squeeze(1)
 
     def __call__(self, x: Tensor, chunk_size: int | None = None) -> Tensor:
-        """Fused conv+argmax. x is the input to the final conv (pre-conv features).
-
-        Args:
-            chunk_size: Number of output channels per chunk. None = full conv (no chunking).
-        """
-        cs = chunk_size if chunk_size is not None else self.out_channels
-        return self._chunked_argmax(x, cs)
+        """Fused conv+argmax. x is the input to the final conv (pre-conv features)."""
+        return self._chunked_argmax(x, chunk_size or self.out_channels)
 
     def argmax_only(self, x: Tensor) -> Tensor:
         """Argmax over pre-computed logits (B, C, D, H, W). No conv fusion."""
