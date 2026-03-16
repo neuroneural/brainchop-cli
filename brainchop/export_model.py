@@ -112,7 +112,7 @@ const {model_name}_name_to_id = Object.fromEntries(weightNames.map((name, index)
 def dtype_to_js_type(dtype: DType) -> str:
   return f"{'Uint' if dtype in dtypes.uints else 'Int' if (dtype in dtypes.sints or dtype == dtypes.bool) else 'Float'}{8*dtype.itemsize}Array"
 
-def export_model_webgpu(functions, statements, bufs, weight_names, input_names, output_names, model_name, symbolic_vars={}, stream_weights=False) -> Tuple[str,int,int]:
+def export_model_webgpu(functions, statements, bufs, weight_names, input_names, output_names, model_name, symbolic_vars={}, stream_weights=False, batch_size=1) -> Tuple[str,int,int]:
   kernel_code = '\n\n'.join([f"const {key} = `{code.replace(key, 'main')}`;" for key, code in functions.items()])
   kernel_names = ', '.join([name for (name, _, _, _) in statements])
   input_names += list(symbolic_vars.values())
@@ -127,7 +127,22 @@ def export_model_webgpu(functions, statements, bufs, weight_names, input_names, 
     for _, (_, args, _, _) in enumerate(statements)
   ])
   layouts = f"const layouts=[{create_bind_group_layouts}]"
-  kernel_calls = '\n        '.join([f"addComputePass(device, commandEncoder, pipelines[{i}], layouts[{i}], infinityBuf, [{', '.join(args)}], [{', '.join(str(x) for x in global_size)}]);" for i, (_name, args, global_size, _local_size) in enumerate(statements) ])
+
+  # Generate batched kernel calls to avoid GPU timeout on Windows
+  num_statements = len(statements)
+  if num_statements <= batch_size:
+    # Small enough to run in one batch
+    kernel_calls = '\n        '.join([f"addComputePass(device, commandEncoder, pipelines[{i}], layouts[{i}], infinityBuf, [{', '.join(args)}], [{', '.join(str(x) for x in global_size)}]);" for i, (_name, args, global_size, _local_size) in enumerate(statements)])
+  else:
+    # Generate batched submissions
+    batches = []
+    for batch_start in range(0, num_statements, batch_size):
+      batch_end = min(batch_start + batch_size, num_statements)
+      batch_calls = [f"addComputePass(device, commandEncoder, pipelines[{i}], layouts[{i}], infinityBuf, [{', '.join(args)}], [{', '.join(str(x) for x in global_size)}]);" for i, (_name, args, global_size, _local_size) in enumerate(statements[batch_start:batch_end], start=batch_start)]
+      batches.append('\n        '.join(batch_calls))
+
+    # Join batches with submit and new encoder
+    kernel_calls = '\n        device.queue.submit([commandEncoder.finish()]);\n        await device.queue.onSubmittedWorkDone();\n        commandEncoder = device.createCommandEncoder();\n        '.join(batches)
 
   buf_type = lambda x: "createUniformBuf" if x in set(uop.arg[0] for uop in symbolic_vars) else "createEmptyBuf"
   map_to_external_weight = lambda _key: f"state_dict['{weight_names[_key]}']" if stream_weights else f"getTensorBuffer(safetensor, metadata['{weight_names[_key]}'])"
@@ -223,12 +238,11 @@ const setupNet = async (device, {"state_dict" if stream_weights else "safetensor
   }}))
 
     return async ({",".join([f"_{input_name}" for input_name in input_names])}) => {{
-        const commandEncoder = device.createCommandEncoder();
+        let commandEncoder = device.createCommandEncoder();
         {input_writers}
         {kernel_calls}
         {outbuf_copies}
-        const gpuCommands = commandEncoder.finish();
-        device.queue.submit([gpuCommands]);
+        device.queue.submit([commandEncoder.finish()]);
 
         {output_readers}
         return {output_return};
