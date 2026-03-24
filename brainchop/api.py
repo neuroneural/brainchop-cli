@@ -130,18 +130,33 @@ def list_models() -> dict[str, str]:
     return {name: details["description"] for name, details in AVAILABLE_MODELS.items()}
 
 
-def load(path: str, *, crop: float | None = None, ct: bool = False, comply: bool = False) -> Volume:
+def _load_single(path: str | Path, *, crop: float | None = None, ct: bool = False, comply: bool = False) -> Volume:
+    from brainchop.utils import crop_to_cutoff
+
+    data, header = conform(os.path.abspath(path), ct=ct, comply=comply)
+    if crop is not None:
+        data, _ = crop_to_cutoff(data, crop)
+    return Volume(Tensor(data.copy()), header)
+
+
+def load(
+    path: str | Path | list[str | Path],
+    *,
+    crop: float | None = None,
+    ct: bool = False,
+    comply: bool = False,
+) -> Volume | list[Volume]:
     """
-    Load NIfTI file and conform to 256x256x256.
+    Load NIfTI file(s) and conform to 256x256x256.
 
     Args:
-        path: Path to NIfTI file (.nii or .nii.gz)
+        path: Path or list of paths to NIfTI file(s) (.nii or .nii.gz)
         crop: Crop intensity percentile (e.g., 0.01 removes bottom 1%)
         ct: Use CT windowing instead of MRI normalization
         comply: Insert niimath compliance arguments before conform
 
     Returns:
-        Volume with data Tensor (256,256,256) and header bytes
+        Single Volume if path is a single path, list[Volume] if path is a list
 
     Example:
         ```python
@@ -149,15 +164,16 @@ def load(path: str, *, crop: float | None = None, ct: bool = False, comply: bool
         >>> vol.data.shape
         (256, 256, 256)
 
+        >>> vols = load(["brain1.nii.gz", "brain2.nii.gz"])
+        >>> len(vols)
+        2
+
         >>> vol = load("brain.nii.gz", crop=0.01)  # crop dark voxels
         ```
     """
-    from brainchop.utils import crop_to_cutoff
-
-    data, header = conform(os.path.abspath(path), ct=ct, comply=comply)
-    if crop is not None:
-        data, _ = crop_to_cutoff(data, crop)
-    return Volume(Tensor(data.copy()), header)
+    if isinstance(path, list):
+        return [_load_single(p, crop=crop, ct=ct, comply=comply) for p in path]
+    return _load_single(path, crop=crop, ct=ct, comply=comply)
 
 
 def save(volume: Volume, path: str) -> None:
