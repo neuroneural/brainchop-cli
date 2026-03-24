@@ -8,24 +8,24 @@ files however you like—by subject, by session, by folder, etc.
 from pathlib import Path
 from brainchop import load, segment, save
 
-# ── single file (same as before) ────────────────────────────────
+# single file (same as before)
 vol = load("brain.nii.gz")
 result = segment(vol, "tissue_fast")
 save(result, "single_output.nii.gz")
 
-# ── batch: load a list of paths at once ─────────────────────────
+# batch: load a list of paths at once
 niftis = sorted(Path(".").glob("*.nii.gz"))
 vols = load(niftis)                        # returns list[Volume]
 results = segment(vols, "tissue_fast")     # segment all at once
 for path, res in zip(niftis, results):
     save(res, f"{path.stem}_seg.nii.gz")
 
-# ── batch with GPU sharding ─────────────────────────────────────
+# batch with GPU sharding
 # shard_size controls how many volumes are batched on GPU per step.
 # larger shard_size = faster, but uses more VRAM.
 results = segment(vols, "tissue_fast", shard_size=2)
 
-# ── custom split logic ──────────────────────────────────────────
+# custom split logic
 # load() gives you full control over how to group files.
 # for example, process subjects in chunks of 4:
 chunk_size = 4
