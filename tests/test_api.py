@@ -35,6 +35,23 @@ class TestLoad:
         assert vol.data.shape == (256, 256, 256)
         assert isinstance(vol.header, bytes)
 
+    def test_load_pathlib(self, test_nifti_path):
+        vol = load(test_nifti_path)
+        assert isinstance(vol, Volume)
+        assert vol.data.shape == (256, 256, 256)
+
+    def test_load_list_of_str(self, test_nifti_path):
+        vols = load([str(test_nifti_path), str(test_nifti_path)])
+        assert isinstance(vols, list)
+        assert len(vols) == 2
+        assert all(isinstance(v, Volume) for v in vols)
+
+    def test_load_list_of_paths(self, test_nifti_path):
+        vols = load([test_nifti_path, test_nifti_path])
+        assert isinstance(vols, list)
+        assert len(vols) == 2
+        assert all(isinstance(v, Volume) for v in vols)
+
     def test_load_with_crop(self, test_nifti_path):
         vol = load(str(test_nifti_path), crop=2.0)
         assert vol.data.shape[0] <= 256
