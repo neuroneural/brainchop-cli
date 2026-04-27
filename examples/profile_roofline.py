@@ -363,7 +363,7 @@ def _configure_backend_for_gpu(gpu_name):
         candidates = ["METAL"]
 
     if platform.system() == "Linux" and ("AMD/ATI" in gpu_name or "Radeon" in gpu_name):
-        candidates = ["AMD", "HIP", "CL"]
+        candidates = ["AMD", "HIP", "CL", "WEBGPU"]
 
     errors = []
     for backend in candidates:
@@ -502,7 +502,7 @@ def main():
             print("  Auto backend probes failed:")
             for err in backend_errors:
                 print(f"    {err}")
-        print(f"  Set the backend (e.g. CL=1, HIP=1, AMD=1, METAL=1) or use --no-run for static analysis only.")
+        print(f"  Set the backend (e.g. WEBGPU=1, CL=1, HIP=1, AMD=1, METAL=1) or use --no-run for static analysis only.")
         raise SystemExit(1)
 
     print("=" * 65)
