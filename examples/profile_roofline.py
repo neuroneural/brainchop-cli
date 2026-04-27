@@ -437,15 +437,6 @@ def main():
     slug = _hw_slug()
     backend = _get_backend()
 
-    # Refuse to profile if the runtime backend doesn't match the GPU whose
-    # peak specs we're using — CPU timings against a GPU roofline are nonsense.
-    gpu_backends = {"METAL", "AMD", "CUDA", "HIP", "HSA", "NV", "CL", "WEBGPU"}
-    if not args.no_run and backend not in gpu_backends:
-        print(f"\n  ERROR: tinygrad backend is '{backend}', but peak specs are for GPU '{gpu_name}'.")
-        print("  Set the backend (e.g. WEBGPU=1, CL=1, HIP=1, AMD=1, METAL=1) "
-              "or use --no-run for static analysis only.")
-        raise SystemExit(1)
-
     print("=" * 65)
     print(f"brainchop roofline profiler  [{slug}]")
     print(f"  models:  {', '.join(models)}")
