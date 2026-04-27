@@ -36,6 +36,10 @@ def conv3d_bytes(in_c, out_c, k, spatial, bpe, has_bias=False):
     b = (in_c * spatial + out_c * in_c * k**3 + out_c * spatial) * bpe
     return b + out_c * bpe if has_bias else b
 
+def conv3d_bytes_io(in_c, out_c, k, in_spatial, out_spatial, bpe, has_bias=False):
+    b = (in_c * in_spatial + out_c * in_c * k**3 + out_c * out_spatial) * bpe
+    return b + out_c * bpe if has_bias else b
+
 def norm_flops(channels, spatial):
     # InstanceNorm (GroupNorm with num_groups=channels, affine=False):
     # mean (1 div) + variance (sub + sq + 1 div) + normalize (sub + div) = 6 ops/elem
@@ -100,34 +104,43 @@ def analyze_meshnet(config_path, dtype):
     return ModelProfile("", dtype, total_f, total_b)
 
 
-def analyze_sae(n_classes, dtype):
-    from brainchop.sae_model import LAYER_INDICES
+def analyze_sae(model_path, dtype):
+    from brainchop.sae_model import LAYER_INDICES, DOWNSAMPLE_LAYER, UPSAMPLE_LAYER
+    from tinygrad.nn.state import torch_load
 
     bpe = _bpe(dtype)
-    ch = 16
     S_full, S_half = 256**3, 128**3
+    state_dict = torch_load(model_path)
+    spatial = S_full
     total_f = total_b = 0
 
     for i, idx in enumerate(LAYER_INDICES):
         is_last = (i == len(LAYER_INDICES) - 1)
-        is_down, is_up = (idx == 10), (idx == 22)
+        is_down, is_up = (idx == DOWNSAMPLE_LAYER), (idx == UPSAMPLE_LAYER)
+        weight = state_dict[f"{idx}.weight"]
 
-        if is_last:      ic, oc, k, S = ch, n_classes, 1, S_full
-        elif is_down:    ic, oc, k, S = ch, ch, 3, S_full
-        elif is_up:      ic, oc, k, S = ch, ch, 2, S_half
-        elif idx < 10:   ic, oc, k, S = (1 if idx == 0 else ch), ch, 3, S_full
-        elif idx > 22:   ic, oc, k, S = ch, ch, 3, S_full
-        else:            ic, oc, k, S = ch, ch, 3, S_half
+        if is_up:
+            # tinygrad ConvTranspose weights are laid out as (in_c, out_c, kD, kH, kW).
+            ic, oc = weight.shape[:2]
+            k = weight.shape[2]
+            out_spatial = S_full
+            # Transposed convolution work is proportional to the input lattice.
+            total_f += conv3d_flops(ic, oc, k, spatial, has_bias=True)
+        else:
+            oc, ic = weight.shape[:2]
+            k = weight.shape[2]
+            out_spatial = S_half if is_down else spatial
+            total_f += conv3d_flops(ic, oc, k, out_spatial, has_bias=True)
 
-        # SAE always has bias
-        total_f += conv3d_flops(ic, oc, k, S, has_bias=True)
-        total_b += conv3d_bytes(ic, oc, k, S, bpe, has_bias=True)
+        # SAE weights always include bias. Count input activation, weights, bias, and output activation.
+        total_b += conv3d_bytes_io(ic, oc, k, spatial, out_spatial, bpe, has_bias=True)
 
-        # SiLU activation after every conv except ConvTranspose and final
+        # SiLU activation after every conv except ConvTranspose and final.
         if not is_last and not is_up:
-            out_S = S_half if is_down else S
-            total_f += silu_flops(oc * out_S)
-            total_b += 2 * oc * out_S * bpe
+            total_f += silu_flops(oc * out_spatial)
+            total_b += 2 * oc * out_spatial * bpe
+
+        spatial = out_spatial
 
     return ModelProfile("", dtype, total_f, total_b)
 
@@ -380,25 +393,30 @@ def plot_roofline(profiles, peak_gflops_fp32, peak_gflops_fp16, peak_bw, output_
     names = list({p.model_name for p in profiles})
     colors = {n: cmap(i % 10) for i, n in enumerate(names)}
 
+    point_handles = []
     for p in profiles:
         if p.achieved_gflops and p.achieved_gflops > 0:
-            ax.plot(p.arithmetic_intensity, p.achieved_gflops,
-                    marker=markers.get(p.dtype, "o"),
-                    color=colors[p.model_name], ms=10, zorder=5)
-            ax.annotate(f"{p.model_name}\n({p.dtype})",
-                        (p.arithmetic_intensity, p.achieved_gflops),
-                        textcoords="offset points", xytext=(8, 4),
-                        fontsize=7, color=colors[p.model_name])
+            (handle,) = ax.plot(p.arithmetic_intensity, p.achieved_gflops,
+                                marker=markers.get(p.dtype, "o"),
+                                color=colors[p.model_name], markeredgecolor="black",
+                                markeredgewidth=0.5, ms=10, linestyle="none",
+                                alpha=0.68, zorder=5,
+                                label=f"{p.model_name} ({p.dtype})")
+            point_handles.append(handle)
 
     ax.set_xlabel("Arithmetic Intensity (FLOPs / Byte)")
     ax.set_ylabel("Performance (GFLOP/s)")
     ax.set_title(f"Roofline — brainchop iGPU\n"
                  f"Peak: {peak_gflops_fp32} GFLOP/s (fp32) | BW: {peak_bw} GB/s")
-    ax.legend()
+    ceiling_legend = ax.legend(loc="upper left", fontsize=8)
+    ax.add_artist(ceiling_legend)
+    if point_handles:
+        ax.legend(handles=point_handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
+                  fontsize=8, frameon=True, title="Models")
     ax.grid(True, which="both", alpha=0.3)
     ax.set_xlim(0.01, 1000)
     ax.set_ylim(0.1, peak_max * 2)
-    plt.tight_layout()
+    plt.tight_layout(rect=(0, 0, 0.78, 1))
     plt.savefig(output_path, dpi=150)
     print(f"Plot saved to {output_path}")
 
@@ -437,15 +455,6 @@ def main():
     slug = _hw_slug()
     backend = _get_backend()
 
-    # Refuse to profile if the runtime backend doesn't match the GPU whose
-    # peak specs we're using — CPU timings against a GPU roofline are nonsense.
-    gpu_backends = {"METAL", "AMD", "CUDA", "HIP", "HSA", "NV", "CL", "WEBGPU"}
-    if not args.no_run and backend not in gpu_backends:
-        print(f"\n  ERROR: tinygrad backend is '{backend}', but peak specs are for GPU '{gpu_name}'.")
-        print("  Set the backend (e.g. WEBGPU=1, CL=1, HIP=1, AMD=1, METAL=1) "
-              "or use --no-run for static analysis only.")
-        raise SystemExit(1)
-
     print("=" * 65)
     print(f"brainchop roofline profiler  [{slug}]")
     print(f"  models:  {', '.join(models)}")
@@ -465,7 +474,6 @@ def main():
     for model_name in models:
         info = registry[model_name]
         model_type = info.get("type", "meshnet")
-        n_classes = info.get("n_classes", 3)
 
         for dtype in args.dtypes:
             # SAE models have no half() — fp16 weights aren't supported
@@ -478,7 +486,8 @@ def main():
             # Static analysis
             try:
                 if model_type == "sae":
-                    p = analyze_sae(n_classes, dtype)
+                    from brainchop.utils import find_sae_files, unwrap_path
+                    p = analyze_sae(unwrap_path(find_sae_files(model_name)), dtype)
                 else:
                     d = _resolve_model_dir(model_name)
                     cfg = str(d / "model.json")
