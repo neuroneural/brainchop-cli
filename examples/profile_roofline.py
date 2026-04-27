@@ -37,7 +37,13 @@ def conv3d_bytes(in_c, out_c, k, spatial, bpe, has_bias=False):
     return b + out_c * bpe if has_bias else b
 
 def norm_flops(channels, spatial):
-    return 5 * channels * spatial
+    # InstanceNorm (GroupNorm with num_groups=channels, affine=False):
+    # mean (1 div) + variance (sub + sq + 1 div) + normalize (sub + div) = 6 ops/elem
+    return 6 * channels * spatial
+
+def silu_flops(n):
+    # SiLU: x * sigmoid(x) = negate + exp + add + reciprocal + multiply = 5 ops/elem
+    return 5 * n
 
 def elem_flops(n):
     return n
@@ -51,7 +57,9 @@ class ModelProfile:
     dtype: str
     total_flops: int
     total_bytes: int
-    wall_time_s: float | None = None
+    wall_time_s: float | None = None       # median of timed runs
+    wall_time_std: float | None = None
+    wall_time_min: float | None = None
     achieved_gflops: float | None = None
     achieved_bw_gbs: float | None = None
 
@@ -111,12 +119,14 @@ def analyze_sae(n_classes, dtype):
         elif idx > 22:   ic, oc, k, S = ch, ch, 3, S_full
         else:            ic, oc, k, S = ch, ch, 3, S_half
 
-        total_f += conv3d_flops(ic, oc, k, S)
-        total_b += conv3d_bytes(ic, oc, k, S, bpe)
+        # SAE always has bias
+        total_f += conv3d_flops(ic, oc, k, S, has_bias=True)
+        total_b += conv3d_bytes(ic, oc, k, S, bpe, has_bias=True)
 
+        # SiLU activation after every conv except ConvTranspose and final
         if not is_last and not is_up:
             out_S = S_half if is_down else S
-            total_f += elem_flops(oc * out_S)
+            total_f += silu_flops(oc * out_S)
             total_b += 2 * oc * out_S * bpe
 
     return ModelProfile("", dtype, total_f, total_b)
@@ -124,21 +134,38 @@ def analyze_sae(n_classes, dtype):
 
 # -- Runtime profiling ---------------------------------------------------------
 
-def profile_inference(model_name, vol, dtype):
-    from brainchop import segment
+N_WARMUP = 2
+N_TIMED = 5
+
+def profile_inference(model_name, vol, dtype, n_warmup=N_WARMUP, n_runs=N_TIMED):
+    from brainchop.api import _load_model, _run_with_fuse_chunk
+    from tinygrad import Tensor
 
     if dtype == "fp16":
         os.environ["FP16"] = "1"
     else:
         os.environ.pop("FP16", None)
 
-    _ = segment(vol, model_name)          # warm-up
-    t0 = time.perf_counter()
-    _ = segment(vol, model_name)          # timed
-    t1 = time.perf_counter()
+    m = _load_model(model_name)
+    x = Tensor(vol.data.numpy().astype(np.float32)).reshape(1, 1, 256, 256, 256)
+    x = m.normalize(x)
+
+    # Warm up (compile kernels, fill caches)
+    for _ in range(n_warmup):
+        out = _run_with_fuse_chunk(m, x, model_name)
+        out.numpy()  # force GPU sync
+
+    # Timed runs
+    times = []
+    for _ in range(n_runs):
+        t0 = time.perf_counter()
+        out = _run_with_fuse_chunk(m, x, model_name)
+        out.numpy()  # force GPU sync before stopping timer
+        t1 = time.perf_counter()
+        times.append(t1 - t0)
 
     os.environ.pop("FP16", None)
-    return t1 - t0
+    return times
 
 
 # -- Hardware detection --------------------------------------------------------
@@ -278,6 +305,10 @@ def main():
                         choices=["fp32", "fp16"])
     parser.add_argument("--peak-gflops", type=float, default=None)
     parser.add_argument("--peak-bw", type=float, default=None)
+    parser.add_argument("--runs", type=int, default=N_TIMED,
+                        help=f"Number of timed inference runs (default {N_TIMED})")
+    parser.add_argument("--warmup", type=int, default=N_WARMUP,
+                        help=f"Number of warm-up runs (default {N_WARMUP})")
     parser.add_argument("--no-plot", action="store_true")
     parser.add_argument("--no-run", action="store_true",
                         help="Static analysis only — skip inference")
@@ -340,12 +371,17 @@ def main():
             # Runtime
             if not args.no_run:
                 try:
-                    wt = profile_inference(model_name, vol, dtype)
-                    p.wall_time_s = wt
+                    times = profile_inference(model_name, vol, dtype,
+                                              n_warmup=args.warmup, n_runs=args.runs)
+                    median_t = float(np.median(times))
+                    p.wall_time_s = median_t
+                    p.wall_time_std = float(np.std(times))
+                    p.wall_time_min = float(np.min(times))
                     if p.total_flops > 0:
-                        p.achieved_gflops = (p.total_flops / 1e9) / wt
-                        p.achieved_bw_gbs = (p.total_bytes / 1e9) / wt
-                    print(f"  Runtime: {wt:.3f}s | {p.achieved_gflops:.1f} GFLOP/s | {p.achieved_bw_gbs:.1f} GB/s")
+                        p.achieved_gflops = (p.total_flops / 1e9) / median_t
+                        p.achieved_bw_gbs = (p.total_bytes / 1e9) / median_t
+                    print(f"  Runtime: {median_t:.3f}s (std={p.wall_time_std:.3f}, n={len(times)}) "
+                          f"| {p.achieved_gflops:.1f} GFLOP/s | {p.achieved_bw_gbs:.1f} GB/s")
                 except Exception as e:
                     print(f"  Runtime failed: {e}")
 
@@ -355,7 +391,7 @@ def main():
     print()
     w = max((len(p.model_name) for p in profiles), default=5)
     w = max(w, 5)
-    hdr = f"{'Model':<{w}}  {'dtype':<5}  {'GFLOP':>7}  {'GB':>6}  {'AI':>6}  {'Time':>7}  {'GF/s':>7}  {'GB/s':>6}"
+    hdr = f"{'Model':<{w}}  {'dtype':<5}  {'GFLOP':>7}  {'GB':>6}  {'AI':>6}  {'med(s)':>7}  {'std':>6}  {'GF/s':>7}  {'GB/s':>6}"
     print(hdr)
     print("-" * len(hdr))
     for p in profiles:
@@ -363,9 +399,10 @@ def main():
         gb = f"{p.total_bytes/1e9:.1f}" if p.total_bytes else "-"
         ai = f"{p.arithmetic_intensity:.1f}" if p.total_bytes else "-"
         wt = f"{p.wall_time_s:.3f}" if p.wall_time_s else "-"
+        sd = f"{p.wall_time_std:.3f}" if p.wall_time_std else "-"
         ag = f"{p.achieved_gflops:.1f}" if p.achieved_gflops else "-"
         ab = f"{p.achieved_bw_gbs:.1f}" if p.achieved_bw_gbs else "-"
-        print(f"{p.model_name:<{w}}  {p.dtype:<5}  {gf:>7}  {gb:>6}  {ai:>6}  {wt:>7}  {ag:>7}  {ab:>6}")
+        print(f"{p.model_name:<{w}}  {p.dtype:<5}  {gf:>7}  {gb:>6}  {ai:>6}  {wt:>7}  {sd:>6}  {ag:>7}  {ab:>6}")
 
     # Save artifacts with hardware slug
     out_dir = Path(args.output_dir)
@@ -379,7 +416,8 @@ def main():
             {"model": p.model_name, "dtype": p.dtype,
              "total_gflops": p.total_flops / 1e9, "total_gb": p.total_bytes / 1e9,
              "arithmetic_intensity": p.arithmetic_intensity,
-             "wall_time_s": p.wall_time_s,
+             "wall_time_s": p.wall_time_s, "wall_time_std": p.wall_time_std,
+             "wall_time_min": p.wall_time_min,
              "achieved_gflops": p.achieved_gflops, "achieved_bw_gbs": p.achieved_bw_gbs}
             for p in profiles
         ],
