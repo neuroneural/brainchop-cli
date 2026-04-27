@@ -323,6 +323,27 @@ def _detect_hardware(user_gflops, user_gflops_fp16, user_bw):
     return gflops_fp32, gflops_fp16, bw, name
 
 
+def _has_explicit_backend():
+    backend_vars = ("DEV", "METAL", "AMD", "NV", "CUDA", "HIP", "HSA", "GPU", "CL", "WEBGPU", "CPU")
+    return any(os.environ.get(k) for k in backend_vars)
+
+
+def _configure_backend_for_gpu(gpu_name):
+    """Set tinygrad backend env before tinygrad/brainchop import when it is unambiguous."""
+    if _has_explicit_backend():
+        return None
+
+    if platform.system() == "Darwin" and gpu_name.startswith("Apple "):
+        os.environ["METAL"] = "1"
+        return "METAL=1"
+
+    if platform.system() == "Linux" and ("AMD/ATI" in gpu_name or "Radeon" in gpu_name):
+        os.environ["AMD"] = "1"
+        return "AMD=1"
+
+    return None
+
+
 def _get_backend():
     try:
         from tinygrad import Device
@@ -426,22 +447,24 @@ def main():
     parser.add_argument("--output-dir", default="examples")
     args = parser.parse_args()
 
+    registry = _load_registry()
+    peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(
+        args.peak_gflops, args.peak_gflops_fp16, args.peak_bw)
+    selected_backend = _configure_backend_for_gpu(gpu_name)
+
     from tinygrad.helpers import fetch
     from brainchop import list_models, load
 
-    registry = _load_registry()
     models = args.models or list(list_models().keys())
-    peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(
-        args.peak_gflops, args.peak_gflops_fp16, args.peak_bw)
     slug = _hw_slug()
     backend = _get_backend()
 
     # Refuse to profile if the runtime backend doesn't match the GPU whose
     # peak specs we're using — CPU timings against a GPU roofline are nonsense.
-    gpu_backends = {"METAL", "CUDA", "GPU", "HIP", "HSA", "NV"}
+    gpu_backends = {"METAL", "AMD", "CUDA", "GPU", "HIP", "HSA", "NV"}
     if not args.no_run and backend not in gpu_backends:
         print(f"\n  ERROR: tinygrad backend is '{backend}', but peak specs are for GPU '{gpu_name}'.")
-        print(f"  Set the backend (e.g. METAL=1) or use --no-run for static analysis only.")
+        print(f"  Set the backend (e.g. AMD=1, METAL=1) or use --no-run for static analysis only.")
         raise SystemExit(1)
 
     print("=" * 65)
@@ -450,6 +473,8 @@ def main():
     print(f"  dtypes:  {', '.join(args.dtypes)}")
     print(f"  peak:    {peak_fp32} GFLOP/s (fp32) | {peak_fp16} GFLOP/s (fp16) | {peak_bw} GB/s")
     print(f"  backend: {backend}")
+    if selected_backend:
+        print(f"  selected: {selected_backend}")
     print("=" * 65)
 
     vol = None
