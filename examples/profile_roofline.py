@@ -150,8 +150,18 @@ def profile_inference(model_name, vol, dtype, n_warmup=N_WARMUP, n_runs=N_TIMED)
     x = Tensor(vol.data.numpy().astype(np.float32)).reshape(1, 1, 256, 256, 256)
     x = m.normalize(x)
 
-    # Warm up (compile kernels, fill caches)
-    for _ in range(n_warmup):
+    if dtype == "fp16":
+        x = x.half()
+
+    # Warm up and validate dtype
+    out = _run_with_fuse_chunk(m, x, model_name)
+    out.numpy()
+    if dtype == "fp16" and out.dtype.name != "half":
+        raise RuntimeError(
+            f"fp16 requested but output dtype is {out.dtype.name} — "
+            f"model does not run in true half precision")
+
+    for _ in range(n_warmup - 1):
         out = _run_with_fuse_chunk(m, x, model_name)
         out.numpy()  # force GPU sync
 
@@ -201,15 +211,15 @@ def _detect_gpu_name():
 
 
 def _detect_hardware(user_gflops, user_bw):
-    """Return (peak_gflops, peak_bw_gbs, gpu_name).
+    """Return (peak_gflops_fp32, peak_gflops_fp16, peak_bw_gbs, gpu_name).
 
-    Raises SystemExit if peak specs cannot be determined (no exact SKU match
-    and no --peak-gflops / --peak-bw supplied).
+    Apple Silicon does 2x throughput for fp16 vs fp32.
+    Raises SystemExit if peak specs cannot be determined.
     """
     name = _detect_gpu_name() or ""
 
     # Exact-SKU lookup: full chip name → (fp32 GFLOP/s, mem BW GB/s)
-    # Only entries we can confidently map; variants (Pro/Max/Ultra) differ.
+    # Apple Silicon ALUs do 2x fp16 throughput; applied automatically below.
     specs = {
         "Apple M1":          (2600,   68),
         "Apple M1 Pro":      (4100,  200),
@@ -227,25 +237,27 @@ def _detect_hardware(user_gflops, user_bw):
         "Apple M4 Max":     (14200,  546),
     }
 
-    gflops = user_gflops
+    gflops_fp32 = user_gflops
     bw = user_bw
+    fp16_multiplier = 2  # Apple Silicon default; override via --peak-gflops for other HW
 
     matched_sku = None
     if name in specs:
         matched_sku = name
         g, b = specs[name]
-        gflops = gflops or g
+        gflops_fp32 = gflops_fp32 or g
         bw = bw or b
 
     if name:
         print(f"  Detected GPU: {name}" + (f" (matched SKU)" if matched_sku else " (unknown SKU)"))
 
-    if not gflops or not bw:
+    if not gflops_fp32 or not bw:
         print(f"\n  ERROR: Could not determine peak specs for '{name or 'no GPU detected'}'.")
         print("  Supply --peak-gflops and --peak-bw explicitly.")
         raise SystemExit(1)
 
-    return gflops, bw, name
+    gflops_fp16 = gflops_fp32 * fp16_multiplier
+    return gflops_fp32, gflops_fp16, bw, name
 
 
 def _get_backend():
@@ -271,7 +283,7 @@ def _resolve_model_dir(model_name):
 
 # -- Plot ----------------------------------------------------------------------
 
-def plot_roofline(profiles, peak_gflops, peak_bw, output_path):
+def plot_roofline(profiles, peak_gflops_fp32, peak_gflops_fp16, peak_bw, output_path):
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -282,12 +294,22 @@ def plot_roofline(profiles, peak_gflops, peak_bw, output_path):
 
     fig, ax = plt.subplots(figsize=(10, 7))
     ai_range = np.logspace(-2, 3, 500)
-    roofline = np.minimum(peak_gflops, ai_range * peak_bw)
-    ax.loglog(ai_range, roofline, "k-", lw=2, label="Roofline ceiling")
 
-    ridge = peak_gflops / peak_bw
+    # Draw roofline per dtype if they differ
+    has_fp16 = any(p.dtype == "fp16" for p in profiles if p.achieved_gflops)
+    peak_max = peak_gflops_fp32
+
+    roof_fp32 = np.minimum(peak_gflops_fp32, ai_range * peak_bw)
+    ax.loglog(ai_range, roof_fp32, "k-", lw=2, label=f"fp32 ceiling ({peak_gflops_fp32} GF/s)")
+
+    if has_fp16 and peak_gflops_fp16 != peak_gflops_fp32:
+        roof_fp16 = np.minimum(peak_gflops_fp16, ai_range * peak_bw)
+        ax.loglog(ai_range, roof_fp16, "k--", lw=1.5, label=f"fp16 ceiling ({peak_gflops_fp16} GF/s)")
+        peak_max = peak_gflops_fp16
+
+    ridge = peak_gflops_fp32 / peak_bw
     ax.axvline(ridge, color="gray", ls=":", alpha=0.5)
-    ax.text(ridge * 1.1, peak_gflops * 0.7, f"Ridge\n({ridge:.1f} F/B)",
+    ax.text(ridge * 1.1, peak_gflops_fp32 * 0.7, f"Ridge\n({ridge:.1f} F/B)",
             fontsize=8, color="gray")
 
     markers = {"fp32": "o", "fp16": "s"}
@@ -308,11 +330,11 @@ def plot_roofline(profiles, peak_gflops, peak_bw, output_path):
     ax.set_xlabel("Arithmetic Intensity (FLOPs / Byte)")
     ax.set_ylabel("Performance (GFLOP/s)")
     ax.set_title(f"Roofline — brainchop iGPU\n"
-                 f"Peak: {peak_gflops} GFLOP/s | BW: {peak_bw} GB/s")
+                 f"Peak: {peak_gflops_fp32} GFLOP/s (fp32) | BW: {peak_bw} GB/s")
     ax.legend()
     ax.grid(True, which="both", alpha=0.3)
     ax.set_xlim(0.01, 1000)
-    ax.set_ylim(0.1, peak_gflops * 2)
+    ax.set_ylim(0.1, peak_max * 2)
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
     print(f"Plot saved to {output_path}")
@@ -342,7 +364,7 @@ def main():
 
     registry = _load_registry()
     models = args.models or list(list_models().keys())
-    peak_gflops, peak_bw, gpu_name = _detect_hardware(args.peak_gflops, args.peak_bw)
+    peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(args.peak_gflops, args.peak_bw)
     slug = _hw_slug()
     backend = _get_backend()
 
@@ -358,7 +380,7 @@ def main():
     print(f"brainchop roofline profiler  [{slug}]")
     print(f"  models:  {', '.join(models)}")
     print(f"  dtypes:  {', '.join(args.dtypes)}")
-    print(f"  peak:    {peak_gflops} GFLOP/s  |  {peak_bw} GB/s")
+    print(f"  peak:    {peak_fp32} GFLOP/s (fp32) | {peak_fp16} GFLOP/s (fp16) | {peak_bw} GB/s")
     print(f"  backend: {backend}")
     print("=" * 65)
 
@@ -447,7 +469,8 @@ def main():
 
     results_path = out_dir / f"roofline_{slug}.json"
     results_data = {
-        "hardware": {"name": gpu_name, "peak_gflops": peak_gflops,
+        "hardware": {"name": gpu_name, "peak_gflops_fp32": peak_fp32,
+                     "peak_gflops_fp16": peak_fp16,
                      "peak_bw_gbs": peak_bw, "backend": backend, "slug": slug},
         "profiles": [
             {"model": p.model_name, "dtype": p.dtype,
@@ -465,7 +488,7 @@ def main():
 
     if not args.no_plot:
         plot_path = out_dir / f"roofline_{slug}.png"
-        plot_roofline(profiles, peak_gflops, peak_bw, str(plot_path))
+        plot_roofline(profiles, peak_fp32, peak_fp16, peak_bw, str(plot_path))
 
 
 if __name__ == "__main__":
