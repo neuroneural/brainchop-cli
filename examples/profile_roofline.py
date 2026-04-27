@@ -152,16 +152,26 @@ def profile_inference(model_name, vol, dtype, n_warmup=N_WARMUP, n_runs=N_TIMED)
 
     if dtype == "fp16":
         x = x.half()
+        # Validate that convolutions actually run in half precision.
+        # We can't check the final output because fused argmax casts to float32.
+        # Instead, probe the first conv layer directly.
+        from tinygrad import nn
+        first_conv = next(
+            (l for l in (getattr(m, 'model', None) or [])
+             if isinstance(l, nn.Conv2d)),
+            None)
+        if first_conv is not None:
+            probe = x[:, :, :4, :4, :4].conv2d(first_conv.weight, first_conv.bias,
+                                                 padding=first_conv.padding)
+            probe_dtype = probe.realize().dtype.name
+            del probe
+            if probe_dtype != "half":
+                raise RuntimeError(
+                    f"fp16 requested but conv output dtype is {probe_dtype} — "
+                    f"model does not run in true half precision")
 
-    # Warm up and validate dtype
-    out = _run_with_fuse_chunk(m, x, model_name)
-    out.numpy()
-    if dtype == "fp16" and out.dtype.name != "half":
-        raise RuntimeError(
-            f"fp16 requested but output dtype is {out.dtype.name} — "
-            f"model does not run in true half precision")
-
-    for _ in range(n_warmup - 1):
+    # Warm up (compile kernels, fill caches)
+    for _ in range(n_warmup):
         out = _run_with_fuse_chunk(m, x, model_name)
         out.numpy()  # force GPU sync
 
@@ -210,16 +220,17 @@ def _detect_gpu_name():
     return None
 
 
-def _detect_hardware(user_gflops, user_bw):
+def _detect_hardware(user_gflops, user_gflops_fp16, user_bw):
     """Return (peak_gflops_fp32, peak_gflops_fp16, peak_bw_gbs, gpu_name).
 
-    Apple Silicon does 2x throughput for fp16 vs fp32.
+    For matched Apple SKUs, fp16 peak is auto-derived as 2x fp32.
+    For unknown hardware, fp16 peak must be supplied via --peak-gflops-fp16.
     Raises SystemExit if peak specs cannot be determined.
     """
     name = _detect_gpu_name() or ""
 
     # Exact-SKU lookup: full chip name → (fp32 GFLOP/s, mem BW GB/s)
-    # Apple Silicon ALUs do 2x fp16 throughput; applied automatically below.
+    # Apple Silicon ALUs do 2x fp16 throughput; applied for matched SKUs only.
     specs = {
         "Apple M1":          (2600,   68),
         "Apple M1 Pro":      (4100,  200),
@@ -238,8 +249,8 @@ def _detect_hardware(user_gflops, user_bw):
     }
 
     gflops_fp32 = user_gflops
+    gflops_fp16 = user_gflops_fp16
     bw = user_bw
-    fp16_multiplier = 2  # Apple Silicon default; override via --peak-gflops for other HW
 
     matched_sku = None
     if name in specs:
@@ -247,16 +258,21 @@ def _detect_hardware(user_gflops, user_bw):
         g, b = specs[name]
         gflops_fp32 = gflops_fp32 or g
         bw = bw or b
+        # Apple Silicon: 2x fp16 throughput
+        gflops_fp16 = gflops_fp16 or gflops_fp32 * 2
 
     if name:
-        print(f"  Detected GPU: {name}" + (f" (matched SKU)" if matched_sku else " (unknown SKU)"))
+        print(f"  Detected GPU: {name}" + (" (matched SKU)" if matched_sku else " (unknown SKU)"))
 
     if not gflops_fp32 or not bw:
         print(f"\n  ERROR: Could not determine peak specs for '{name or 'no GPU detected'}'.")
         print("  Supply --peak-gflops and --peak-bw explicitly.")
         raise SystemExit(1)
 
-    gflops_fp16 = gflops_fp32 * fp16_multiplier
+    # fp16 peak: require explicit value for non-Apple / unknown hardware
+    if not gflops_fp16:
+        gflops_fp16 = gflops_fp32  # conservative: assume no fp16 speedup
+
     return gflops_fp32, gflops_fp16, bw, name
 
 
@@ -347,8 +363,12 @@ def main():
     parser.add_argument("--models", nargs="+", default=None)
     parser.add_argument("--dtypes", nargs="+", default=["fp32", "fp16"],
                         choices=["fp32", "fp16"])
-    parser.add_argument("--peak-gflops", type=float, default=None)
-    parser.add_argument("--peak-bw", type=float, default=None)
+    parser.add_argument("--peak-gflops", type=float, default=None,
+                        help="Peak fp32 GFLOP/s for the target device")
+    parser.add_argument("--peak-gflops-fp16", type=float, default=None,
+                        help="Peak fp16 GFLOP/s (auto-derived as 2x fp32 for Apple Silicon)")
+    parser.add_argument("--peak-bw", type=float, default=None,
+                        help="Peak memory bandwidth in GB/s")
     parser.add_argument("--runs", type=int, default=N_TIMED,
                         help=f"Number of timed inference runs (default {N_TIMED})")
     parser.add_argument("--warmup", type=int, default=N_WARMUP,
@@ -364,7 +384,8 @@ def main():
 
     registry = _load_registry()
     models = args.models or list(list_models().keys())
-    peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(args.peak_gflops, args.peak_bw)
+    peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(
+        args.peak_gflops, args.peak_gflops_fp16, args.peak_bw)
     slug = _hw_slug()
     backend = _get_backend()
 
