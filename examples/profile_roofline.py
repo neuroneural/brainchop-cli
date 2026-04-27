@@ -19,17 +19,11 @@ import os
 import platform
 import re
 import subprocess
-import sys
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
 import numpy as np
-
-BACKEND_ENV_VARS = ("DEV", "METAL", "AMD", "NV", "CUDA", "HIP", "HSA",
-                    "GPU", "CL", "WEBGPU", "CPU")
-ROCM_LIB_DIR = "/opt/rocm/lib"
-ROCM_REEXEC_ENV = "BRAINCHOP_ROOFLINE_ROCM_REEXEC"
 
 
 # -- FLOPs / bandwidth helpers ------------------------------------------------
@@ -329,158 +323,6 @@ def _detect_hardware(user_gflops, user_gflops_fp16, user_bw):
     return gflops_fp32, gflops_fp16, bw, name
 
 
-def _is_amd_gpu_name(gpu_name):
-    return "AMD/ATI" in gpu_name or "Radeon" in gpu_name or "Strix" in gpu_name
-
-
-def _add_rocm_library_path(env):
-    if env.get("DIY") == "1" or not os.path.isdir(ROCM_LIB_DIR):
-        return False
-
-    ld = env.get("LD_LIBRARY_PATH", "")
-    paths = [p for p in ld.split(":") if p]
-    if ROCM_LIB_DIR in paths:
-        return False
-
-    env["LD_LIBRARY_PATH"] = f"{ROCM_LIB_DIR}:{ld}" if ld else ROCM_LIB_DIR
-    return True
-
-
-def _ensure_rocm_library_path_for_runtime():
-    if platform.system() != "Linux":
-        return
-
-    added = _add_rocm_library_path(os.environ)
-    if added and os.environ.get(ROCM_REEXEC_ENV) != "1":
-        os.environ[ROCM_REEXEC_ENV] = "1"
-        os.execvpe(sys.executable, [sys.executable, *sys.argv], os.environ.copy())
-
-
-def _has_explicit_backend():
-    return any(os.environ.get(k) for k in BACKEND_ENV_VARS)
-
-
-def _command_summary(cmd, timeout=8, patterns=None):
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    except FileNotFoundError:
-        return "not found"
-    except subprocess.TimeoutExpired:
-        return f"timed out after {timeout}s"
-    except Exception as e:
-        return f"{type(e).__name__}: {e}"
-
-    lines = [line.strip() for line in (r.stdout + r.stderr).splitlines()
-             if line.strip()]
-    if patterns:
-        matched = [line for line in lines if any(re.search(p, line, re.IGNORECASE)
-                                                 for p in patterns)]
-        if matched:
-            return "; ".join(matched[:4])
-
-    if r.returncode != 0:
-        tail = lines[-1] if lines else "no output"
-        return f"exit {r.returncode}: {tail}"
-    return lines[0] if lines else "ok"
-
-
-def _group_summary():
-    try:
-        import grp
-        groups = {grp.getgrgid(gid).gr_name for gid in os.getgroups()}
-        groups.add(grp.getgrgid(os.getgid()).gr_name)
-    except Exception:
-        return "unknown"
-
-    relevant = [g for g in ("render", "video") if g in groups]
-    missing = [g for g in ("render", "video") if g not in groups]
-    if missing:
-        return f"{', '.join(sorted(relevant)) or 'none'} (missing {', '.join(missing)})"
-    return ", ".join(sorted(relevant))
-
-
-def _print_amd_igpu_diagnostics():
-    if platform.system() != "Linux":
-        return
-
-    render_nodes = sorted(str(p) for p in Path("/dev/dri").glob("renderD*"))
-    rocm_ld = ROCM_LIB_DIR in [p for p in os.environ.get("LD_LIBRARY_PATH", "").split(":") if p]
-    print("  AMD ROCm/iGPU checks:")
-    print(f"    {ROCM_LIB_DIR}: {'present' if os.path.isdir(ROCM_LIB_DIR) else 'missing'}")
-    print(f"    LD_LIBRARY_PATH includes {ROCM_LIB_DIR}: {'yes' if rocm_ld else 'no'}")
-    print(f"    /dev/kfd: {'present' if Path('/dev/kfd').exists() else 'missing'}")
-    print(f"    /dev/dri/renderD*: {', '.join(render_nodes) if render_nodes else 'none'}")
-    print(f"    user groups: {_group_summary()}")
-    print(f"    hipcc --version: {_command_summary(['hipcc', '--version'])}")
-    print("    rocminfo gfx agents: " +
-          _command_summary(["rocminfo"], timeout=12,
-                           patterns=(r"Marketing Name", r"Name:\s*gfx", r"gfx[0-9a-f]+")))
-    print(f"    tinygrad probe: {sys.executable} -m tinygrad.device")
-
-
-def _fail_no_gpu_backend(gpu_name, backend_errors):
-    print(f"\n  ERROR: no usable tinygrad GPU backend found for '{gpu_name}'.")
-    if backend_errors:
-        print("  Auto backend probes failed:")
-        for err in backend_errors:
-            print(f"    {err}")
-    if _is_amd_gpu_name(gpu_name):
-        _print_amd_igpu_diagnostics()
-        print("  For AMD Linux iGPU runtime profiling, ROCm/HIP must be installed "
-              "and /dev/kfd plus /dev/dri/renderD* must be visible.")
-    print("  Set a working backend explicitly (e.g. METAL=1, HIP=1, AMD=1, CL=1, WEBGPU=1) "
-          "or use --no-run for static analysis only.")
-    raise SystemExit(1)
-
-
-def _probe_backend(backend):
-    env = os.environ.copy()
-    for key in BACKEND_ENV_VARS:
-        env.pop(key, None)
-    _add_rocm_library_path(env)
-    env[backend] = "1"
-    code = """
-from tinygrad import Device
-dev = Device.DEFAULT
-opened = Device[dev]
-name = getattr(opened, "device_name", dev)
-if dev == "CL" and "cpu" in name.lower():
-    raise RuntimeError(f"OpenCL selected CPU device: {name}")
-print(f"{dev}:{name}")
-"""
-    try:
-        r = subprocess.run([sys.executable, "-c", code], env=env,
-                           capture_output=True, text=True, timeout=15)
-    except Exception as e:
-        return False, str(e)
-    msg = (r.stdout + r.stderr).strip()
-    return r.returncode == 0, msg
-
-
-def _configure_backend_for_gpu(gpu_name):
-    """Set tinygrad backend env before tinygrad/brainchop import when it is unambiguous."""
-    if _has_explicit_backend():
-        return None, []
-
-    candidates = []
-
-    if platform.system() == "Darwin" and gpu_name.startswith("Apple "):
-        candidates = ["METAL"]
-
-    if platform.system() == "Linux" and _is_amd_gpu_name(gpu_name):
-        candidates = ["AMD", "HIP", "CL", "WEBGPU"]
-
-    errors = []
-    for backend in candidates:
-        ok, msg = _probe_backend(backend)
-        if ok:
-            os.environ[backend] = "1"
-            return f"{backend}=1", errors
-        errors.append(f"{backend}: {msg.splitlines()[-1] if msg else 'unavailable'}")
-
-    return None, errors
-
-
 def _get_backend():
     try:
         from tinygrad import Device
@@ -584,20 +426,12 @@ def main():
     parser.add_argument("--output-dir", default="examples")
     args = parser.parse_args()
 
-    if not args.no_run:
-        _ensure_rocm_library_path_for_runtime()
-
     registry = _load_registry()
     peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(
         args.peak_gflops, args.peak_gflops_fp16, args.peak_bw)
-    selected_backend, backend_errors = (None, [])
-    if not args.no_run:
-        selected_backend, backend_errors = _configure_backend_for_gpu(gpu_name)
-        if backend_errors and not selected_backend:
-            _fail_no_gpu_backend(gpu_name, backend_errors)
 
-    from tinygrad.helpers import fetch
     from brainchop import list_models, load
+    from tinygrad.helpers import fetch
 
     models = args.models or list(list_models().keys())
     slug = _hw_slug()
@@ -608,12 +442,6 @@ def main():
     gpu_backends = {"METAL", "AMD", "CUDA", "HIP", "HSA", "NV", "CL", "WEBGPU"}
     if not args.no_run and backend not in gpu_backends:
         print(f"\n  ERROR: tinygrad backend is '{backend}', but peak specs are for GPU '{gpu_name}'.")
-        if backend_errors:
-            print("  Auto backend probes failed:")
-            for err in backend_errors:
-                print(f"    {err}")
-        if _is_amd_gpu_name(gpu_name):
-            _print_amd_igpu_diagnostics()
         print("  Set the backend (e.g. WEBGPU=1, CL=1, HIP=1, AMD=1, METAL=1) "
               "or use --no-run for static analysis only.")
         raise SystemExit(1)
@@ -624,8 +452,6 @@ def main():
     print(f"  dtypes:  {', '.join(args.dtypes)}")
     print(f"  peak:    {peak_fp32} GFLOP/s (fp32) | {peak_fp16} GFLOP/s (fp16) | {peak_bw} GB/s")
     print(f"  backend: {backend}")
-    if selected_backend:
-        print(f"  selected: {selected_backend}")
     print("=" * 65)
 
     vol = None
