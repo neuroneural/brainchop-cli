@@ -19,6 +19,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -328,20 +329,51 @@ def _has_explicit_backend():
     return any(os.environ.get(k) for k in backend_vars)
 
 
+def _probe_backend(backend):
+    env = os.environ.copy()
+    for key in ("DEV", "METAL", "AMD", "NV", "CUDA", "HIP", "HSA", "GPU", "CL", "WEBGPU", "CPU"):
+        env.pop(key, None)
+    env[backend] = "1"
+    code = """
+from tinygrad import Device
+dev = Device.DEFAULT
+opened = Device[dev]
+name = getattr(opened, "device_name", dev)
+if dev == "CL" and "cpu" in name.lower():
+    raise RuntimeError(f"OpenCL selected CPU device: {name}")
+print(f"{dev}:{name}")
+"""
+    try:
+        r = subprocess.run([sys.executable, "-c", code], env=env,
+                           capture_output=True, text=True, timeout=15)
+    except Exception as e:
+        return False, str(e)
+    msg = (r.stdout + r.stderr).strip()
+    return r.returncode == 0, msg
+
+
 def _configure_backend_for_gpu(gpu_name):
     """Set tinygrad backend env before tinygrad/brainchop import when it is unambiguous."""
     if _has_explicit_backend():
-        return None
+        return None, []
+
+    candidates = []
 
     if platform.system() == "Darwin" and gpu_name.startswith("Apple "):
-        os.environ["METAL"] = "1"
-        return "METAL=1"
+        candidates = ["METAL"]
 
     if platform.system() == "Linux" and ("AMD/ATI" in gpu_name or "Radeon" in gpu_name):
-        os.environ["AMD"] = "1"
-        return "AMD=1"
+        candidates = ["AMD", "HIP", "CL"]
 
-    return None
+    errors = []
+    for backend in candidates:
+        ok, msg = _probe_backend(backend)
+        if ok:
+            os.environ[backend] = "1"
+            return f"{backend}=1", errors
+        errors.append(f"{backend}: {msg.splitlines()[-1] if msg else 'unavailable'}")
+
+    return None, errors
 
 
 def _get_backend():
@@ -450,7 +482,9 @@ def main():
     registry = _load_registry()
     peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(
         args.peak_gflops, args.peak_gflops_fp16, args.peak_bw)
-    selected_backend = _configure_backend_for_gpu(gpu_name)
+    selected_backend, backend_errors = (None, [])
+    if not args.no_run:
+        selected_backend, backend_errors = _configure_backend_for_gpu(gpu_name)
 
     from tinygrad.helpers import fetch
     from brainchop import list_models, load
@@ -461,10 +495,14 @@ def main():
 
     # Refuse to profile if the runtime backend doesn't match the GPU whose
     # peak specs we're using — CPU timings against a GPU roofline are nonsense.
-    gpu_backends = {"METAL", "AMD", "CUDA", "GPU", "HIP", "HSA", "NV"}
+    gpu_backends = {"METAL", "AMD", "CUDA", "HIP", "HSA", "NV", "CL", "WEBGPU"}
     if not args.no_run and backend not in gpu_backends:
         print(f"\n  ERROR: tinygrad backend is '{backend}', but peak specs are for GPU '{gpu_name}'.")
-        print(f"  Set the backend (e.g. AMD=1, METAL=1) or use --no-run for static analysis only.")
+        if backend_errors:
+            print("  Auto backend probes failed:")
+            for err in backend_errors:
+                print(f"    {err}")
+        print(f"  Set the backend (e.g. CL=1, HIP=1, AMD=1, METAL=1) or use --no-run for static analysis only.")
         raise SystemExit(1)
 
     print("=" * 65)
