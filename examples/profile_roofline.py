@@ -26,6 +26,11 @@ from pathlib import Path
 
 import numpy as np
 
+BACKEND_ENV_VARS = ("DEV", "METAL", "AMD", "NV", "CUDA", "HIP", "HSA",
+                    "GPU", "CL", "WEBGPU", "CPU")
+ROCM_LIB_DIR = "/opt/rocm/lib"
+ROCM_REEXEC_ENV = "BRAINCHOP_ROOFLINE_ROCM_REEXEC"
+
 
 # -- FLOPs / bandwidth helpers ------------------------------------------------
 
@@ -324,15 +329,38 @@ def _detect_hardware(user_gflops, user_gflops_fp16, user_bw):
     return gflops_fp32, gflops_fp16, bw, name
 
 
+def _add_rocm_library_path(env):
+    if env.get("DIY") == "1" or not os.path.isdir(ROCM_LIB_DIR):
+        return False
+
+    ld = env.get("LD_LIBRARY_PATH", "")
+    paths = [p for p in ld.split(":") if p]
+    if ROCM_LIB_DIR in paths:
+        return False
+
+    env["LD_LIBRARY_PATH"] = f"{ROCM_LIB_DIR}:{ld}" if ld else ROCM_LIB_DIR
+    return True
+
+
+def _ensure_rocm_library_path_for_runtime():
+    if platform.system() != "Linux":
+        return
+
+    added = _add_rocm_library_path(os.environ)
+    if added and os.environ.get(ROCM_REEXEC_ENV) != "1":
+        os.environ[ROCM_REEXEC_ENV] = "1"
+        os.execvpe(sys.executable, [sys.executable, *sys.argv], os.environ.copy())
+
+
 def _has_explicit_backend():
-    backend_vars = ("DEV", "METAL", "AMD", "NV", "CUDA", "HIP", "HSA", "GPU", "CL", "WEBGPU", "CPU")
-    return any(os.environ.get(k) for k in backend_vars)
+    return any(os.environ.get(k) for k in BACKEND_ENV_VARS)
 
 
 def _probe_backend(backend):
     env = os.environ.copy()
-    for key in ("DEV", "METAL", "AMD", "NV", "CUDA", "HIP", "HSA", "GPU", "CL", "WEBGPU", "CPU"):
+    for key in BACKEND_ENV_VARS:
         env.pop(key, None)
+    _add_rocm_library_path(env)
     env[backend] = "1"
     code = """
 from tinygrad import Device
@@ -478,6 +506,9 @@ def main():
                         help="Static analysis only — skip inference")
     parser.add_argument("--output-dir", default="examples")
     args = parser.parse_args()
+
+    if not args.no_run:
+        _ensure_rocm_library_path_for_runtime()
 
     registry = _load_registry()
     peak_fp32, peak_fp16, peak_bw, gpu_name = _detect_hardware(
