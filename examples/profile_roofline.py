@@ -220,18 +220,46 @@ def _detect_gpu_name():
     return None
 
 
+def _detect_cpu_name():
+    if platform.system() == "Linux":
+        try:
+            r = subprocess.run(["lscpu"], capture_output=True, text=True)
+            for line in r.stdout.splitlines():
+                if line.startswith("Model name:"):
+                    return line.split(":", 1)[-1].strip()
+        except Exception:
+            pass
+        try:
+            with open("/proc/cpuinfo") as f:
+                for line in f:
+                    if line.startswith("model name"):
+                        return line.split(":", 1)[-1].strip()
+        except Exception:
+            pass
+    elif platform.system() == "Darwin":
+        try:
+            r = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"],
+                               capture_output=True, text=True)
+            return r.stdout.strip() or None
+        except Exception:
+            pass
+    return None
+
+
 def _detect_hardware(user_gflops, user_gflops_fp16, user_bw):
     """Return (peak_gflops_fp32, peak_gflops_fp16, peak_bw_gbs, gpu_name).
 
     For matched Apple SKUs, fp16 peak is auto-derived as 2x fp32.
-    For unknown hardware, fp16 peak must be supplied via --peak-gflops-fp16.
+    For matched AMD Strix Halo SKUs, fp32/fp16/bandwidth are inferred from CPU model.
+    For other unknown hardware, fp16 peak must be supplied via --peak-gflops-fp16.
     Raises SystemExit if peak specs cannot be determined.
     """
     name = _detect_gpu_name() or ""
+    cpu_name = _detect_cpu_name() or ""
 
     # Exact-SKU lookup: full chip name → (fp32 GFLOP/s, mem BW GB/s)
     # Apple Silicon ALUs do 2x fp16 throughput; applied for matched SKUs only.
-    specs = {
+    apple_specs = {
         "Apple M1":          (2600,   68),
         "Apple M1 Pro":      (4100,  200),
         "Apple M1 Max":      (8200,  400),
@@ -247,25 +275,44 @@ def _detect_hardware(user_gflops, user_gflops_fp16, user_bw):
         "Apple M4 Pro":      (7400,  273),
         "Apple M4 Max":     (14200,  546),
     }
+    # Linux lspci reports Strix Halo as an ambiguous 8050S/8060S string, so
+    # distinguish the iGPU by CPU model instead.
+    strix_halo_specs = [
+        (r"Ryzen AI Max\+?(?: PRO)? 395\b", (14800, 29600, 256, "AMD Strix Halo Radeon 8060S")),
+        (r"Ryzen AI Max(?: PRO)? 390\b",    (11500, 23000, 256, "AMD Strix Halo Radeon 8050S")),
+        (r"Ryzen AI Max(?: PRO)? 385\b",    (11500, 23000, 256, "AMD Strix Halo Radeon 8050S")),
+    ]
 
     gflops_fp32 = user_gflops
     gflops_fp16 = user_gflops_fp16
     bw = user_bw
 
     matched_sku = None
-    if name in specs:
+    if name in apple_specs:
         matched_sku = name
-        g, b = specs[name]
+        g, b = apple_specs[name]
         gflops_fp32 = gflops_fp32 or g
         bw = bw or b
         # Apple Silicon: 2x fp16 throughput
         gflops_fp16 = gflops_fp16 or gflops_fp32 * 2
+    elif "Strix Halo" in name or "Radeon 8050S" in name or "Radeon 8060S" in name:
+        for pattern, (g32, g16, b, label) in strix_halo_specs:
+            if re.search(pattern, cpu_name, re.IGNORECASE):
+                matched_sku = label
+                gflops_fp32 = gflops_fp32 or g32
+                gflops_fp16 = gflops_fp16 or g16
+                bw = bw or b
+                break
 
     if name:
         print(f"  Detected GPU: {name}" + (" (matched SKU)" if matched_sku else " (unknown SKU)"))
+    if cpu_name and matched_sku:
+        print(f"  Detected CPU: {cpu_name}")
 
     if not gflops_fp32 or not bw:
         print(f"\n  ERROR: Could not determine peak specs for '{name or 'no GPU detected'}'.")
+        if cpu_name:
+            print(f"  CPU: {cpu_name}")
         print("  Supply --peak-gflops and --peak-bw explicitly.")
         raise SystemExit(1)
 
