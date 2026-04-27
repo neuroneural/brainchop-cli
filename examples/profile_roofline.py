@@ -201,28 +201,50 @@ def _detect_gpu_name():
 
 
 def _detect_hardware(user_gflops, user_bw):
-    """Return (peak_gflops, peak_bw_gbs, gpu_name)."""
+    """Return (peak_gflops, peak_bw_gbs, gpu_name).
+
+    Raises SystemExit if peak specs cannot be determined (no exact SKU match
+    and no --peak-gflops / --peak-bw supplied).
+    """
     name = _detect_gpu_name() or ""
 
-    # Lookup table: substring → (GFLOP/s, GB/s)
+    # Exact-SKU lookup: full chip name → (fp32 GFLOP/s, mem BW GB/s)
+    # Only entries we can confidently map; variants (Pro/Max/Ultra) differ.
     specs = {
-        "M1":   (2600,  68), "M2":   (3600, 100),
-        "M3":   (4100, 100), "M4":   (4600, 120),
-        "780M": (8600,  51), "890M": (8600,  51),
-        "680M": (4300,  51), "Vega": (2000,  38),
+        "Apple M1":          (2600,   68),
+        "Apple M1 Pro":      (4100,  200),
+        "Apple M1 Max":      (8200,  400),
+        "Apple M1 Ultra":   (16400,  800),
+        "Apple M2":          (3600,  100),
+        "Apple M2 Pro":      (5700,  200),
+        "Apple M2 Max":      (9800,  400),
+        "Apple M2 Ultra":   (19600,  800),
+        "Apple M3":          (4100,  100),
+        "Apple M3 Pro":      (5700,  150),
+        "Apple M3 Max":      (9800,  400),
+        "Apple M4":          (4600,  120),
+        "Apple M4 Pro":      (7400,  273),
+        "Apple M4 Max":     (14200,  546),
     }
+
     gflops = user_gflops
     bw = user_bw
-    for key, (g, b) in specs.items():
-        if key in name:
-            gflops = gflops or g
-            bw = bw or b
-            break
 
-    gflops = gflops or 500   # conservative fallback
-    bw = bw or 50
+    matched_sku = None
+    if name in specs:
+        matched_sku = name
+        g, b = specs[name]
+        gflops = gflops or g
+        bw = bw or b
+
     if name:
-        print(f"  Detected: {name}")
+        print(f"  Detected GPU: {name}" + (f" (matched SKU)" if matched_sku else " (unknown SKU)"))
+
+    if not gflops or not bw:
+        print(f"\n  ERROR: Could not determine peak specs for '{name or 'no GPU detected'}'.")
+        print("  Supply --peak-gflops and --peak-bw explicitly.")
+        raise SystemExit(1)
+
     return gflops, bw, name
 
 
@@ -324,6 +346,14 @@ def main():
     slug = _hw_slug()
     backend = _get_backend()
 
+    # Refuse to profile if the runtime backend doesn't match the GPU whose
+    # peak specs we're using — CPU timings against a GPU roofline are nonsense.
+    gpu_backends = {"METAL", "CUDA", "GPU", "HIP", "HSA", "NV"}
+    if not args.no_run and backend not in gpu_backends:
+        print(f"\n  ERROR: tinygrad backend is '{backend}', but peak specs are for GPU '{gpu_name}'.")
+        print(f"  Set the backend (e.g. METAL=1) or use --no-run for static analysis only.")
+        raise SystemExit(1)
+
     print("=" * 65)
     print(f"brainchop roofline profiler  [{slug}]")
     print(f"  models:  {', '.join(models)}")
@@ -346,6 +376,11 @@ def main():
         n_classes = info.get("n_classes", 3)
 
         for dtype in args.dtypes:
+            # SAE models have no half() — fp16 weights aren't supported
+            if dtype == "fp16" and model_type == "sae":
+                print(f"[{model_name} ({dtype})]  skipped — SAE has no fp16 path")
+                continue
+
             print(f"[{model_name} ({dtype})]")
 
             # Static analysis
@@ -380,8 +415,10 @@ def main():
                     if p.total_flops > 0:
                         p.achieved_gflops = (p.total_flops / 1e9) / median_t
                         p.achieved_bw_gbs = (p.total_bytes / 1e9) / median_t
+                    gf_s = f"{p.achieved_gflops:.1f} GFLOP/s" if p.achieved_gflops else "- GFLOP/s"
+                    bw_s = f"{p.achieved_bw_gbs:.1f} GB/s" if p.achieved_bw_gbs else "- GB/s"
                     print(f"  Runtime: {median_t:.3f}s (std={p.wall_time_std:.3f}, n={len(times)}) "
-                          f"| {p.achieved_gflops:.1f} GFLOP/s | {p.achieved_bw_gbs:.1f} GB/s")
+                          f"| {gf_s} | {bw_s}")
                 except Exception as e:
                     print(f"  Runtime failed: {e}")
 
