@@ -14,3 +14,5 @@ nifti/
 *.so
 _build/
 site/
+roofline_*.json
+roofline_*.png
