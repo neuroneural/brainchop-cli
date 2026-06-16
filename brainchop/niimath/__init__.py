@@ -10,6 +10,25 @@ from tinygrad import Tensor
 from typing import Tuple
 
 
+def _run_niimath(cmd, *, input: bytes | None = None) -> subprocess.CompletedProcess:
+    """Run a niimath command, surfacing its stderr on failure.
+
+    niimath aborts (e.g. SIGABRT / exit 134) on some inputs -- extended headers
+    with operation history, unusual datatypes, 4D volumes. ``capture_output``
+    otherwise swallows the reason and leaves only an opaque CalledProcessError,
+    so on a non-zero exit we decode and re-raise niimath's own stderr.
+    """
+    try:
+        return subprocess.run(cmd, input=input, capture_output=True, check=True)
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or b"").decode("utf-8", "replace").strip()
+        msg = f"niimath failed (exit {e.returncode}): {' '.join(map(str, cmd))}"
+        if stderr:
+            msg += f"\n{stderr}"
+        print(msg, file=sys.stderr)
+        raise RuntimeError(msg) from e
+
+
 def _get_executable():
     """
     Locate the niimath binary, either via NIIMATH_PATH or on your PATH.
@@ -270,7 +289,7 @@ def conform(input_image_path, comply=False, ct=False):
     cmd += ["-conform", "-gz", "0", "-", "-odt", "char"]
 
     # run niimath, capture stdout (header+raw voxels)
-    res = subprocess.run(cmd, capture_output=True, check=True)
+    res = _run_niimath(cmd)
     out = res.stdout
 
     # split off header and data
