@@ -171,7 +171,7 @@ def set_channel_num(config, in_channels, n_classes, channels):
     return config
 
 
-def construct_layer(dropout_p=0, bnorm=True, gelu=False, elu=False, *args, **kwargs):
+def construct_layer(dropout_p=0, bnorm=True, gelu=False, elu=False, affine=False, *args, **kwargs):
     layers = []
     kwargs["kernel_size"] = [kwargs["kernel_size"]] * 3
     layers.append(nn.Conv2d(*args, **kwargs))
@@ -180,7 +180,7 @@ def construct_layer(dropout_p=0, bnorm=True, gelu=False, elu=False, *args, **kwa
             nn.GroupNorm(
                 num_groups=kwargs["out_channels"],
                 num_channels=kwargs["out_channels"],
-                affine=False,
+                affine=affine,
             )
         )
 
@@ -223,15 +223,23 @@ class MeshNet:
         self.model = []
         # Check if config specifies bias (default False for backward compat)
         use_bias = config.get("bias", False)
+        # Learnable per-channel scale/shift in GroupNorm (default False for
+        # backward compat). Models trained with affine GroupNorm (e.g. the deep
+        # gridding-free DK-atlas model) carry extra GN weight/bias params.
+        use_affine = config.get("affine", False)
 
         for block_kwargs in config["layers"][:-1]:  # All but the last layer
+            # Per-layer "bias" overrides the global default, so a stack can keep
+            # bias-free hidden convs while still allowing a biased layer.
+            layer_bias = block_kwargs.get("bias", use_bias)
             self.model.extend(
                 construct_layer(
                     dropout_p=config["dropout_p"],
                     bnorm=config["bnorm"],
                     gelu=config.get("gelu", False),
                     elu=config.get("elu", False),
-                    **{**block_kwargs, "bias": use_bias},
+                    affine=use_affine,
+                    **{**block_kwargs, "bias": layer_bias},
                 )
             )
 
@@ -245,7 +253,7 @@ class MeshNet:
                 padding=last_config["padding"],
                 stride=last_config["stride"],
                 dilation=last_config["dilation"],
-                bias=use_bias,
+                bias=last_config.get("bias", use_bias),
             )
         )
 

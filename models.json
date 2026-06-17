@@ -29,9 +29,9 @@
     "considerations": "min/max normalization"
   },
   "DKatlas": {
-    "folder": "model21_104class",
+    "folder": "model24chan104cls",
     "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
-    "considerations": "min/max normalization"
+    "considerations": "quantile normalization"
   },
   "mindgrab": {
     "folder": "mindgrab",
