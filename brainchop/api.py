@@ -114,8 +114,11 @@ class Volume:
         352
         ```
     """
-    data: Tensor  # (256, 256, 256) uint8
-    header: bytes  # 352-byte NIfTI header
+    data: Tensor  # (256, 256, 256) uint8, or the cropped sub-volume when crop is used
+    header: bytes  # 352-byte NIfTI header (always describes the 256^3 space)
+    # Bounding box (x_min,x_max,y_min,y_max,z_min,z_max) when loaded with crop=,
+    # so the model output can be padded back to 256^3 before labeling/saving.
+    crop_coords: tuple | None = None
 
 
 def list_models() -> dict[str, str]:
@@ -136,9 +139,10 @@ def _load_single(path: str | Path, *, crop: float | None = None, ct: bool = Fals
     from brainchop.utils import crop_to_cutoff
 
     data, header = conform(os.path.abspath(path), ct=ct, comply=comply)
+    coords = None
     if crop is not None:
-        data, _ = crop_to_cutoff(data, crop)
-    return Volume(Tensor(data.copy()), header)
+        data, coords = crop_to_cutoff(data, crop)
+    return Volume(Tensor(data.copy()), header, crop_coords=coords)
 
 
 def load(
@@ -524,7 +528,13 @@ def segment(
             for j in range(output.shape[0]):
                 out = output[j].permute(2, 1, 0).cast("uint8")  # (D,H,W) -> (X,Y,Z)
                 header = shard[j].header
-                out_np, _ = bwlabel(header, out.numpy())
+                out_np = out.numpy()
+                # If the input was cropped, pad the label volume back to 256^3 so
+                # it matches the header before connected-component labeling/saving.
+                if shard[j].crop_coords is not None:
+                    from brainchop.utils import pad_to_original_size
+                    out_np = pad_to_original_size(out_np, shard[j].crop_coords)
+                out_np, _ = bwlabel(header, out_np)
                 results.append(Volume(Tensor(out_np), header))
                 if return_raw:
                     raw_outputs.append(raw_output[j:j+1])
