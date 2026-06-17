@@ -11,7 +11,12 @@ from brainchop.api import (
     Volume, load, save, segment, list_models, optimize, export_classes,
     _is_first_run, _get_best_beam,
 )
-from brainchop.niimath import grow_border, truncate_header_bytes
+from brainchop.niimath import (
+    grow_border,
+    truncate_header_bytes,
+    set_header_intent_label,
+    _run_niimath,
+)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -205,11 +210,12 @@ def _save_mindgrab(result: Volume, source_path: str, args, output_path: str):
 
 def _save_inverse_conform(result: Volume, source_path: str, output_path: str):
     """Save with inverse conform."""
-    header = truncate_header_bytes(result.header)
+    # Categorical label output -> tag header with NIFTI_INTENT_LABEL (1002).
+    header = set_header_intent_label(truncate_header_bytes(result.header))
     gz = "0" if output_path.endswith(".nii") else "1"
-    subprocess.run(
+    _run_niimath(
         ["niimath", "-", "-reslice_nn", source_path, "-gz", gz, output_path, "-odt", "char"],
-        input=header + result.data.cast("uint8").numpy().tobytes(), check=True
+        input=header + result.data.cast("uint8").numpy().tobytes(),
     )
 
 

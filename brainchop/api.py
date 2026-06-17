@@ -22,6 +22,8 @@ from brainchop.niimath import (
     conform,
     bwlabel,
     truncate_header_bytes,
+    set_header_intent_label,
+    _run_niimath,
 )
 from brainchop.tiny_meshnet import load_meshnet, chunked_conv
 from brainchop.sae_model import load_sae
@@ -191,13 +193,14 @@ def save(volume: Volume, path: str) -> None:
         >>> save(result, "segmented.nii.gz")
         ```
     """
-    header = truncate_header_bytes(volume.header)
+    # Segmentation output is a categorical label map: tag the NIfTI header with
+    # NIFTI_INTENT_LABEL (1002) so downstream viewers treat it as labels.
+    header = set_header_intent_label(truncate_header_bytes(volume.header))
     gz = "1" if path.endswith(".gz") else "0"
     data = volume.data.cast("uint8").numpy().tobytes()
-    subprocess.run(
+    _run_niimath(
         ["niimath", "-", "-gz", gz, path, "-odt", "char"],
         input=header + data,
-        check=True,
     )
 
 

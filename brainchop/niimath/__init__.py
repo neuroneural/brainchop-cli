@@ -10,6 +10,25 @@ from tinygrad import Tensor
 from typing import Tuple
 
 
+def _run_niimath(cmd, *, input: bytes | None = None) -> subprocess.CompletedProcess:
+    """Run a niimath command, surfacing its stderr on failure.
+
+    niimath aborts (e.g. SIGABRT / exit 134) on some inputs -- extended headers
+    with operation history, unusual datatypes, 4D volumes. ``capture_output``
+    otherwise swallows the reason and leaves only an opaque CalledProcessError,
+    so on a non-zero exit we decode and re-raise niimath's own stderr.
+    """
+    try:
+        return subprocess.run(cmd, input=input, capture_output=True, check=True)
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or b"").decode("utf-8", "replace").strip()
+        msg = f"niimath failed (exit {e.returncode}): {' '.join(map(str, cmd))}"
+        if stderr:
+            msg += f"\n{stderr}"
+        print(msg, file=sys.stderr)
+        raise RuntimeError(msg) from e
+
+
 def _get_executable():
     """
     Locate the niimath binary, either via NIIMATH_PATH or on your PATH.
@@ -127,21 +146,23 @@ def _read_nifti(filename):
 
     INITIAL_HEADER_READ_SIZE = 352
 
-    # NIfTI datatype codes to numpy dtypes mapping
+    # NIfTI-1 datatype codes -> numpy dtypes (see nifti1.h). NOTE: the previous
+    # table was shifted (e.g. 16 mapped to complex64 instead of float32) and
+    # referenced np.float128, which does not exist on Apple Silicon. Both are
+    # fixed here.
     nifti_dtypes = {
-        1: np.uint8,  # DT_UNSIGNED_CHAR
-        2: np.int16,  # DT_SIGNED_SHORT
-        4: np.int32,  # DT_SIGNED_INT
-        8: np.float32,  # DT_FLOAT
-        16: np.complex64,  # DT_COMPLEX
-        32: np.float64,  # DT_DOUBLE
-        64: np.int8,  # DT_INT8 (NIfTI-1 extension)
-        128: np.uint16,  # DT_UINT16 (NIfTI-1 extension)
-        256: np.uint32,  # DT_UINT32 (NIfTI-1 extension)
-        512: np.int64,  # DT_INT64 (NIfTI-1 extension)
-        768: np.uint64,  # DT_UINT64 (NIfTI-1 extension)
-        1024: np.float128,  # DT_FLOAT128 (NIfTI-1 extension)
-        1792: np.complex128,  # DT_COMPLEX128 (NIfTI-1 extension)
+        2: np.uint8,        # DT_UINT8
+        4: np.int16,        # DT_INT16
+        8: np.int32,        # DT_INT32
+        16: np.float32,     # DT_FLOAT32
+        32: np.complex64,   # DT_COMPLEX64
+        64: np.float64,     # DT_FLOAT64
+        256: np.int8,       # DT_INT8
+        512: np.uint16,     # DT_UINT16
+        768: np.uint32,     # DT_UINT32
+        1024: np.int64,     # DT_INT64
+        1280: np.uint64,    # DT_UINT64
+        1792: np.complex128,  # DT_COMPLEX128
     }
 
     file_size = os.path.getsize(filename)
@@ -244,6 +265,28 @@ def _read_nifti(filename):
     return data.reshape(reshaped_dims), header_bytes
 
 
+def _read_nifti_any(path):
+    """Like _read_nifti but transparently handles gzip-compressed (.nii.gz) files.
+
+    _read_nifti seeks by byte offset on the raw file, so a gzip stream must be
+    decompressed to a plain NIfTI first.
+    """
+    with open(path, "rb") as f:
+        magic = f.read(2)
+    if magic == b"\x1f\x8b":  # gzip
+        import tempfile
+        with gzip.open(path, "rb") as gf:
+            raw = gf.read()
+        tmp = tempfile.NamedTemporaryFile(suffix=".nii", delete=False)
+        try:
+            tmp.write(raw)
+            tmp.close()
+            return _read_nifti(tmp.name)
+        finally:
+            os.unlink(tmp.name)
+    return _read_nifti(path)
+
+
 def _write_nifti(path, data, header):
     # write header + raw voxel data
     with open(path, "wb") as f:
@@ -262,16 +305,28 @@ def conform(input_image_path, comply=False, ct=False):
 
     comply_args = ["-comply", "256", "256", "256", "1", "1", "1", "1", "1"]
 
-    cmd = ["niimath", str(inp)]
-    if ct:
-        cmd += ["-h2c"]
-    if comply:
-        cmd += comply_args
-    cmd += ["-conform", "-gz", "0", "-", "-odt", "char"]
+    def _conform_args(read_from):
+        cmd = ["niimath", read_from]
+        if ct:
+            cmd += ["-h2c"]
+        if comply:
+            cmd += comply_args
+        cmd += ["-conform", "-gz", "0", "-", "-odt", "char"]
+        return cmd
 
-    # run niimath, capture stdout (header+raw voxels)
-    res = subprocess.run(cmd, capture_output=True, check=True)
-    out = res.stdout
+    # Fast path: let niimath read the file directly.
+    try:
+        out = _run_niimath(_conform_args(str(inp))).stdout
+    except RuntimeError:
+        # niimath could not read the file. This happens with NIfTI files that
+        # carry a header extension (e.g. AFNI/FSL operation history): vox_offset
+        # points past the extension and niimath's reader miscounts the image
+        # buffer ("data bytes needed > data bytes input"). Re-read the volume in
+        # Python honoring vox_offset, then hand niimath a clean, extension-free
+        # volume (vox_offset=352) via stdin.
+        vol_data, clean_header = _read_nifti_any(str(inp))
+        piped = clean_header + np.ascontiguousarray(vol_data).tobytes()
+        out = _run_niimath(_conform_args("-"), input=piped).stdout
 
     # split off header and data
     header, data = header_data_split(out)
