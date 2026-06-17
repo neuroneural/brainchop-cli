@@ -129,3 +129,24 @@ def crop_to_cutoff(arr: np.ndarray, cutoff_percent: float = 2.0):
 
     cropped_arr = arr[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1]
     return cropped_arr, (x_min, x_max, y_min, y_max, z_min, z_max)
+
+
+def pad_to_original_size(
+    cropped_arr: np.ndarray, coords: tuple, original_shape: tuple = (256, 256, 256)
+):
+    """Inverse of crop_to_cutoff: place a cropped volume back into a zero-filled
+    original_shape volume at its bounding-box coordinates. Needed so the label
+    output and the (256^3) NIfTI header agree before bwlabel/save."""
+    x_min, x_max, y_min, y_max, z_min, z_max = coords
+
+    padded_arr = np.zeros(original_shape, dtype=cropped_arr.dtype)
+    if cropped_arr.size == 0:
+        return padded_arr
+
+    x_size = x_max - x_min + 1
+    y_size = y_max - y_min + 1
+    z_size = z_max - z_min + 1
+    if x_size > 0 and y_size > 0 and z_size > 0:
+        padded_arr[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = cropped_arr
+
+    return padded_arr
