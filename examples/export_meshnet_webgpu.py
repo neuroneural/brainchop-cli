@@ -33,7 +33,7 @@ Run on a machine with the torch/tinygrad env AND a working WebGPU device:
 
     source ~/venv/torch/bin/activate
     cd brainchop-cli
-    IGNORE_BEAM_CACHE=0 python examples/export_dkatlas24_webgpu.py \
+    IGNORE_BEAM_CACHE=0 python examples/export_meshnet_webgpu.py \
         --model-dir   ../brainchop-models/meshnet/model24chan104cls \
         --bct         ../brainchop-test \
         --runner-name dkatlas24 \

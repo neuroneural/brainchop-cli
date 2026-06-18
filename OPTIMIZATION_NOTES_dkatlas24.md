@@ -12,7 +12,7 @@ M-series GPU (Dawn → Metal) running the full 256³ volume.
 | **fp16, `--beam 3`** | **~12 s** | current best |
 | fp32, `--beam 2` | ~22 s | |
 
-The export script is `examples/export_dkatlas24_webgpu.py`. The two model-side
+The export script is `examples/export_meshnet_webgpu.py`. The two model-side
 fixes are in `brainchop/tiny_meshnet.py`. A third fix is browser-side
 (`brainchop-test/main.js`).
 
@@ -107,7 +107,7 @@ explicitly:
 ```bash
 source ~/venv/torch/bin/activate
 cd brainchop-cli
-IGNORE_BEAM_CACHE=0 python examples/export_dkatlas24_webgpu.py \
+IGNORE_BEAM_CACHE=0 python examples/export_meshnet_webgpu.py \
     --model-dir   ../brainchop-models/meshnet/model24chan104cls \
     --bct         ../brainchop-test \
     --runner-name dkatlas24 \
