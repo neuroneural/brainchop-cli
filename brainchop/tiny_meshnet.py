@@ -1,6 +1,6 @@
 import os
 from tinygrad.tensor import Tensor
-from tinygrad import nn
+from tinygrad import nn, dtypes
 from tinygrad.nn.state import torch_load, safe_load, load_state_dict
 import json
 import numpy as np
@@ -70,6 +70,18 @@ class SequentialConvArgmax:
 
     def _chunked_argmax(self, x: Tensor, chunk_size: int) -> Tensor:
         """Conv + argmax in chunks of chunk_size channels."""
+        # Realize the backbone output ONCE before chunking. x is the (lazy)
+        # output of the full conv stack; each chunk below reads it to compute a
+        # slice of the final 1x1 classifier conv. In eager CLI execution the
+        # first chunk's .realize() already materializes x and later chunks reuse
+        # it, but export_model() captures x as a lazy graph -- without this
+        # boundary every chunk branch re-traces the entire backbone, so the
+        # exported WebGPU/WebGL runner recomputes the whole network once per
+        # chunk (e.g. 104 classes / chunk 24 = 5x the conv passes, 5x inference
+        # and 5x BEAM/export time). Forcing one realization keeps peak memory
+        # identical (one backbone activation + one chunk) while computing the
+        # backbone exactly once.
+        x = x.realize()
         # First chunk
         end = min(chunk_size, self.out_channels)
         logits = self._conv_channels(x, 0, end).realize()
@@ -269,11 +281,29 @@ class MeshNet:
         return qnormalize(x) # TODO: interpret normalization from config file
 
     def __call__(self, x, fuse_chunk=None):
+        # True fp16 activations. When the model is half precision, cast each
+        # layer's OUTPUT back to f16 so the materialized activation buffers are
+        # f16 (24*256^3 = 0.8 GiB) instead of f32 (1.6 GiB). tinygrad upcasts
+        # reduction accumulators to f32 (sum_acc_dtype: half -> float), so the
+        # conv accumulate and the GroupNorm mean/variance still run in f32 -- the
+        # cast only changes the stored result, NOT the accumulation, so there is
+        # no f16 variance-sum overflow. The cast folds into the producing kernel's
+        # store (no extra pass).
+        #
+        # Why this matters: without it, every conv/GroupNorm returns f32 and the
+        # big activation lives as f32 through the whole stack. The "fp16" export
+        # then only halves the (tiny) weights while adding ~1500 element-wise
+        # f16<->f32 conversions, so on GPUs without 2:1 f16 throughput (e.g. Apple
+        # Silicon) it ran SLOWER than fp32. Keeping activations f16 halves the
+        # dominant (bandwidth-bound) GroupNorm traffic -> the intended ~2x speedup.
+        fp16 = isinstance(self.model[0], nn.Conv2d) and self.model[0].weight.dtype == dtypes.float16
         for layer in self.model[:-1]:  # all layers except final conv
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)
             else:
                 x = layer(x)
+            if fp16:
+                x = x.cast(dtypes.float16)
         assert self.seq_conv_argmax is not None
         return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 
