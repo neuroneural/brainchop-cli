@@ -7,7 +7,9 @@ This module provides SAENet, an encoder-decoder architecture with:
 - SiLU activation
 """
 
-from tinygrad import Tensor
+import os
+
+from tinygrad import Tensor, dtypes
 from tinygrad.nn.state import torch_load
 
 from brainchop.tiny_meshnet import qnormalize, SequentialConvArgmax
@@ -86,6 +88,14 @@ class SAENet:
         """
         self.layers = []
         self.n_classes = n_classes
+        # fp16: when FP16 is set, store weights as f16 and (in the forward pass)
+        # keep activations f16 too. The conv/conv_transpose accumulators still run
+        # in f32 (tinygrad sum_acc_dtype: half -> float), so this is the same
+        # overflow-safe mixed precision as MeshNet -- see the comment in
+        # brainchop/tiny_meshnet.py MeshNet.__call__ for the full rationale. Without
+        # it, an "fp16" export keeps activations in f32 and runs no faster (often
+        # slower) than fp32 on GPUs without 2:1 f16 throughput.
+        self.fp16 = bool(os.environ.get("FP16"))
 
         for idx in LAYER_INDICES:
             # Move weights from DISK to compute device via numpy roundtrip
@@ -102,6 +112,10 @@ class SAENet:
             # Permute weights if needed (swap D <-> W)
             if permute:
                 weight = _permute_weights(weight, is_conv_transpose=(layer_type == "convT"))
+
+            if self.fp16:
+                weight = weight.cast(dtypes.float16).realize()
+                bias = bias.cast(dtypes.float16).realize()
 
             self.layers.append((layer_type, idx, weight, bias))
 
@@ -147,6 +161,10 @@ class SAENet:
             if layer_type != "convT":
                 x = x.silu()
 
+            # Keep the materialized activation in f16 (accumulators stayed f32).
+            if self.fp16:
+                x = x.cast(dtypes.float16)
+
         # Final layer: 1x1x1 conv, no activation, no padding
         _, idx, weight, bias = self.layers[-1]
         kernel_size = weight.shape[2]
@@ -170,6 +188,10 @@ class SAENet:
 
             if layer_type != "convT":
                 x = x.silu()
+
+            # Keep the materialized activation in f16 (accumulators stayed f32).
+            if self.fp16:
+                x = x.cast(dtypes.float16)
 
         return x
 
