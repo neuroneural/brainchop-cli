@@ -298,24 +298,12 @@ class MeshNet:
         # dominant (bandwidth-bound) GroupNorm traffic -> the intended ~2x speedup.
         fp16 = isinstance(self.model[0], nn.Conv2d) and self.model[0].weight.dtype == dtypes.float16
         for layer in self.model[:-1]:  # all layers except final conv
-            is_conv = isinstance(layer, nn.Conv2d)
-            x = chunked_conv(x, layer) if is_conv else layer(x)
+            if isinstance(layer, nn.Conv2d):
+                x = chunked_conv(x, layer)
+            else:
+                x = layer(x)
             if fp16:
                 x = x.cast(dtypes.float16)
-                # For Conv outputs, force a realize boundary on the f16 result.
-                # A conv is a reduce whose natural output dtype is the f32
-                # accumulator, and the following GroupNorm reads it TWICE (mean and
-                # normalize). Without this boundary tinygrad realizes that shared
-                # conv output at f32 -- the 24*256^3*4 = 1.5 GiB buffer (buf_0) that
-                # OOMs Firefox's 1024 MiB single-buffer cap -- and fuses the cast
-                # into GroupNorm's kernels. Making the f16 cast the realized buffer
-                # lets conv+cast fuse into ONE f16 store, so the full-volume f32
-                # buffer never materializes and peak drops to ~768 MiB. The reduce
-                # still accumulates in f32 (sum_acc_dtype: half->float), so this is
-                # numerically safe. VERIFY after export (must print 0):
-                #   grep -cE '_402653184:array<f32>' <bct>/webgpu_runners/dkatlas24_runner.js
-                if is_conv:
-                    x = x.contiguous()
         assert self.seq_conv_argmax is not None
         return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 

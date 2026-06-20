@@ -41,6 +41,10 @@ from pathlib import Path
 #   web-model-dir == public/models/<dir> from its `webgpu_safetensor`
 #   chunk         == FUSE_CHUNK for the final classifier conv (<= hidden channels
 #                    keeps peak at one hidden activation; 24 is safe for all here)
+# NOTE: only models actually present in the brainchop-test menu are listed. The
+# legacy 'model21' (21ch/104cls) entry is commented out in brainchop-parameters.js
+# and is intentionally NOT re-exported. 'model21chan18cls' (21ch/18cls, menu id 8
+# "Subcortical + GWM (Small Model)") is a different, active model and IS listed.
 MODELS = [
     # runner            web-model-dir       source (under --models-root)        chunk
     ("model5",           "model5_gw_ae",     "meshnet/model5_gw_ae",             24),
@@ -48,8 +52,7 @@ MODELS = [
     ("model21chan18cls", "model18cls",       "meshnet/model18cls",               24),  # subcortical-mini 21ch/18cls
     ("model30chan18cls", "model30chan18cls", "meshnet/subcortical",              24),  # subcortical 30ch/18cls
     ("model30chan50cls", "model30chan50cls", "meshnet/model30chan50cls",         24),  # aparc50 30ch/50cls
-    ("model21",          "model21_104class", "meshnet/model21_104class",         24),  # legacy 21ch/104cls
-    ("dkatlas24",        "model24chan104cls","meshnet/model24chan104cls",        24),  # deep 24ch/104cls (the heavy one)
+    ("dkatlas24",        "model24chan104cls","meshnet/model24chan104cls",        24),  # deep 24ch/104cls
 ]
 
 # Not MeshNets -- spatial-autoencoder architecture; export_meshnet_webgpu.py
