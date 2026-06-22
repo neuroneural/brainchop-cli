@@ -283,24 +283,31 @@ class MeshNet:
     def __call__(self, x, fuse_chunk=None):
         # True fp16 activations. When the model is half precision, cast each
         # layer's OUTPUT back to f16 so the materialized activation buffers are
-        # f16 (24*256^3 = 0.8 GiB) instead of f32 (1.6 GiB). tinygrad upcasts
-        # reduction accumulators to f32 (sum_acc_dtype: half -> float), so the
-        # conv accumulate and the GroupNorm mean/variance still run in f32 -- the
-        # cast only changes the stored result, NOT the accumulation, so there is
-        # no f16 variance-sum overflow. The cast folds into the producing kernel's
-        # store (no extra pass).
+        # f16 (24*256^3 = 0.8 GiB) instead of f32 (1.6 GiB). The cast folds into
+        # the producing kernel's store (no extra pass), halving the dominant
+        # (bandwidth-bound) GroupNorm traffic -> the intended ~2x speedup on GPUs
+        # without 2:1 f16 throughput (e.g. Apple Silicon).
         #
-        # Why this matters: without it, every conv/GroupNorm returns f32 and the
-        # big activation lives as f32 through the whole stack. The "fp16" export
-        # then only halves the (tiny) weights while adding ~1500 element-wise
-        # f16<->f32 conversions, so on GPUs without 2:1 f16 throughput (e.g. Apple
-        # Silicon) it ran SLOWER than fp32. Keeping activations f16 halves the
-        # dominant (bandwidth-bound) GroupNorm traffic -> the intended ~2x speedup.
+        # CRITICAL fp16 correctness fix: GroupNorm computes variance by SQUARING
+        # its input elementwise. tinygrad upcasts the reduction *accumulator* to
+        # f32 (sum_acc_dtype: half -> float), but the per-element square is done in
+        # the input dtype FIRST -- so with an f16 input, any conv output > ~256
+        # overflows (256^2 > 65504) to +inf before the f32 accumulator ever sees
+        # it, poisoning the per-channel variance and producing garbage output.
+        # High-capacity models reach far past this: the 24ch synth DK-atlas hits
+        # ~940 at layer 1 (-> 72k inf voxels); the shipped 24ch model peaks ~375
+        # (only ~97 inf) which is why it merely "mostly" worked. We therefore
+        # upcast the GroupNorm input to f32 so the square is safe. The conv output
+        # is still stored f16 (940 fits f16 fine; only the SQUARE overflowed), so
+        # the activation-bandwidth win is preserved -- the upcast happens in-kernel
+        # for the reduction only.
         fp16 = isinstance(self.model[0], nn.Conv2d) and self.model[0].weight.dtype == dtypes.float16
         for layer in self.model[:-1]:  # all layers except final conv
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)
             else:
+                if fp16 and isinstance(layer, nn.GroupNorm):
+                    x = x.cast(dtypes.float32)  # f32 variance: avoid f16 square overflow
                 x = layer(x)
             if fp16:
                 x = x.cast(dtypes.float16)
