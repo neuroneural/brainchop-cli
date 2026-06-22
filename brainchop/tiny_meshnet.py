@@ -296,17 +296,20 @@ class MeshNet:
         # it, poisoning the per-channel variance and producing garbage output.
         # High-capacity models reach far past this: the 24ch synth DK-atlas hits
         # ~940 at layer 1 (-> 72k inf voxels); the shipped 24ch model peaks ~375
-        # (only ~97 inf) which is why it merely "mostly" worked. We therefore
-        # upcast the GroupNorm input to f32 so the square is safe. The conv output
-        # is still stored f16 (940 fits f16 fine; only the SQUARE overflowed), so
-        # the activation-bandwidth win is preserved -- the upcast happens in-kernel
-        # for the reduction only.
+        # (only ~97 inf) which is why it merely "mostly" worked. We keep the square
+        # safe one of two ways (see export_meshnet_webgpu.py --fp16-norm):
+        #   * default: upcast the GroupNorm input to f32 -> safe for ANY weights, but
+        #     the reduction runs in f32 (~1.5-2x slower on 2:1 f16:f32 GPUs, e.g. Apple).
+        #   * MESHNET_FAST_F16_GN=1: GroupNorm fully in f16 (fast); ONLY safe when conv
+        #     weights were rescaled so conv outputs stay < ~256 (lossless, via the
+        #     export's rescaling pass exploiting GroupNorm scale-invariance).
         fp16 = isinstance(self.model[0], nn.Conv2d) and self.model[0].weight.dtype == dtypes.float16
+        fast_f16_gn = os.environ.get("MESHNET_FAST_F16_GN") == "1"
         for layer in self.model[:-1]:  # all layers except final conv
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)
             else:
-                if fp16 and isinstance(layer, nn.GroupNorm):
+                if fp16 and not fast_f16_gn and isinstance(layer, nn.GroupNorm):
                     x = x.cast(dtypes.float32)  # f32 variance: avoid f16 square overflow
                 x = layer(x)
             if fp16:

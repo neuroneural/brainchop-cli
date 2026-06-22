@@ -120,7 +120,57 @@ class _ChunkedExport:
         return self.m(x, fuse_chunk=self.chunk)
 
 
-def _export_one(model_dir, name, fp16, chunk, beam, out_dir):
+def _condition_fp16_weights(model, target=128.0, k_sigma=6.0):
+    """Losslessly rescale hidden conv weights so f16 conv outputs stay < ~256,
+    making the f16 GroupNorm variance overflow-safe (256^2 > 65504 -> inf).
+
+    GroupNorm is invariant to positive scaling of its conv's weights/bias (it
+    divides by the per-channel std), so dividing a conv's weights by s leaves the
+    network output unchanged -- it only shrinks the *transient* conv-output
+    magnitude into f16's safe range. This lets the runner keep the FAST f16
+    GroupNorm (no f32 upcast) while staying numerically equivalent to fp32.
+
+    Data-free: bounds each conv's output by (max output-channel L1 weight norm) x
+    (bound on its input activation). The input bound comes from the previous
+    block's GroupNorm affine: after normalization the per-channel signal is ~unit
+    std, so |activation| <= max|beta| + k_sigma*max|gamma| (GELU does not amplify).
+    The first conv sees the qnormalized image, clipped to [0,1]. The final
+    classifier conv has no following GroupNorm (its output is never squared), so it
+    is left untouched. The L1 bound is deliberately loose -> it only ever
+    over-shrinks, which is harmless (f16 relative precision is scale-independent
+    and the values stay well above the subnormal floor).
+    """
+    from tinygrad import nn
+    layers = model.model
+    n = len(layers)
+    prev_act_max = 1.0  # qnormalized input volume is clipped to [0,1]
+    print(f"[rescale] conditioning conv weights for fast f16 GroupNorm "
+          f"(target peak |conv| < {target:.0f})")
+    touched = 0
+    for idx, layer in enumerate(layers):
+        if not isinstance(layer, nn.Conv2d):
+            continue
+        gn = layers[idx + 1] if idx + 1 < n and isinstance(layers[idx + 1], nn.GroupNorm) else None
+        if gn is None:
+            continue  # final classifier conv: never squared by a GroupNorm -> skip
+        W = layer.weight
+        l1 = W.float().abs().sum(axis=tuple(range(1, W.ndim))).max().item()  # max_o ||W[o]||_1
+        out_bound = l1 * prev_act_max
+        s = out_bound / target
+        if s > 1.0:
+            layer.weight = (layer.weight / s).realize()
+            if layer.bias is not None:
+                layer.bias = (layer.bias / s).realize()
+            touched += 1
+            print(f"[rescale]   conv[{idx:2d}]: out_bound~{out_bound:9.1f}  /= {s:7.2f}")
+        gamma_max = gn.weight.float().abs().max().item() if gn.weight is not None else 1.0
+        beta_max = gn.bias.float().abs().max().item() if gn.bias is not None else 0.0
+        prev_act_max = beta_max + k_sigma * gamma_max
+    print(f"[rescale] done: rescaled {touched} conv layer(s); output is unchanged "
+          f"(GroupNorm scale-invariance), only f16 headroom improved.")
+
+
+def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"):
     # FP16 must be set BEFORE importing/loading so load_meshnet() halves weights.
     if fp16:
         os.environ["FP16"] = "1"
@@ -131,6 +181,14 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir):
         os.environ["BEAM"] = str(beam)
     else:
         os.environ.pop("BEAM", None)
+    # fp16 GroupNorm strategy. 'rescale' pre-conditions the weights (below) so the
+    # runner can use the fast f16 GroupNorm; 'fp32' leaves weights alone and tells
+    # tiny_meshnet to upcast the GroupNorm reduction to f32 (slower, any weights).
+    use_rescale = fp16 and fp16_norm == "rescale"
+    if use_rescale:
+        os.environ["MESHNET_FAST_F16_GN"] = "1"
+    else:
+        os.environ.pop("MESHNET_FAST_F16_GN", None)
 
     import time
     from brainchop.api import _load_model
@@ -164,6 +222,11 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir):
         _em.export_model_webgpu = _single_batch_webgpu
 
     m = _load_model(str(model_dir))
+    # Lossless conv-weight conditioning so the fast f16 GroupNorm stays overflow-safe.
+    # Must run on the loaded (halved) weights, BEFORE re-binding the fused argmax and
+    # before tracing, so the rescaled weights are what gets traced and saved.
+    if use_rescale:
+        _condition_fp16_weights(m)
     # Re-bind the fused conv+argmax to the (possibly halved) final conv so the
     # classifier runs in the same precision as the rest of the network.
     if hasattr(m, "init_seq_conv_argmax"):
@@ -212,6 +275,14 @@ def main():
                          "~/.cache/tinygrad, so a later re-run with the same --beam is fast. Keep "
                          "IGNORE_BEAM_CACHE=0.)")
     ap.add_argument("--which", choices=["fp16", "fp32", "both"], default="both")
+    ap.add_argument("--fp16-norm", choices=["rescale", "fp32"], default="rescale",
+                    help="fp16 GroupNorm strategy (both are numerically equivalent to "
+                         "fp32 inference). 'rescale' (default): losslessly rescale conv "
+                         "weights so conv outputs stay in f16's safe range, then run "
+                         "GroupNorm in f16 -- FAST (matches the pre-fix speed). 'fp32': "
+                         "no rescaling; run the GroupNorm reduction in f32 -- correct for "
+                         "any weights but ~1.5-2x slower on Apple Silicon (2:1 f16:f32). "
+                         "Ignored for fp32 exports.")
     ap.add_argument("--runner-name", default=None,
                     help="base name of the emitted runner: <name>_runner.js (+ <name>_f32_runner.js). "
                          "The brainchop-test model entry's `webgpu_runner` must equal this. "
@@ -245,7 +316,8 @@ def main():
         jobs.append((f"{runner_name}_f32", False, "model_f32.safetensors"))
 
     for name, fp16, st_name in jobs:
-        js_path, st_path = _export_one(args.model_dir, name, fp16, args.chunk, args.beam, staging)
+        js_path, st_path = _export_one(args.model_dir, name, fp16, args.chunk, args.beam,
+                                       staging, args.fp16_norm)
         # Runner JS -> webgpu_runners/<name>_runner.js (auto-discovered by import.meta.glob)
         dst_js = runners / f"{name}_runner.js"
         shutil.copyfile(js_path, dst_js)
