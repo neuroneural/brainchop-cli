@@ -71,6 +71,11 @@ def main():
                     help="root holding the source checkpoints (default ../brainchop-models)")
     ap.add_argument("--beam", type=int, default=3, help="BEAM kernel-search level (0 = quick/untuned)")
     ap.add_argument("--which", choices=["fp16", "fp32", "both"], default="both")
+    ap.add_argument("--fp16-norm", choices=["rescale", "fp32"], default="rescale",
+                    help="fp16 GroupNorm strategy passed to the exporter. 'rescale' "
+                         "(default): lossless conv-weight conditioning + fast f16 "
+                         "GroupNorm. 'fp32': slower f32 GroupNorm reduction. Both match "
+                         "fp32 inference.")
     ap.add_argument("--only", default=None,
                     help="comma-separated runner names to limit to (default: all)")
     ap.add_argument("--dry-run", action="store_true", help="print commands without running them")
@@ -104,6 +109,7 @@ def main():
             "--chunk", str(chunk),
             "--beam", str(args.beam),
             "--which", args.which,
+            "--fp16-norm", args.fp16_norm,
         ]
         print("=" * 78)
         print(f"[{runner}]  src={model_dir}  web={web}  chunk={chunk}")
