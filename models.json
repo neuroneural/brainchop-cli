@@ -1,4 +1,9 @@
 {
+  "tissue_fast": {
+    "folder": "model5_gw_ae",
+    "description": "⚡ our fastest tissue segmentation model that produces gray and white matter labels",
+    "considerations": "min/max normalization"
+  },
   "robust_tissue": {
     "folder": "robust_tissue",
     "type": "sae",
@@ -6,41 +11,24 @@
     "description": "🧠 robust tissue segmentation using spatial autoencoder architecture",
     "considerations": "quantile normalization"
   },
-  "big_robust_tissue": {
-    "folder": "big_robust_tissue",
-    "type": "sae",
-    "n_classes": 18,
-    "description": "🧠 large robust tissue segmentation with 18 classes using spatial autoencoder",
-    "considerations": "quantile normalization"
-  },
-  "tissue_fast": {
-    "folder": "model5_gw_ae",
-    "description": "⚡ our fastest tissue segmentation model that produces gray and white matter labels",
-    "considerations": "min/max normalization"
-  },
   "subcortical": {
-    "folder": "subcortical",
+    "folder": "model32chan18cls",
     "description": "🪓 a robust model that can handle clinical scans and other difficult input volumes producing cortical tissue segmentation accompanied by 15 subcortical regions",
-    "considerations": "min/max normalization"
-  },
-  "subcortical-mini": {
-    "folder": "model18cls",
-    "description": "🪓 a smaller version of subcortical that has only 21 channels instead of 30",
-    "considerations": "min/max normalization"
+    "considerations": "quantile normalization"
   },
   "DKatlas": {
-    "folder": "model24chan104cls",
-    "description": "🔪 segments the brain into the Desikan-Killiany Atlas with 104 labels",
-    "considerations": "quantile normalization"
-  },
-  "mindgrab": {
-    "folder": "mindgrab",
-    "description": "tissue extraction",
+    "folder": "model24chan104cls_synth",
+    "description": "🪓 segments the brain into the Desikan-Killiany Atlas with 104 labels",
     "considerations": "quantile normalization"
   },
   "aparc50": {
     "folder": "model30chan50cls",
     "description": "🧠 cortical parcellation model with 50 anatomical regions",
     "considerations": "quantile normalization (5%-95%)"
+  },
+  "mindgrab": {
+    "folder": "mindgrab",
+    "description": "🪓 skull stripping in any modality",
+    "considerations": "quantile normalization"
   }
 }
