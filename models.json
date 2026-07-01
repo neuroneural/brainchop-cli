@@ -12,7 +12,7 @@
     "considerations": "quantile normalization"
   },
   "subcortical": {
-    "folder": "model32chan18cls",
+    "folder": "model16chan18cls",
     "description": "🪓 a robust model that can handle clinical scans and other difficult input volumes producing cortical tissue segmentation accompanied by 15 subcortical regions",
     "considerations": "quantile normalization"
   },
