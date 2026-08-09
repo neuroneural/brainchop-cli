@@ -8,15 +8,48 @@ from tinygrad.helpers import Context, to_mv
 from tinygrad.dtype import dtypes
 from tinygrad.uop.ops import Ops
 import json
+import os
+import pickle
 from collections import OrderedDict
 
-EXPORT_SUPPORTED_DEVICE = ["WEBGPU", "CPU", "CUDA", "CL"]
+EXPORT_SUPPORTED_DEVICE = ["WEBGPU", "METAL", "CPU", "CUDA", "CL"]
 
-def compile_net(run:TinyJit, special_names:Dict[int,str]) -> Tuple[Dict[str,str],List[Tuple[str,List[str],List[int]]],Dict[str,Tuple[int,DType,int]],Dict[str,Tensor]]:
+def compile_net(run:TinyJit, special_names:Dict[int,str], target:Optional[str]=None) -> Tuple[Dict[str,str],List[Tuple[str,List[str],List[int]]],Dict[str,Tuple[int,DType,int]],Dict[str,Tensor]]:
   functions, bufs, bufs_to_save, statements, bufnum = {}, {}, {}, [], 0
+  cross_webgpu = target == "webgpu" and Device.DEFAULT != "WEBGPU"
+  canonical_functions:Dict[str,str] = {}
+  captured_asts = []
+  ast_ordinals:Dict[bytes,int] = {}
+  opt_catalog = None
+  if catalog_path := os.environ.get("MESHNET_WEBGPU_OPT_CATALOG"):
+    with open(catalog_path, "rb") as catalog_file:
+      opt_catalog = pickle.load(catalog_file)
   for ji in run.jit_cache:
     fxn: ProgramSpec = ji.prg.p
-    functions[fxn.function_name] = fxn.src   # NOTE: this assumes all with the same name are the same
+    # A native Dawn adapter is useful for tuning, but is not required merely to
+    # emit WGSL. Capture the graph on a capable local accelerator (Metal on
+    # Apple Silicon), then lower each captured kernel AST with WebGPU's renderer.
+    # This preserves the graph/buffer schedule while avoiding Dawn's fallback
+    # adapter limits during an untuned (BEAM=0) export.
+    if target == "webgpu" and fxn.device != "WEBGPU":
+      from tinygrad.codegen import get_program
+      from tinygrad.renderer.wgsl import WGSLRenderer
+      if ji.ast.key not in ast_ordinals:
+        ast_ordinals[ji.ast.key] = len(ast_ordinals)
+      ordinal = ast_ordinals[ji.ast.key]
+      opts = None if opt_catalog is None else list(opt_catalog[ordinal])
+      fxn = get_program(ji.ast, WGSLRenderer(), opts=opts)
+      captured_asts.append(ji.ast)
+    function_name = fxn.function_name
+    if cross_webgpu:
+      canonical_source = fxn.src.replace(function_name, "main")
+      if canonical_source in canonical_functions:
+        function_name = canonical_functions[canonical_source]
+      else:
+        canonical_functions[canonical_source] = function_name
+        functions[function_name] = fxn.src
+    else:
+      functions[function_name] = fxn.src   # NOTE: this assumes all with the same name are the same
     cargs = []
     for i,arg in enumerate(ji.bufs):
       key = id(arg)
@@ -29,9 +62,49 @@ def compile_net(run:TinyJit, special_names:Dict[int,str]) -> Tuple[Dict[str,str]
           if i > 0: bufs_to_save[bufs[key][0]] = arg   # if first usage of a buffer is not an output, and it's not a special name
       cargs.append(bufs[key][0])
     cargs += [var for var in fxn.vars if getattr(var, "op", None) is Ops.DEFINE_VAR] # symbolic vars; is it necessary or sufficient to check for DEFINE_VAR?
-    statements.append((fxn.function_name, cargs, fxn.global_size, fxn.local_size))
+    statements.append((function_name, cargs, fxn.global_size, fxn.local_size))
 
-  return functions, statements, {name:(size, dtype, key) for (name,size,dtype,key) in bufs.values()}, bufs_to_save
+  exported_bufs = {name:(size, dtype, key) for (name,size,dtype,key) in bufs.values()}
+  if cross_webgpu:
+    # Metal's JIT memory planner represents hundreds of logical tensors as
+    # views into one large arena. WebGPU cannot bind those views through this
+    # legacy runner ABI, and allocating every logical tensor independently is
+    # enormous. Reuse standalone GPUBuffer slots for non-overlapping logical
+    # lifetimes. Inputs, outputs, and model weights remain dedicated.
+    persistent = set(special_names.values()) | set(bufs_to_save)
+    usage:Dict[str,List[int]] = {}
+    for statement_index, (_name, args, _global, _local) in enumerate(statements):
+      for arg in args:
+        if isinstance(arg, str) and arg in exported_bufs and arg not in persistent:
+          usage.setdefault(arg, []).append(statement_index)
+
+    slots:List[Dict[str,int|DType]] = []
+    rename:Dict[str,str] = {}
+    intervals = sorted(((indices[0], indices[-1], name) for name, indices in usage.items()))
+    for first, last, name in intervals:
+      size, dtype, _key = exported_bufs[name]
+      available = [(max(int(slot["size"]), size) - int(slot["size"]), index)
+                   for index, slot in enumerate(slots) if int(slot["last"]) < first]
+      if available:
+        _, slot_index = min(available)
+        slot = slots[slot_index]
+        slot["size"], slot["last"] = max(int(slot["size"]), size), last
+      else:
+        slot_index = len(slots)
+        slots.append({"size": size, "last": last, "dtype": dtype})
+      rename[name] = f"arena_{slot_index}"
+
+    statements = [(name, [rename.get(arg, arg) for arg in args], global_size, local_size)
+                  for name, args, global_size, local_size in statements]
+    exported_bufs = {name:data for name,data in exported_bufs.items() if name not in rename}
+    exported_bufs.update({f"arena_{index}":(int(slot["size"]), slot["dtype"], -index-1)
+                          for index, slot in enumerate(slots)})
+
+    if dump_path := os.environ.get("MESHNET_WEBGPU_AST_DUMP"):
+      with open(dump_path, "wb") as dump_file:
+        pickle.dump(captured_asts, dump_file)
+
+  return functions, statements, exported_bufs, bufs_to_save
 
 def jit_model(model, *args) -> Tuple[TinyJit,Dict[int,str]]:
   assert hasattr(model, "forward") or callable(model), "model needs a forward function"
@@ -258,7 +331,7 @@ def export_model(model, target:str, *inputs, model_name: Optional[str] = "model"
   assert Device.DEFAULT in EXPORT_SUPPORTED_DEVICE, f"only {', '.join(EXPORT_SUPPORTED_DEVICE)} are supported"
 
   with Context(JIT=2): run,special_names = jit_model(model, *inputs)
-  functions, statements, bufs, bufs_to_save = compile_net(run, special_names)
+  functions, statements, bufs, bufs_to_save = compile_net(run, special_names, target)
   state = get_state_dict(model)
   weight_names = {id(x.uop.base.realized): name for name, x in state.items()}
   input_names = [name for _,name in special_names.items() if "input" in name]

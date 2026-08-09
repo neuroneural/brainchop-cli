@@ -305,9 +305,18 @@ class MeshNet:
         #     export's rescaling pass exploiting GroupNorm scale-invariance).
         fp16 = isinstance(self.model[0], nn.Conv2d) and self.model[0].weight.dtype == dtypes.float16
         fast_f16_gn = os.environ.get("MESHNET_FAST_F16_GN") == "1"
+        # Force each convolution result into a materialized fp16 buffer before
+        # GroupNorm. This cuts the largest physical buffer roughly in half.
+        # It changes the kernel ASTs, so the export must use schedules tuned for
+        # this graph; reusing an unrelated BEAM result can be dramatically slow.
+        # Exporters select this explicitly; fp16 release exporters default to it,
+        # while old-graph A/B diagnostics leave it disabled.
+        contiguous_f16_conv = os.environ.get("MESHNET_CONTIGUOUS_F16_CONV") == "1"
         for layer in self.model[:-1]:  # all layers except final conv
             if isinstance(layer, nn.Conv2d):
                 x = chunked_conv(x, layer)
+                if fp16 and contiguous_f16_conv:
+                    x = x.cast(dtypes.float16).contiguous()
             else:
                 if fp16 and not fast_f16_gn and isinstance(layer, nn.GroupNorm):
                     x = x.cast(dtypes.float32)  # f32 variance: avoid f16 square overflow

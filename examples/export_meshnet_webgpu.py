@@ -170,13 +170,20 @@ def _condition_fp16_weights(model, target=128.0, k_sigma=6.0):
           f"(GroupNorm scale-invariance), only f16 headroom improved.")
 
 
-def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"):
+def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale",
+                fp16_conv_store="scheduled", capture_device="webgpu", ast_dump=None,
+                opt_catalog=None):
     # FP16 must be set BEFORE importing/loading so load_meshnet() halves weights.
     if fp16:
         os.environ["FP16"] = "1"
     else:
         os.environ.pop("FP16", None)
-    os.environ["WEBGPU"] = "1"
+    if capture_device == "metal":
+        os.environ["METAL"] = "1"
+        os.environ.pop("WEBGPU", None)
+    else:
+        os.environ["WEBGPU"] = "1"
+        os.environ.pop("METAL", None)
     if beam and beam > 0:
         os.environ["BEAM"] = str(beam)
     else:
@@ -189,6 +196,18 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"
         os.environ["MESHNET_FAST_F16_GN"] = "1"
     else:
         os.environ.pop("MESHNET_FAST_F16_GN", None)
+    if fp16 and fp16_conv_store == "contiguous":
+        os.environ["MESHNET_CONTIGUOUS_F16_CONV"] = "1"
+    else:
+        os.environ.pop("MESHNET_CONTIGUOUS_F16_CONV", None)
+    if ast_dump:
+        os.environ["MESHNET_WEBGPU_AST_DUMP"] = str(ast_dump)
+    else:
+        os.environ.pop("MESHNET_WEBGPU_AST_DUMP", None)
+    if opt_catalog:
+        os.environ["MESHNET_WEBGPU_OPT_CATALOG"] = str(opt_catalog)
+    else:
+        os.environ.pop("MESHNET_WEBGPU_OPT_CATALOG", None)
 
     import time
     from brainchop.api import _load_model
@@ -283,6 +302,21 @@ def main():
                          "no rescaling; run the GroupNorm reduction in f32 -- correct for "
                          "any weights but ~1.5-2x slower on Apple Silicon (2:1 f16:f32). "
                          "Ignored for fp32 exports.")
+    ap.add_argument("--fp16-conv-store", choices=["scheduled", "contiguous"],
+                    default="contiguous",
+                    help="activation storage policy. 'contiguous' (default) materializes every "
+                         "convolution result as fp16, reducing the maximum buffer. Tune or "
+                         "provide schedules for this graph because old-graph BEAM choices can "
+                         "be slow. 'scheduled' retains the former high-memory graph for A/B "
+                         "diagnostics. Ignored for fp32 exports.")
+    ap.add_argument("--capture-device", choices=["webgpu", "metal"], default="webgpu",
+                    help="device used to execute the graph while exporting WGSL. 'webgpu' "
+                         "is required for BEAM tuning. 'metal' supports untuned BEAM=0 export "
+                         "when native Dawn has no hardware adapter or insufficient limits.")
+    ap.add_argument("--ast-dump", default=None,
+                    help=argparse.SUPPRESS)
+    ap.add_argument("--opt-catalog", default=None,
+                    help=argparse.SUPPRESS)
     ap.add_argument("--runner-name", default=None,
                     help="base name of the emitted runner: <name>_runner.js (+ <name>_f32_runner.js). "
                          "The brainchop-test model entry's `webgpu_runner` must equal this. "
@@ -295,6 +329,8 @@ def main():
     ap.add_argument("--staging", default=None,
                     help="scratch dir for the raw export (default: /tmp/<runner-name>_export)")
     args = ap.parse_args()
+    if args.capture_device != "webgpu" and args.beam:
+        ap.error("--capture-device metal supports only --beam 0; WebGPU BEAM choices are device-specific")
 
     # Universal: derive output naming from --model-dir unless overridden. Nothing
     # here is DK-atlas-specific; this exports any brainchop MeshNet to WebGPU.
@@ -317,7 +353,8 @@ def main():
 
     for name, fp16, st_name in jobs:
         js_path, st_path = _export_one(args.model_dir, name, fp16, args.chunk, args.beam,
-                                       staging, args.fp16_norm)
+                                       staging, args.fp16_norm, args.fp16_conv_store,
+                                       args.capture_device, args.ast_dump, args.opt_catalog)
         # Runner JS -> webgpu_runners/<name>_runner.js (auto-discovered by import.meta.glob)
         dst_js = runners / f"{name}_runner.js"
         shutil.copyfile(js_path, dst_js)
