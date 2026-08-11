@@ -164,6 +164,8 @@ class SAENet:
             # Keep the materialized activation in f16 (accumulators stayed f32).
             if self.fp16:
                 x = x.cast(dtypes.float16)
+                if os.environ.get("SAE_CONTIGUOUS_F16_CONV") == "1":
+                    x = x.contiguous()
 
         # Final layer: 1x1x1 conv, no activation, no padding
         _, idx, weight, bias = self.layers[-1]
@@ -192,6 +194,8 @@ class SAENet:
             # Keep the materialized activation in f16 (accumulators stayed f32).
             if self.fp16:
                 x = x.cast(dtypes.float16)
+                if os.environ.get("SAE_CONTIGUOUS_F16_CONV") == "1":
+                    x = x.contiguous()
 
         return x
 

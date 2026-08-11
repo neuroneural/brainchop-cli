@@ -20,10 +20,22 @@ def compile_net(run:TinyJit, special_names:Dict[int,str], target:Optional[str]=N
   canonical_functions:Dict[str,str] = {}
   captured_asts = []
   ast_ordinals:Dict[bytes,int] = {}
-  opt_catalog = None
+  opt_catalog, opt_entries, opt_by_key = None, [], {}
+  catalog_key_matches, catalog_ordinal_fallbacks = 0, 0
   if catalog_path := os.environ.get("MESHNET_WEBGPU_OPT_CATALOG"):
     with open(catalog_path, "rb") as catalog_file:
       opt_catalog = pickle.load(catalog_file)
+    if isinstance(opt_catalog, dict):
+      if opt_catalog.get("version") != 1 or not isinstance(opt_catalog.get("entries"), list):
+        raise ValueError(f"unsupported WebGPU optimization catalog: {catalog_path}")
+      opt_entries = opt_catalog["entries"]
+      opt_by_key = {entry["ast_key"]: entry for entry in opt_entries}
+    elif isinstance(opt_catalog, list):
+      # Compatibility with the two manually seeded low-memory exports.
+      opt_entries = [{"opts": opts} for opts in opt_catalog]
+    else:
+      raise ValueError(f"invalid WebGPU optimization catalog: {catalog_path}")
+  tuned_entries = []
   for ji in run.jit_cache:
     fxn: ProgramSpec = ji.prg.p
     # A native Dawn adapter is useful for tuning, but is not required merely to
@@ -34,12 +46,29 @@ def compile_net(run:TinyJit, special_names:Dict[int,str], target:Optional[str]=N
     if target == "webgpu" and fxn.device != "WEBGPU":
       from tinygrad.codegen import get_program
       from tinygrad.renderer.wgsl import WGSLRenderer
-      if ji.ast.key not in ast_ordinals:
+      is_new_ast = ji.ast.key not in ast_ordinals
+      if is_new_ast:
         ast_ordinals[ji.ast.key] = len(ast_ordinals)
       ordinal = ast_ordinals[ji.ast.key]
-      opts = None if opt_catalog is None else list(opt_catalog[ordinal])
+      if opt_catalog is None:
+        opts = None
+      else:
+        ast_key = ji.ast.key.hex()
+        entry = opt_by_key.get(ast_key)
+        if entry is None:
+          catalog_ordinal_fallbacks += 1
+          if ordinal >= len(opt_entries):
+            raise ValueError(f"WebGPU optimization catalog has {len(opt_entries)} entries, "
+                             f"but captured graph needs at least {ordinal + 1}")
+          entry = opt_entries[ordinal]
+        else:
+          catalog_key_matches += 1
+        opts = list(entry["opts"])
       fxn = get_program(ji.ast, WGSLRenderer(), opts=opts)
-      captured_asts.append(ji.ast)
+      if is_new_ast: captured_asts.append(ji.ast)
+    elif target == "webgpu" and fxn.device == "WEBGPU" and ji.ast.key not in ast_ordinals:
+      ast_ordinals[ji.ast.key] = len(ast_ordinals)
+      tuned_entries.append({"ast_key": ji.ast.key.hex(), "opts": tuple(fxn.applied_opts)})
     function_name = fxn.function_name
     if cross_webgpu:
       canonical_source = fxn.src.replace(function_name, "main")
@@ -103,6 +132,22 @@ def compile_net(run:TinyJit, special_names:Dict[int,str], target:Optional[str]=N
     if dump_path := os.environ.get("MESHNET_WEBGPU_AST_DUMP"):
       with open(dump_path, "wb") as dump_file:
         pickle.dump(captured_asts, dump_file)
+
+  if opt_dump_path := os.environ.get("MESHNET_WEBGPU_OPT_DUMP"):
+    if target != "webgpu" or cross_webgpu:
+      raise ValueError("MESHNET_WEBGPU_OPT_DUMP requires a native WebGPU capture")
+    parent = os.path.dirname(os.path.abspath(opt_dump_path))
+    os.makedirs(parent, exist_ok=True)
+    with open(opt_dump_path, "wb") as dump_file:
+      pickle.dump({"version": 1, "device": Device.DEFAULT, "entries": tuned_entries}, dump_file)
+    print(f"[schedule] wrote {len(tuned_entries)} WebGPU optimization entries to {opt_dump_path}")
+
+  if cross_webgpu and opt_catalog is not None and len(ast_ordinals) != len(opt_entries):
+    raise ValueError(f"WebGPU optimization catalog has {len(opt_entries)} entries, "
+                             f"but captured graph has {len(ast_ordinals)} unique kernel ASTs")
+  if cross_webgpu and opt_catalog is not None:
+    print(f"[schedule] catalog mapping: {catalog_key_matches} AST-key matches, "
+          f"{catalog_ordinal_fallbacks} ordinal fallbacks")
 
   return functions, statements, exported_bufs, bufs_to_save
 

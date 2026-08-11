@@ -98,6 +98,7 @@ Tuning notes:
 """
 import argparse
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -172,7 +173,7 @@ def _condition_fp16_weights(model, target=128.0, k_sigma=6.0):
 
 def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale",
                 fp16_conv_store="scheduled", capture_device="webgpu", ast_dump=None,
-                opt_catalog=None):
+                opt_catalog=None, opt_dump=None, model_kind="meshnet", n_classes=3):
     # FP16 must be set BEFORE importing/loading so load_meshnet() halves weights.
     if fp16:
         os.environ["FP16"] = "1"
@@ -198,8 +199,10 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"
         os.environ.pop("MESHNET_FAST_F16_GN", None)
     if fp16 and fp16_conv_store == "contiguous":
         os.environ["MESHNET_CONTIGUOUS_F16_CONV"] = "1"
+        os.environ["SAE_CONTIGUOUS_F16_CONV"] = "1"
     else:
         os.environ.pop("MESHNET_CONTIGUOUS_F16_CONV", None)
+        os.environ.pop("SAE_CONTIGUOUS_F16_CONV", None)
     if ast_dump:
         os.environ["MESHNET_WEBGPU_AST_DUMP"] = str(ast_dump)
     else:
@@ -208,6 +211,10 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"
         os.environ["MESHNET_WEBGPU_OPT_CATALOG"] = str(opt_catalog)
     else:
         os.environ.pop("MESHNET_WEBGPU_OPT_CATALOG", None)
+    if opt_dump:
+        os.environ["MESHNET_WEBGPU_OPT_DUMP"] = str(opt_dump)
+    else:
+        os.environ.pop("MESHNET_WEBGPU_OPT_DUMP", None)
 
     import time
     from brainchop.api import _load_model
@@ -240,11 +247,19 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"
         _single_batch_webgpu._single_batch_patched = True
         _em.export_model_webgpu = _single_batch_webgpu
 
-    m = _load_model(str(model_dir))
+    if model_kind == "sae":
+        from brainchop.sae_model import load_sae
+        model_path = Path(model_dir)
+        weights_path = model_path if model_path.is_file() else model_path / "model.pth"
+        if not weights_path.is_file():
+            raise FileNotFoundError(f"SAE weights not found: {weights_path}")
+        m = load_sae(str(weights_path), n_classes=n_classes)
+    else:
+        m = _load_model(str(model_dir))
     # Lossless conv-weight conditioning so the fast f16 GroupNorm stays overflow-safe.
     # Must run on the loaded (halved) weights, BEFORE re-binding the fused argmax and
     # before tracing, so the rescaled weights are what gets traced and saved.
-    if use_rescale:
+    if use_rescale and model_kind == "meshnet":
         _condition_fp16_weights(m)
     # Re-bind the fused conv+argmax to the (possibly halved) final conv so the
     # classifier runs in the same precision as the rest of the network.
@@ -275,6 +290,11 @@ def _export_one(model_dir, name, fp16, chunk, beam, out_dir, fp16_norm="rescale"
     st_path = out_dir / f"{name}.safetensors"
     js_path.write_text(prg)
     safe_save(state, str(st_path))
+    empty_sizes = [int(size) for size in re.findall(r"createEmptyBuf\(device,\s*(\d+)\)", prg)]
+    empty_total = sum(empty_sizes)
+    empty_max = max(empty_sizes, default=0)
+    print(f"[memory] fixed non-weight buffers: {len(empty_sizes)} buffers, "
+          f"{empty_total / 2**20:.1f} MiB total, {empty_max / 2**20:.1f} MiB largest")
     print(f"[export]   wrote {js_path} ({js_path.stat().st_size} bytes)")
     print(f"[export]   wrote {st_path} ({st_path.stat().st_size} bytes)")
     return js_path, st_path
@@ -317,6 +337,12 @@ def main():
                     help=argparse.SUPPRESS)
     ap.add_argument("--opt-catalog", default=None,
                     help=argparse.SUPPRESS)
+    ap.add_argument("--opt-dump", default=None,
+                    help="write the native-WebGPU kernel optimization catalog used by this export")
+    ap.add_argument("--model-kind", choices=["meshnet", "sae"], default="meshnet",
+                    help="model architecture (default: meshnet)")
+    ap.add_argument("--n-classes", type=int, default=3,
+                    help="number of classes for an SAE model (default: 3)")
     ap.add_argument("--runner-name", default=None,
                     help="base name of the emitted runner: <name>_runner.js (+ <name>_f32_runner.js). "
                          "The brainchop-test model entry's `webgpu_runner` must equal this. "
@@ -354,7 +380,8 @@ def main():
     for name, fp16, st_name in jobs:
         js_path, st_path = _export_one(args.model_dir, name, fp16, args.chunk, args.beam,
                                        staging, args.fp16_norm, args.fp16_conv_store,
-                                       args.capture_device, args.ast_dump, args.opt_catalog)
+                                       args.capture_device, args.ast_dump, args.opt_catalog,
+                                       args.opt_dump, args.model_kind, args.n_classes)
         # Runner JS -> webgpu_runners/<name>_runner.js (auto-discovered by import.meta.glob)
         dst_js = runners / f"{name}_runner.js"
         shutil.copyfile(js_path, dst_js)
