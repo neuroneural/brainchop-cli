@@ -280,7 +280,7 @@ class MeshNet:
     def normalize(self, x):
         return qnormalize(x) # TODO: interpret normalization from config file
 
-    def __call__(self, x, fuse_chunk=None):
+    def __call__(self, x, fuse_chunk=None, return_logits=False):
         # True fp16 activations. When the model is half precision, cast each
         # layer's OUTPUT back to f16 so the materialized activation buffers are
         # f16 (24*256^3 = 0.8 GiB) instead of f32 (1.6 GiB). The cast folds into
@@ -314,6 +314,10 @@ class MeshNet:
                 x = layer(x)
             if fp16:
                 x = x.cast(dtypes.float16)
+        if return_logits:
+            # Per-class logits (B, n_classes, D, H, W), e.g. for export_classes.
+            # Materializes every class at once, so only used when asked for.
+            return self.model[-1](x)
         assert self.seq_conv_argmax is not None
         return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 
