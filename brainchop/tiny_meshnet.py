@@ -9,8 +9,13 @@ import numpy as np
 def convert_keys(torch_state_dict, tiny_state_dict):
     torch_keys = torch_state_dict.keys()
     tiny_keys = tiny_state_dict.keys()
+    if len(torch_keys) != len(tiny_keys):
+        raise ValueError(f"Checkpoint has {len(torch_keys)} parameters, model expects {len(tiny_keys)}")
     new_dict = {}
     for f, t in zip(torch_keys, tiny_keys):
+        if torch_state_dict[f].shape != tiny_state_dict[t].shape:
+            raise ValueError(f"Shape mismatch mapping {f} to {t}: "
+                             f"{torch_state_dict[f].shape} != {tiny_state_dict[t].shape}")
         new_dict[t] = torch_state_dict[f]
     return new_dict
 
@@ -367,6 +372,18 @@ def load_meshnet(
         state_dict = safe_load(model_fn)
     except Exception:
         state_dict = torch_load(model_fn)
+        keys = list(state_dict)
+        final_conv = model.model[-1]
+        # Legacy MindGrab configs omit the final bias declaration, although
+        # the checkpoint carries it. Restore only an unambiguous trailing head
+        # bias; keep explicitly configured bias behavior and all hidden layers.
+        if (final_conv.bias is None and "bias" not in config
+                and "bias" not in config["layers"][-1]
+                and len(keys) == len(nn.state.get_state_dict(model)) + 1
+                and keys[-2].endswith(".weight")
+                and keys[-1] == keys[-2].removesuffix(".weight") + ".bias"
+                and state_dict[keys[-1]].shape == (out_channels,)):
+            final_conv.bias = Tensor.zeros(out_channels, device=final_conv.weight.device)
         state_dict = convert_keys(state_dict, nn.state.get_state_dict(model))
     load_state_dict(model, state_dict, strict=True, verbose=False)
     # Initialize SequentialConvArgmax for memory-efficient argmax
