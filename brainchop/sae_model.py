@@ -144,29 +144,10 @@ class SAENet:
         Returns:
             Logits tensor (B, n_classes, D, H, W)
         """
-        # Process all layers except the last (which has no activation)
-        for layer_type, idx, weight, bias in self.layers[:-1]:
-            dilation = DILATION_SCHEDULE.get(idx, 1)
-            padding = dilation  # padding = dilation for 3x3 kernel
-
-            if layer_type == "conv":
-                x = x.conv2d(weight, bias, padding=padding, dilation=dilation)
-            elif layer_type == "conv_s2":
-                x = x.conv2d(weight, bias, padding=padding, stride=2, dilation=dilation)
-            elif layer_type == "convT":
-                x = x.conv_transpose2d(weight, bias, stride=2, padding=0)
-
-            # SiLU activation after each conv (except output and ConvTranspose)
-            # ConvTranspose (upsample) has no activation - goes directly to next conv
-            if layer_type != "convT":
-                x = x.silu()
-
-            # Keep the materialized activation in f16 (accumulators stayed f32).
-            if self.fp16:
-                x = x.cast(dtypes.float16)
+        x = self.forward_no_final(x)
 
         # Final layer: 1x1x1 conv, no activation, no padding
-        _, idx, weight, bias = self.layers[-1]
+        _, _, weight, bias = self.layers[-1]
         kernel_size = weight.shape[2]
         padding = (kernel_size - 1) // 2  # 0 for 1x1, 1 for 3x3
         x = x.conv2d(weight, bias, padding=padding)
@@ -177,15 +158,21 @@ class SAENet:
         """Forward pass through all layers except the final conv."""
         for layer_type, idx, weight, bias in self.layers[:-1]:
             dilation = DILATION_SCHEDULE.get(idx, 1)
-            padding = dilation
+            padding = dilation  # padding = dilation for 3x3 kernel
 
             if layer_type == "conv":
                 x = x.conv2d(weight, bias, padding=padding, dilation=dilation)
             elif layer_type == "conv_s2":
+                size = x.shape[2:]
                 x = x.conv2d(weight, bias, padding=padding, stride=2, dilation=dilation)
             elif layer_type == "convT":
                 x = x.conv_transpose2d(weight, bias, stride=2, padding=0)
+                # Halving then doubling turns an odd size n into n + 1 (e.g. after
+                # --crop); trim back so the output stays on the input grid.
+                x = x[:, :, : size[0], : size[1], : size[2]]
 
+            # SiLU activation after each conv (except output and ConvTranspose)
+            # ConvTranspose (upsample) has no activation - goes directly to next conv
             if layer_type != "convT":
                 x = x.silu()
 
@@ -195,17 +182,20 @@ class SAENet:
 
         return x
 
-    def __call__(self, x: Tensor, fuse_chunk=None) -> Tensor:
+    def __call__(self, x: Tensor, fuse_chunk=None, return_logits=False) -> Tensor:
         """
         Forward pass.
 
         Args:
             x: Input tensor (B, 1, D, H, W)
             fuse_chunk: Number of output channels per chunk (None = full conv)
+            return_logits: If True, return per-class logits instead of the argmax
 
         Returns:
-            Segmentation (B, D, H, W) after argmax
+            Segmentation (B, D, H, W) after argmax, or logits (B, n_classes, D, H, W)
         """
+        if return_logits:
+            return self.forward_no_argmax(x)
         x = self.forward_no_final(x)
         return self.seq_conv_argmax(x, chunk_size=fuse_chunk)
 

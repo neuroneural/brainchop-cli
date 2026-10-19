@@ -153,7 +153,12 @@ def main():
         vol = load(abs_path, crop=args.crop, ct=args.ct, comply=args.comply)
 
         # Segment (single volume, so result is always Volume)
-        result, raw_output = segment(vol, model_name, beam=beam, return_raw=True)
+        # Only ask for raw logits when exporting them: they bypass the fused
+        # argmax and hold every class in memory at once.
+        if args.export_classes:
+            result, raw_output = segment(vol, model_name, beam=beam, return_raw=True)
+        else:
+            result, raw_output = segment(vol, model_name, beam=beam), None
         assert isinstance(result, Volume)
 
         # Output path
@@ -171,7 +176,7 @@ def main():
 
         # Export class probability maps if requested
         if args.export_classes and raw_output is not None:
-            export_classes(raw_output, vol.header, output_path)
+            export_classes(raw_output, vol.header, output_path, crop_coords=vol.crop_coords)
             print(f"brainchop :: Exported class probability maps")
 
         # Save

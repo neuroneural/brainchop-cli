@@ -517,8 +517,13 @@ def segment(
             if hasattr(m, "normalize"):
                 batched = m.normalize(batched)
 
-            raw_output = _run_with_fuse_chunk(m, batched, model_name, tta=tta)
-            # TTAModel returns raw logits (B, C, D, H, W), MeshNet returns argmaxed (B, D, H, W)
+            if return_raw and not tta:
+                # Plain models fuse argmax into their final layer so the C x 256^3
+                # logits never exist; export_classes needs them, so ask for them.
+                raw_output = m(batched, return_logits=True)
+            else:
+                raw_output = _run_with_fuse_chunk(m, batched, model_name, tta=tta)
+            # Logits are (B, C, D, H, W); the default fused path is argmaxed (B, D, H, W)
             if len(raw_output.shape) == 5:
                 output = raw_output.argmax(axis=1)  # (B, C, D, H, W) -> (B, D, H, W)
             else:
@@ -668,7 +673,9 @@ def export(
             del os.environ["BEAM"]
 
 
-def export_classes(raw_output: Tensor, header: bytes, output_path: str) -> list[str]:
+def export_classes(
+    raw_output: Tensor, header: bytes, output_path: str, crop_coords: tuple | None = None
+) -> list[str]:
     """
     Export per-class probability maps as separate NIfTI files.
 
@@ -676,6 +683,7 @@ def export_classes(raw_output: Tensor, header: bytes, output_path: str) -> list[
         raw_output: Raw model output tensor, shape (1, C, D, H, W) before argmax
         header: 352-byte NIfTI header from input volume
         output_path: Base output path (e.g., "output.nii.gz")
+        crop_coords: The input volume's crop_coords, if it was loaded with crop
 
     Returns:
         List of saved file paths
@@ -698,8 +706,15 @@ def export_classes(raw_output: Tensor, header: bytes, output_path: str) -> list[
             base = base[:-len(ext)]
             break
 
-    # Get numpy array and drop batch dim: (1, C, D, H, W) -> (C, D, H, W)
-    ch_np = raw_output.numpy().squeeze(0)
+    if len(raw_output.shape) != 5:
+        raise ValueError(
+            f"export_classes needs per-class output (1, C, D, H, W), got {tuple(raw_output.shape)}; "
+            "use segment(..., return_raw=True)"
+        )
+
+    # Get numpy array and drop batch dim: (1, C, D, H, W) -> (C, D, H, W).
+    # float32 to match the header below (fp16 models produce float16 logits).
+    ch_np = raw_output.numpy().squeeze(0).astype("float32", copy=False)
 
     # Modify header for float data
     header_ba = bytearray(header)
@@ -710,6 +725,10 @@ def export_classes(raw_output: Tensor, header: bytes, output_path: str) -> list[
     for i in range(ch_np.shape[0]):
         # Transpose from (D, H, W) to (W, H, D) for NIfTI
         chan = ch_np[i].transpose((2, 1, 0))
+        if crop_coords is not None:
+            # Same as the label output: back onto the full grid the header describes
+            from brainchop.utils import pad_to_original_size
+            chan = pad_to_original_size(chan, crop_coords)
         out_fname = f"{base}_c{i}.nii"
         _write_nifti(out_fname, chan, header_bytes)
         saved_paths.append(out_fname)
